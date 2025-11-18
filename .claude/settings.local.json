@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /b /a:d \"C:\\SoftRobotEvolution\")",
+      "Bash(tree:*)",
+      "Bash(nul)",
+      "Bash(dir /S /B \"C:\\SoftRobotEvolution\\src\")",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
