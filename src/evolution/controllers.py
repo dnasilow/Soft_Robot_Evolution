@@ -73,11 +73,12 @@ class CPGController:
 
 class NeuralController(nn.Module):
     """Neural network controller with sensory feedback"""
-    
-    def __init__(self, num_actuators, num_sensors=12, hidden_size=64):
+
+    def __init__(self, num_actuators, num_sensors=12, hidden_size=64, device='cpu'):
         super().__init__()
         self.num_actuators = num_actuators
-        
+        self.device = torch.device(device)
+
         # Network architecture
         self.network = nn.Sequential(
             nn.Linear(num_sensors + num_actuators, hidden_size),
@@ -86,24 +87,28 @@ class NeuralController(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_size, num_actuators),
             nn.Tanh()
-        )
-        
-        # Recurrent state
-        self.hidden_state = torch.zeros(num_actuators)
-        
+        ).to(self.device)
+
+        # FIXED: Recurrent state registered as buffer with correct device
+        # This ensures the state moves with the model when .to(device) is called
+        self.register_buffer('hidden_state', torch.zeros(num_actuators, device=self.device))
+
         # Initialize weights
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.zeros_(m.bias)
-    
+
     def forward(self, sensor_data):
         """Forward pass"""
+        # FIXED: Convert sensor_data to tensor on correct device
+        if not isinstance(sensor_data, torch.Tensor):
+            sensor_data = torch.tensor(sensor_data, dtype=torch.float32, device=self.device)
+        else:
+            sensor_data = sensor_data.to(self.device)
+
         # Combine sensor data with previous actuator state
-        combined_input = torch.cat([
-            torch.tensor(sensor_data, dtype=torch.float32),
-            self.hidden_state
-        ])
+        combined_input = torch.cat([sensor_data, self.hidden_state])
         
         # Network forward pass
         output = self.network(combined_input)

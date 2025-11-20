@@ -359,23 +359,10 @@ class OptimizedDirectVoxelGenome(BaseGenome):
         
         return coords, distances.flatten()
     
-    def _apply_softmax_selection_fixed(self, all_outputs):
-        """Apply softmax material selection with FIXED thresholds"""
-        # Extract outputs
-        presence_outputs = all_outputs[:, 0]  # First output
-        material_logits = all_outputs[:, 1:5]  # Next 4 outputs
-        
-        # FIXED: Much more permissive presence threshold
-        # Use adaptive threshold based on output distribution
-        presence_threshold = np.percentile(presence_outputs, 70)  # Top 30% of positions
-        presence_threshold = max(presence_threshold, -0.5)  # But not too restrictive
-        
-        print(f"Using presence threshold: {presence_threshold:.3f}")
-        
-        # Use numba-accelerated selection with FIXED threshold
-        return self._apply_softmax_selection_numba_fixed(
-            presence_outputs, material_logits, self.shape, presence_threshold
-        )
+    # REMOVED: _apply_softmax_selection_fixed() - Dead code from refactoring
+    # This method called non-existent _apply_softmax_selection_numba_fixed()
+    # and was never used in the codebase. If fixed threshold selection is needed
+    # in the future, implement and test properly with correct numba function.
 
     def _create_basic_robot(self):
         """Create a basic robot structure when CPPN fails"""

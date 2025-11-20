@@ -76,6 +76,10 @@ class OptimizedCUDAPhysicsEngine:
         self.num_actuators = 0
         self.force_distribution_matrix = None
 
+        # FIXED: Ensure GPU operations complete before returning
+        # Prevents race conditions in batch evaluation
+        cp.cuda.Stream.null.synchronize()
+
     def add_robot(self, robot):
         """Add robot with optimized data structures"""
         nodes = robot.get_nodes()
@@ -202,11 +206,11 @@ class OptimizedCUDAPhysicsEngine:
             
             # Total force magnitudes
             total_forces = spring_forces + damping_forces  # (num_springs,)
-            
-            # Limit forces to prevent instability
-            max_force = 55.0
-            total_forces = cp.clip(total_forces, -max_force, max_force)
-            
+
+            # FIXED: Removed restrictive 55N force limit - now using unified 5000N limit
+            # in integrate_positions_vectorized() which allows realistic spring forces
+            # for robots with mass up to ~500 kg (gravity + spring compression forces)
+
             # Force vectors (springs push/pull along their direction)
             force_vectors = unit_displacement * total_forces[:, cp.newaxis]  # (num_springs, 3)
             
@@ -284,11 +288,13 @@ class OptimizedCUDAPhysicsEngine:
         accelerations = self.d_forces[active_slice] / self.d_masses[active_slice, cp.newaxis]
         self.d_velocities[active_slice] = self.d_velocities[active_slice] * 0.999 + accelerations * dt  
         
-        # RELAXED VELOCITY LIMITING
+        # FIXED: Increased velocity limiting for realistic dynamics
+        # Typical terminal velocity for soft robots ~34 m/s, allowing 100 m/s for safety
+        # and fast actuation dynamics without numerical instability
         vel_magnitudes = cp.linalg.norm(self.d_velocities[active_slice], axis=1)
-        vel_limit_mask = vel_magnitudes > 50.0  # Increased from 10 m/s to 20 m/s
+        vel_limit_mask = vel_magnitudes > 100.0  # Increased from 50 m/s to 100 m/s
         if cp.any(vel_limit_mask):
-            scale_factors = 50.0 / (vel_magnitudes + 1e-6)
+            scale_factors = 100.0 / (vel_magnitudes + 1e-6)
             self.d_velocities[active_slice][vel_limit_mask] *= scale_factors[vel_limit_mask, cp.newaxis]
         
         # Update positions (unchanged)
@@ -310,16 +316,21 @@ class OptimizedCUDAPhysicsEngine:
         """Optimized physics step - should be 10-50x faster"""
         if dt is None:
             dt = self.default_timestep
-        
+
         # Clear forces
         self.d_forces[:self.num_nodes] = 0.0
-        
+
         # Vectorized computations
         self.compute_spring_forces_vectorized()
         self.apply_actuator_forces_vectorized()
         self.integrate_positions_vectorized(dt)
-        
+
         self.time += dt
+
+        # FIXED: Synchronize after critical physics operations
+        # Ensures GPU computations complete before CPU accesses data
+        if self.num_nodes > 0:
+            cp.cuda.Stream.null.synchronize()
     
     def get_positions(self):
         """Get positions (minimize CPU-GPU transfer)"""

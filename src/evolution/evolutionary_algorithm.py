@@ -173,8 +173,8 @@ class EvolutionaryAlgorithm:
             raise ValueError(f"Unknown selection method: {self.selection_method}")
     
     def _tournament_selection(self, num_parents, tournament_size=3):
-        tournament_size = min(tournament_size, len(self.population))    
         """Tournament selection"""
+        tournament_size = min(tournament_size, len(self.population))
         parents = []
         
         for _ in range(num_parents):
@@ -187,14 +187,21 @@ class EvolutionaryAlgorithm:
     
     def _roulette_selection(self, num_parents):
         """Fitness-proportionate selection"""
-        # Shift fitness to positive values
         fitness_values = np.array([ind.fitness for ind in self.population])
+
+        # FIXED: Handle edge cases robustly
+        if np.all(fitness_values == fitness_values[0]):
+            # All equal fitness - random selection
+            indices = np.random.choice(len(self.population), num_parents, replace=True)
+            return [self.population[i] for i in indices]
+
+        # Shift fitness to positive range (use maximum to ensure non-negative)
         min_fitness = np.min(fitness_values)
-        shifted_fitness = fitness_values - min_fitness + 1e-6
-        
+        shifted_fitness = np.maximum(fitness_values - min_fitness, 0.0) + 1e-6
+
         # Calculate probabilities
         probabilities = shifted_fitness / np.sum(shifted_fitness)
-        
+
         # Select parents
         parents = np.random.choice(self.population, num_parents, p=probabilities)
         return list(parents)
@@ -202,7 +209,13 @@ class EvolutionaryAlgorithm:
     def reproduce(self, parents):
         """Create offspring from parents"""
         offspring = []
-        
+
+        # FIXED: Ensure even number of parents for pairing
+        # If odd number, duplicate a random parent to make even
+        if len(parents) % 2 == 1:
+            parents = list(parents)
+            parents.append(parents[np.random.randint(len(parents))].copy())
+
         for i in range(0, len(parents) - 1, 2):
             parent1 = parents[i]
             parent2 = parents[i + 1]
