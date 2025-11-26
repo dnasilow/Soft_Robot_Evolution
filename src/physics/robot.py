@@ -23,15 +23,16 @@ class VoxelMaterial:
 #     3: VoxelMaterial(young_modulus=0.1e6, poisson_ratio=0.45, density=800.0, damping=0.2, is_actuated=False),    # Light Blue (soft passive)
 #     4: VoxelMaterial(young_modulus=10e6, poisson_ratio=0.25, density=1200.0, damping=0.05, is_actuated=False),      # Dark Blue (stiff passive)
 # }
-# FIXED - Much softer materials
-# BETTER materials for 1×1×1 meter voxels
+# FIXED: Balanced soft robot materials - stable equilibrium without explosion
+# Target: ~3-5× gravity force at 5% compression (realistic soft robot behavior)
+# 160kg robot → 1569N gravity → need ~5000N spring force at 5% compression
 MATERIALS = {
     0: None,  # Empty
-    # 10x stiffer springs to prevent flattening
-    1: VoxelMaterial(young_modulus=2.5e5, poisson_ratio=0.35, density=200.0, damping=0.1, is_actuated=True, actuation_phase=0.0, actuation_strength=0.2),      # Green: 10x stiffer
-    2: VoxelMaterial(young_modulus=2.5e5, poisson_ratio=0.35, density=200.0, damping=0.1, is_actuated=True, actuation_phase=np.pi, actuation_strength=0.2),    # Red: 10x stiffer  
-    3: VoxelMaterial(young_modulus=1.25e5, poisson_ratio=0.45, density=160.0, damping=0.2, is_actuated=False),    # Light Blue: 10x stiffer
-    4: VoxelMaterial(young_modulus=5e5, poisson_ratio=0.25, density=240.0, damping=0.1, is_actuated=False),      # Dark Blue: 10x stiffer
+    # BALANCED: Strong enough to maintain structure, soft enough to settle quickly
+    1: VoxelMaterial(young_modulus=5.0e4, poisson_ratio=0.35, density=200.0, damping=0.3, is_actuated=True, actuation_phase=0.0, actuation_strength=0.2),      # Green: Active 0°
+    2: VoxelMaterial(young_modulus=5.0e4, poisson_ratio=0.35, density=200.0, damping=0.3, is_actuated=True, actuation_phase=np.pi, actuation_strength=0.2),    # Red: Active 180°
+    3: VoxelMaterial(young_modulus=2.5e4, poisson_ratio=0.45, density=160.0, damping=0.4, is_actuated=False),    # Light Blue: Soft passive
+    4: VoxelMaterial(young_modulus=1.0e5, poisson_ratio=0.25, density=240.0, damping=0.2, is_actuated=False),      # Dark Blue: Stiff passive
 }
 
 # Color mapping for visualization
@@ -199,7 +200,13 @@ class OptimizedVoxelRobot:
                     # Calculate spring properties
                     pos1 = self.nodes[node1_idx]['position']
                     pos2 = self.nodes[node2_idx]['position']
-                    rest_length = np.linalg.norm(pos2 - pos1)
+                    current_length = np.linalg.norm(pos2 - pos1)
+
+                    # FIXED: Set rest length LONGER than current to create compression
+                    # Spring physics: force = stiffness * (current_length - rest_length)
+                    # If rest_length > current_length → force is NEGATIVE → spring compressed → pushes outward
+                    # This prevents cube collapse by pre-compressing springs
+                    rest_length = current_length * 1.05  # Springs want to be 5% longer → resist compression
                     
                     # Spring stiffness
                     cross_section = self.voxel_size ** 2

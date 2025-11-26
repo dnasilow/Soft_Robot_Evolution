@@ -30,9 +30,9 @@ class OptimizedCUDAPhysicsEngine:
             print(f"GPU Memory: {mem_info[1] / 1e9:.1f} GB total, {mem_info[0] / 1e9:.1f} GB free")
             print(f"Default timestep: {default_timestep} s")
             if SPARSE_AVAILABLE:
-                print("✓ CuPy sparse matrices available (fastest force distribution)")
+                print("[OK] CuPy sparse matrices available (fastest force distribution)")
             else:
-                print("! Using fallback force distribution (still fast)")
+                print("[WARN] Using fallback force distribution (still fast)")
             OptimizedCUDAPhysicsEngine._gpu_info_printed = True
         
         # GPU memory - preallocate everything
@@ -284,9 +284,11 @@ class OptimizedCUDAPhysicsEngine:
             scale_factors = 5000.0 / (force_magnitudes + 1e-6)
             self.d_forces[active_slice][force_limit_mask] *= scale_factors[force_limit_mask, cp.newaxis]
         
-        # Update velocities with LESS DAMPING
+        # FIXED: Increased velocity damping to prevent wild oscillations
+        # Previous 0.999 caused energy buildup and endless bouncing
+        # 0.98 = 2% energy loss per step = realistic soft body damping
         accelerations = self.d_forces[active_slice] / self.d_masses[active_slice, cp.newaxis]
-        self.d_velocities[active_slice] = self.d_velocities[active_slice] * 0.999 + accelerations * dt  
+        self.d_velocities[active_slice] = self.d_velocities[active_slice] * 0.98 + accelerations * dt  
         
         # FIXED: Increased velocity limiting for realistic dynamics
         # Typical terminal velocity for soft robots ~34 m/s, allowing 100 m/s for safety
