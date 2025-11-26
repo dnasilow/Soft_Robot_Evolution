@@ -38,10 +38,10 @@ print(f"\n{'Step':>4} {'Min_Y':>8} {'Max_Y':>8} {'COM_Y':>8} {'Vel_Y':>8} {'Belo
 print("-" * 55)
 
 # Run simulation
-for step in range(2000):  # Run even longer to hit ground
+for step in range(3000):  # Run long enough to hit ground
     physics_engine.step(0.001)
 
-    if step % 50 == 0:
+    if step % 100 == 0:
         pos = physics_engine.get_positions()
         com = robot.get_center_of_mass(pos)
         vel = cp.asnumpy(physics_engine.d_velocities[:physics_engine.num_nodes])

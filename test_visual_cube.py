@@ -107,7 +107,7 @@ def test_visual_falling_cube():
             else:
                 is_settling = False
 
-            status = "✓ SETTLED" if is_settling else "oscillating"
+            status = "SETTLED" if is_settling else "falling"
             print(f"t={sim_time:.2f}s: Y={com[1]:.3f}m, fall={fall_distance:.3f}m, vel={avg_vel:.3f}m/s [{status}]")
             last_print_time = sim_time
 

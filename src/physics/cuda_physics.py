@@ -190,9 +190,13 @@ class OptimizedCUDAPhysicsEngine:
             
             # Unit displacement vectors
             unit_displacement = displacement / safe_lengths[:, cp.newaxis]  # (num_springs, 3)
-            
-            # Spring force magnitudes
-            extensions = lengths - self.d_rest_lengths[:self.num_springs]
+
+            # CRITICAL FIX: Spring force direction was inverted!
+            # Correct physics: F = k * (rest_length - current_length)
+            # - If rest > current (compressed): F > 0, pushes nodes apart (expands)
+            # - If rest < current (stretched): F < 0, pulls nodes together (contracts)
+            # Previous code had: F = k * (current - rest) which is backwards!
+            extensions = self.d_rest_lengths[:self.num_springs] - lengths  # FLIPPED SIGN
             spring_forces = self.d_stiffnesses[:self.num_springs] * extensions  # (num_springs,)
             
             # Damping forces

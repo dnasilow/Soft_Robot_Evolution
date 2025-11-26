@@ -202,12 +202,11 @@ class OptimizedVoxelRobot:
                     pos2 = self.nodes[node2_idx]['position']
                     current_length = np.linalg.norm(pos2 - pos1)
 
-                    # CRITICAL FIX: Pre-compress springs by 10%
-                    # rest_length > current_length → springs are initially COMPRESSED
-                    # Compressed springs resist FURTHER compression (ground collision)
-                    # This prevents "top face explosion" when bottom nodes hit ground
-                    # 10% pre-compression is typical for soft body physics (see Hiller & Lipson 2012)
-                    rest_length = current_length * 1.10
+                    # Set rest length to current length (neutral springs)
+                    # With corrected force direction in cuda_physics.py, neutral springs work correctly:
+                    # - Compression → springs push apart → resists compression
+                    # - Stretching → springs pull together → resists stretching
+                    rest_length = current_length
                     
                     # Spring stiffness
                     cross_section = self.voxel_size ** 2
