@@ -5,7 +5,13 @@
       "Bash(tree:*)",
       "Bash(nul)",
       "Bash(dir /S /B \"C:\\SoftRobotEvolution\\src\")",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(curl:*)",
+      "Bash(git checkout:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

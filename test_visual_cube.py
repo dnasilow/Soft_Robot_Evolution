@@ -46,6 +46,11 @@ def test_visual_falling_cube():
     physics_engine.reset()
     physics_engine.add_robot(robot)
 
+    # CRITICAL: Lift cube above ground so it actually falls!
+    # Robot is initially at Y=[0,2], we want bottom at Y=1.0
+    import cupy as cp
+    physics_engine.d_positions[:physics_engine.num_nodes, 1] += 1.0  # Lift 1 meter
+
     # Get initial position
     initial_positions = physics_engine.get_positions()
     initial_com = robot.get_center_of_mass(initial_positions)
@@ -132,13 +137,13 @@ def test_visual_falling_cube():
     print(f"Actual fall: {total_fall:.3f} m")
 
     if total_fall < 0.2:
-        print("\n✅ SUCCESS: Springs are working! Cube barely fell.")
+        print("\n[SUCCESS] Springs are working! Cube barely fell.")
     elif total_fall < 1.0:
-        print("\n✅ GOOD: Cube fell some but springs resisted significantly.")
+        print("\n[GOOD] Cube fell some but springs resisted significantly.")
     elif total_fall > 4.0:
-        print("\n❌ PROBLEM: Cube fell too much - springs may not be working.")
+        print("\n[PROBLEM] Cube fell too much - springs may not be working.")
     else:
-        print("\n⚠️ MODERATE: Some spring resistance but could be better.")
+        print("\n[MODERATE] Some spring resistance but could be better.")
 
 if __name__ == "__main__":
     test_visual_falling_cube()

@@ -301,15 +301,27 @@ class OptimizedCUDAPhysicsEngine:
         
         # Update positions (unchanged)
         self.d_positions[active_slice] += self.d_velocities[active_slice] * dt
-        
-        # Ground collision (unchanged)
-        below_ground = self.d_positions[active_slice, 1] < 0.0
-        self.d_positions[active_slice, 1] = cp.maximum(self.d_positions[active_slice, 1], 0.0)
-        
+
+        # FIXED: Stable ground collision without hard constraints
+        ground_threshold = 0.0
+        below_ground = self.d_positions[active_slice, 1] < ground_threshold
+
         if cp.any(below_ground):
-            self.d_velocities[active_slice, 1][below_ground] *= -0.3  # Bounce
-            self.d_velocities[active_slice, 0][below_ground] *= 0.8   # Friction
-            self.d_velocities[active_slice, 2][below_ground] *= 0.8   # Friction
+            # Clamp positions to ground level (prevents tunneling)
+            self.d_positions[active_slice, 1] = cp.maximum(self.d_positions[active_slice, 1], ground_threshold)
+
+            # CRITICAL FIX: Stop downward velocity only (don't add energy)
+            # If velocity is downward, set to small upward (minimal bounce)
+            downward_mask = self.d_velocities[active_slice, 1][below_ground] < 0
+
+            # For nodes moving down: small bounce (5% restitution)
+            if cp.any(downward_mask):
+                bounce_velocity = -0.05 * self.d_velocities[active_slice, 1][below_ground][downward_mask]
+                self.d_velocities[active_slice, 1][below_ground][downward_mask] = bounce_velocity
+
+            # Friction on horizontal velocities
+            self.d_velocities[active_slice, 0][below_ground] *= 0.8
+            self.d_velocities[active_slice, 2][below_ground] *= 0.8
         
         # Clear forces
         self.d_forces[active_slice] = 0.0    

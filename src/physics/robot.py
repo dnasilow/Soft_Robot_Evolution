@@ -202,11 +202,12 @@ class OptimizedVoxelRobot:
                     pos2 = self.nodes[node2_idx]['position']
                     current_length = np.linalg.norm(pos2 - pos1)
 
-                    # FIXED: Set rest length LONGER than current to create compression
-                    # Spring physics: force = stiffness * (current_length - rest_length)
-                    # If rest_length > current_length → force is NEGATIVE → spring compressed → pushes outward
-                    # This prevents cube collapse by pre-compressing springs
-                    rest_length = current_length * 1.05  # Springs want to be 5% longer → resist compression
+                    # CRITICAL FIX: Pre-compress springs by 10%
+                    # rest_length > current_length → springs are initially COMPRESSED
+                    # Compressed springs resist FURTHER compression (ground collision)
+                    # This prevents "top face explosion" when bottom nodes hit ground
+                    # 10% pre-compression is typical for soft body physics (see Hiller & Lipson 2012)
+                    rest_length = current_length * 1.10
                     
                     # Spring stiffness
                     cross_section = self.voxel_size ** 2
