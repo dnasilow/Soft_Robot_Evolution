@@ -288,11 +288,14 @@ class OptimizedCUDAPhysicsEngine:
             scale_factors = 5000.0 / (force_magnitudes + 1e-6)
             self.d_forces[active_slice][force_limit_mask] *= scale_factors[force_limit_mask, cp.newaxis]
         
-        # FIXED: Increased velocity damping to prevent wild oscillations
-        # Previous 0.999 caused energy buildup and endless bouncing
-        # 0.98 = 2% energy loss per step = realistic soft body damping
+        # FIXED: Timestep-adaptive velocity damping
+        # Damping coefficient: 20 s^-1 gives terminal velocity = g/20 = 0.49 m/s
+        # This is timestep-independent: works correctly for any dt
+        # Previous fixed 0.98 only worked for dt=0.001s
+        damping_coefficient = 20.0  # s^-1
+        damping_factor = 1.0 - damping_coefficient * dt
         accelerations = self.d_forces[active_slice] / self.d_masses[active_slice, cp.newaxis]
-        self.d_velocities[active_slice] = self.d_velocities[active_slice] * 0.98 + accelerations * dt  
+        self.d_velocities[active_slice] = self.d_velocities[active_slice] * damping_factor + accelerations * dt  
         
         # FIXED: Increased velocity limiting for realistic dynamics
         # Typical terminal velocity for soft robots ~34 m/s, allowing 100 m/s for safety
@@ -318,9 +321,10 @@ class OptimizedCUDAPhysicsEngine:
             # If velocity is downward, set to small upward (minimal bounce)
             downward_mask = self.d_velocities[active_slice, 1][below_ground] < 0
 
-            # For nodes moving down: small bounce (5% restitution)
+            # For nodes moving down: realistic soft body bounce (35% restitution)
+            # CoR = 0.35 is typical for soft silicone rubber on hard ground
             if cp.any(downward_mask):
-                bounce_velocity = -0.05 * self.d_velocities[active_slice, 1][below_ground][downward_mask]
+                bounce_velocity = -0.35 * self.d_velocities[active_slice, 1][below_ground][downward_mask]
                 self.d_velocities[active_slice, 1][below_ground][downward_mask] = bounce_velocity
 
             # Friction on horizontal velocities

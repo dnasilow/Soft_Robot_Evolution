@@ -11,7 +11,8 @@
       "Bash(git push:*)",
       "Bash(curl:*)",
       "Bash(git checkout:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(if not exist srcevolution mkdir srcevolution)"
     ],
     "deny": [],
     "ask": []
