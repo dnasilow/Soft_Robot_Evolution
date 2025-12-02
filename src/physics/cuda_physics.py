@@ -321,10 +321,11 @@ class OptimizedCUDAPhysicsEngine:
             # If velocity is downward, set to small upward (minimal bounce)
             downward_mask = self.d_velocities[active_slice, 1][below_ground] < 0
 
-            # For nodes moving down: realistic soft body bounce (35% restitution)
-            # CoR = 0.35 is typical for soft silicone rubber on hard ground
+            # For nodes moving down: moderate bounce (50% restitution)
+            # CoR = 0.5 balances realism with visible bounce behavior
+            # Typical range for soft elastomers: 0.3-0.6
             if cp.any(downward_mask):
-                bounce_velocity = -0.35 * self.d_velocities[active_slice, 1][below_ground][downward_mask]
+                bounce_velocity = -0.5 * self.d_velocities[active_slice, 1][below_ground][downward_mask]
                 self.d_velocities[active_slice, 1][below_ground][downward_mask] = bounce_velocity
 
             # Friction on horizontal velocities
