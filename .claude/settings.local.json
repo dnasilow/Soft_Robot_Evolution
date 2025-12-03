@@ -12,7 +12,10 @@
       "Bash(curl:*)",
       "Bash(git checkout:*)",
       "Bash(python:*)",
-      "Bash(if not exist srcevolution mkdir srcevolution)"
+      "Bash(if not exist srcevolution mkdir srcevolution)",
+      "Bash(dir /B *.py)",
+      "Bash(if not exist archive mkdir archive)",
+      "Bash(timeout 30 python:*)"
     ],
     "deny": [],
     "ask": []

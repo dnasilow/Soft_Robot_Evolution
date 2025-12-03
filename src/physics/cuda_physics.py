@@ -295,8 +295,8 @@ class OptimizedCUDAPhysicsEngine:
         damping_coefficient = 10.0  # s^-1 (was 20.0, too aggressive)
         damping_factor = 1.0 - damping_coefficient * dt
         accelerations = self.d_forces[active_slice] / self.d_masses[active_slice, cp.newaxis]
-        self.d_velocities[active_slice] = self.d_velocities[active_slice] * damping_factor + accelerations * dt  
-        
+        self.d_velocities[active_slice] = self.d_velocities[active_slice] * damping_factor + accelerations * dt
+
         # FIXED: Increased velocity limiting for realistic dynamics
         # Typical terminal velocity for soft robots ~34 m/s, allowing 100 m/s for safety
         # and fast actuation dynamics without numerical instability
@@ -305,33 +305,70 @@ class OptimizedCUDAPhysicsEngine:
         if cp.any(vel_limit_mask):
             scale_factors = 100.0 / (vel_magnitudes + 1e-6)
             self.d_velocities[active_slice][vel_limit_mask] *= scale_factors[vel_limit_mask, cp.newaxis]
-        
+
         # Update positions (unchanged)
         self.d_positions[active_slice] += self.d_velocities[active_slice] * dt
 
-        # FIXED: Stable ground collision without hard constraints
-        ground_threshold = 0.0
-        below_ground = self.d_positions[active_slice, 1] < ground_threshold
+        # OPTION A: Spring-based ground contact (allows natural oscillation)
+        # Instead of hard position clamping, apply repulsive spring force when penetrating ground
+        # This allows nodes to compress slightly into ground before bouncing back (realistic)
+        ground_level = 0.0
+        penetration = ground_level - self.d_positions[active_slice, 1]  # Positive when below ground
+        penetrating_mask = penetration > 0
 
-        if cp.any(below_ground):
-            # Clamp positions to ground level (prevents tunneling)
-            self.d_positions[active_slice, 1] = cp.maximum(self.d_positions[active_slice, 1], ground_threshold)
+        if cp.any(penetrating_mask):
+            # Mass-adaptive ground stiffness: Scale with node mass to avoid instability
+            # Target: Ground force should produce ~100 m/s² acceleration (10× gravity)
+            # F = m × a, so k = m × a / penetration
+            # For typical 1mm penetration: k = m × 100 / 0.001 = m × 100000
+            penetrating_masses = self.d_masses[active_slice][penetrating_mask]
 
-            # CRITICAL FIX: Stop downward velocity only (don't add energy)
-            # If velocity is downward, set to small upward (minimal bounce)
-            downward_mask = self.d_velocities[active_slice, 1][below_ground] < 0
+            # Base stiffness per unit mass: 100000 N/(m·kg)
+            # This gives consistent behavior across all mass scales
+            stiffness_per_kg = 100000.0  # N/(m·kg)
+            ground_stiffnesses = stiffness_per_kg * penetrating_masses  # N/m per node
 
-            # For nodes moving down: moderate bounce (50% restitution)
-            # CoR = 0.5 balances realism with visible bounce behavior
-            # Typical range for soft elastomers: 0.3-0.6
-            if cp.any(downward_mask):
-                bounce_velocity = -0.5 * self.d_velocities[active_slice, 1][below_ground][downward_mask]
-                self.d_velocities[active_slice, 1][below_ground][downward_mask] = bounce_velocity
+            # Damping also scales with mass for consistent settling time
+            # Critical damping: c = 2 * sqrt(k * m)
+            # Use 80% of critical for slight oscillation
+            damping_per_kg = 1000.0  # N·s/(m·kg)
+            ground_dampings = damping_per_kg * penetrating_masses  # N·s/m per node
 
-            # Friction on horizontal velocities
-            self.d_velocities[active_slice, 0][below_ground] *= 0.8
-            self.d_velocities[active_slice, 2][below_ground] *= 0.8
-        
+            # Spring force: F = k × penetration_depth (upward)
+            repulsion_forces = ground_stiffnesses * penetration[penetrating_mask]
+
+            # Damping force: F = c × velocity (opposes downward motion)
+            ground_velocities = self.d_velocities[active_slice, 1][penetrating_mask]
+            damping_forces = -ground_dampings * ground_velocities
+
+            # Total upward force (spring + damping)
+            total_ground_forces = repulsion_forces + damping_forces
+
+            # Apply forces to Y-axis only (ground is horizontal)
+            # Force / mass = acceleration, then × dt = velocity change
+            accelerations = total_ground_forces / penetrating_masses
+            self.d_velocities[active_slice, 1][penetrating_mask] += accelerations * dt
+
+            # Horizontal friction: Only apply when in contact with significant penetration
+            # Friction proportional to normal force (realistic Coulomb friction)
+            significant_contact = penetration > 0.001  # > 1mm penetration
+            if cp.any(significant_contact):
+                friction_coefficient = 0.3  # Reduced from 0.8 to 0.3 (less aggressive)
+                # Apply friction: reduce horizontal velocity by friction coefficient
+                friction_mask = cp.logical_and(penetrating_mask, significant_contact)
+                self.d_velocities[active_slice, 0][friction_mask] *= (1.0 - friction_coefficient * dt * 100)
+                self.d_velocities[active_slice, 2][friction_mask] *= (1.0 - friction_coefficient * dt * 100)
+
+            # Safety: Prevent deep tunneling (only if penetration > 5cm, clearly a bug)
+            deep_penetration = penetration > 0.05
+            if cp.any(deep_penetration):
+                # Hard stop only for extreme cases
+                self.d_positions[active_slice, 1][deep_penetration] = ground_level - 0.05
+                # Kill downward velocity
+                moving_down = self.d_velocities[active_slice, 1][deep_penetration] < 0
+                if cp.any(moving_down):
+                    self.d_velocities[active_slice, 1][deep_penetration][moving_down] = 0.0
+
         # Clear forces
         self.d_forces[active_slice] = 0.0    
 

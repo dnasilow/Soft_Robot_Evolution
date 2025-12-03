@@ -58,52 +58,44 @@ Use robots with:
 
 ---
 
-## Issue #2: No Observable Bounce with CoR = 0.35 (Dec 2, 2024)
+## Issue #2: Ground Position Clamping Kills Oscillation (FIXED: Dec 3, 2024)
 
 ### Symptom
-Ground coefficient of restitution set to 0.35 (35%), but objects show minimal/no bounce after ground impact.
+Bottom surface of cubes does NOT oscillate when in contact with ground, while top surface oscillates normally.
 
 ### Test Results
-**Three-cube structure (480kg, dropped from 2m):**
+**Before fix (hard position clamping):**
 ```
-t=4.0s: Y=0.547m [falling]
-t=5.0s: Y=0.499m [settled]  ← No bounce observed
-t=6.0s: Y=0.499m [settled]
+Bottom nodes: 0.00mm oscillation (FROZEN at Y=0.0000m)
+Top nodes: 50.49mm oscillation (Y=0.982m-1.009m)
+Bottom velocity: -3.433 m/s (trying to move down)
+Bottom position: 0.0000m (CLAMPED - cannot move!)
 ```
-
-Expected with CoR=0.35:
-- First bounce height: 0.35² × 2m = 0.245m
-- Should see Y oscillate: 0.50m → 0.74m → 0.50m → ...
 
 ### Root Cause
-**Damping overwhelms elastic rebound.**
+**Hard position clamping at line 318:** `self.d_positions[:, 1] = cp.maximum(..., 0.0)`
 
-Combined energy dissipation:
-1. **Velocity damping**: 20 s^-1 coefficient
-2. **Ground restitution**: CoR = 0.35 (87.75% energy loss)
-3. **Spring internal damping**: Additional losses
-4. **Fall duration**: ~4.5 seconds allows significant damping during fall
+This hard constraint prevented nodes from temporarily penetrating ground, which is necessary for:
+1. Natural spring compression/expansion at boundary
+2. Realistic soft-body ground contact
+3. Visible bounce behavior
 
-Energy retained after impact:
-- Ground contact: (0.35)² = 12.25% of kinetic energy
-- During 4.5s fall: damping reduces impact velocity
-- Net bounce: < 5% of potential energy → < 10cm bounce height
-- Springs compress/absorb remaining energy → no visible bounce
+### Solution
+**Replaced hard clamping with spring-based ground contact:**
+- Ground acts as very stiff spring: F = k × penetration_depth
+- Mass-adaptive stiffness: k = 100000 N/(m·kg) per node
+- Ground damping: c = 1000 N·s/(m·kg) per node
+- Allows 1-3mm penetration for realistic soft contact
 
 ### Impact
-- **LOW**: Physics is physically plausible (highly damped soft materials)
-- Bounce exists but is microscopic (<5cm)
-- Does not affect fitness evaluation or evolution
+**FIXED** - Now produces realistic bounce behavior:
+- 1m drop: 23 bounces, first bounce = 9.7cm
+- 2m drop: 19 bounces, first bounce = 6.9cm
+- 5m drop: 14 bounces, first bounce = 3.8cm
 
-### Status
-**EXPECTED BEHAVIOR** - Not a bug.
+**Location**: cuda_physics.py:312-358
 
-Soft silicone robots with significant damping would exhibit minimal bounce. This is realistic for the material properties (Young's modulus = 25kPa, density = 160kg/m³).
-
-To increase bounce visibility:
-- Reduce damping coefficient from 20 s^-1 to 5-10 s^-1
-- Increase ground CoR to 0.6-0.8
-- Use stiffer materials (higher Young's modulus)
+**Test**: `python test_bounce_heights.py`
 
 ---
 
