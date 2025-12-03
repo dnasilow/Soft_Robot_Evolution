@@ -75,13 +75,11 @@ class FitnessEvaluator:
             self.physics_engine = CUDAPhysicsEngine(
                 max_nodes=max_nodes,
                 max_springs=max_springs,
-                actuation_frequency=actuation_frequency,
-                actuation_amplitude=actuation_amplitude
+                actuation_frequency=actuation_frequency
             )
         else:
             self.physics_engine.reset()
             self.physics_engine.actuation_frequency = actuation_frequency
-            self.physics_engine.actuation_amplitude = actuation_amplitude
 
         # Add robot to physics
         self.physics_engine.add_robot(robot)

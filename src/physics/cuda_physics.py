@@ -289,10 +289,10 @@ class OptimizedCUDAPhysicsEngine:
             self.d_forces[active_slice][force_limit_mask] *= scale_factors[force_limit_mask, cp.newaxis]
         
         # FIXED: Timestep-adaptive velocity damping
-        # Damping coefficient: 20 s^-1 gives terminal velocity = g/20 = 0.49 m/s
+        # Damping coefficient: 10 s^-1 gives terminal velocity = g/10 = 0.98 m/s
+        # Reduced from 20 s^-1 to allow visible bounces and faster falling
         # This is timestep-independent: works correctly for any dt
-        # Previous fixed 0.98 only worked for dt=0.001s
-        damping_coefficient = 20.0  # s^-1
+        damping_coefficient = 10.0  # s^-1 (was 20.0, too aggressive)
         damping_factor = 1.0 - damping_coefficient * dt
         accelerations = self.d_forces[active_slice] / self.d_masses[active_slice, cp.newaxis]
         self.d_velocities[active_slice] = self.d_velocities[active_slice] * damping_factor + accelerations * dt  

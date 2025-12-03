@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-"""Debug: Are spring forces actually being computed?"""
+"""
+Deep diagnostic: Identify which springs create upward forces causing floating.
+"""
 
 import numpy as np
 import cupy as cp
@@ -11,108 +13,70 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from src.physics.cuda_physics import CUDAPhysicsEngine
 from src.physics.robot import VoxelRobot
 
-def debug_spring_forces():
-    """Check if spring forces are actually being computed"""
-    print("="*60)
-    print("SPRING FORCE DEBUG")
-    print("="*60)
+print("="*70)
+print("SPRING FORCE DIAGNOSTIC")
+print("="*70)
 
-    # Create robot
-    voxel_grid = np.zeros((3, 3, 3), dtype=np.int8)
-    voxel_grid[1, 1, 1] = 3
-    robot = VoxelRobot(voxel_grid, voxel_size=1.0)
+# Create small 5cm cube
+voxel_grid = np.zeros((3, 3, 3), dtype=np.int8)
+voxel_grid[1, 1, 1] = 3
+robot = VoxelRobot(voxel_grid, voxel_size=0.05)
 
-    # Initialize physics
-    physics_engine = CUDAPhysicsEngine(max_nodes=100, max_springs=100)
-    physics_engine.reset()
-    physics_engine.add_robot(robot)
+print(f"\nRobot: {len(robot.nodes)} nodes, {len(robot.springs)} springs")
+print(f"Mass: {sum(n['mass'] for n in robot.nodes):.6f} kg")
+print(f"Gravity force: {sum(n['mass'] for n in robot.nodes) * 9.81:.6f} N (downward)")
 
-    print(f"\nSetup:")
-    print(f"  Nodes: {physics_engine.num_nodes}")
-    print(f"  Springs: {physics_engine.num_springs}")
-    print(f"  Gravity: {physics_engine.gravity} m/s²")
+# Get node positions
+node_positions = np.array([n['position'] for n in robot.nodes])
+print(f"\nNode positions (Y-axis):")
+print(f"  Min: {np.min(node_positions[:, 1]):.4f} m")
+print(f"  Max: {np.max(node_positions[:, 1]):.4f} m")
+print(f"  Range: {np.max(node_positions[:, 1]) - np.min(node_positions[:, 1]):.4f} m")
 
-    # Get initial state
-    initial_pos = physics_engine.get_positions()
-    print(f"\nInitial positions (first 3 nodes):")
-    for i in range(min(3, len(initial_pos))):
-        print(f"  Node {i}: [{initial_pos[i,0]:.3f}, {initial_pos[i,1]:.3f}, {initial_pos[i,2]:.3f}]")
+# Initialize physics WITHOUT gravity to isolate spring forces
+physics = CUDAPhysicsEngine(max_nodes=50, max_springs=100)
+physics.reset()
 
-    # Check spring rest lengths
-    rest_lengths = cp.asnumpy(physics_engine.d_rest_lengths[:physics_engine.num_springs])
-    stiffnesses = cp.asnumpy(physics_engine.d_stiffnesses[:physics_engine.num_springs])
+# Temporarily disable gravity
+original_gravity = physics.gravity
+physics.gravity = 0.0
 
-    print(f"\nSpring properties:")
-    print(f"  Rest lengths: min={np.min(rest_lengths):.3f}m, max={np.max(rest_lengths):.3f}m, avg={np.mean(rest_lengths):.3f}m")
-    print(f"  Stiffnesses: min={np.min(stiffnesses):.1f}N/m, max={np.max(stiffnesses):.1f}N/m, avg={np.mean(stiffnesses):.1f}N/m")
+physics.add_robot(robot)
 
-    # Run ONE physics step and inspect forces
-    print(f"\n{'='*60}")
-    print("STEP-BY-STEP FORCE INSPECTION")
-    print("="*60)
+# Get initial spring forces (should be zero for neutral springs)
+physics.compute_spring_forces_vectorized()
 
-    # Clear forces
-    physics_engine.d_forces[:physics_engine.num_nodes] = 0.0
+# Copy forces to CPU
+spring_forces_gpu = physics.d_forces[:physics.num_nodes]
+spring_forces = cp.asnumpy(spring_forces_gpu)
 
-    # Step 1: Compute spring forces
-    print("\n1. Computing spring forces...")
-    physics_engine.compute_spring_forces_vectorized()
+print(f"\nSpring forces (no gravity, equilibrium):")
+print(f"  Total force X: {np.sum(spring_forces[:, 0]):.6f} N")
+print(f"  Total force Y: {np.sum(spring_forces[:, 1]):.6f} N")
+print(f"  Total force Z: {np.sum(spring_forces[:, 2]):.6f} N")
 
-    spring_forces = cp.asnumpy(physics_engine.d_forces[:physics_engine.num_nodes])
-    print(f"   Spring forces sum: {np.sum(np.abs(spring_forces)):.3f} N")
-    print(f"   Spring forces Y-component: {np.sum(spring_forces[:, 1]):.3f} N")
-    print(f"   Max node force: {np.max(np.linalg.norm(spring_forces, axis=1)):.3f} N")
+# Restore gravity and check net force
+physics.gravity = original_gravity
 
-    # Step 2: Add gravity
-    print("\n2. Adding gravity...")
-    physics_engine.d_forces[:physics_engine.num_nodes, 1] -= physics_engine.d_masses[:physics_engine.num_nodes] * physics_engine.gravity
+# Manually compute gravity forces
+gravity_forces = np.zeros_like(spring_forces)
+masses = cp.asnumpy(physics.d_masses[:physics.num_nodes])
+gravity_forces[:, 1] = -masses * physics.gravity
 
-    total_forces = cp.asnumpy(physics_engine.d_forces[:physics_engine.num_nodes])
-    print(f"   Total forces sum: {np.sum(np.abs(total_forces)):.3f} N")
-    print(f"   Total forces Y-component: {np.sum(total_forces[:, 1]):.3f} N (should be ~-1569N)")
-    print(f"   Expected gravity: {-np.sum(cp.asnumpy(physics_engine.d_masses[:physics_engine.num_nodes])) * 9.81:.1f} N")
+net_forces = spring_forces + gravity_forces
 
-    # Step 3: Integration
-    print("\n3. Checking integration...")
-    dt = 0.001
-    masses = cp.asnumpy(physics_engine.d_masses[:physics_engine.num_nodes])
-    accelerations = total_forces / masses[:, np.newaxis]
+print(f"\nNet forces (springs + gravity):")
+print(f"  Total X: {np.sum(net_forces[:, 0]):.6f} N")
+print(f"  Total Y: {np.sum(net_forces[:, 1]):.6f} N")
+print(f"  Total Z: {np.sum(net_forces[:, 2]):.6f} N")
 
-    print(f"   Average Y acceleration: {np.mean(accelerations[:, 1]):.3f} m/s²")
-    print(f"   Expected (gravity only): -9.81 m/s²")
+if np.sum(net_forces[:, 1]) > 0.01:
+    print(f"\n[FOUND BUG] Net UPWARD force: {np.sum(net_forces[:, 1]):.6f} N")
+    print(f"  This exceeds gravity ({np.sum(gravity_forces[:, 1]):.6f} N)")
+    print(f"  Spring forces sum: {np.sum(spring_forces[:, 1]):.6f} N")
+elif np.sum(net_forces[:, 1]) < -0.01:
+    print(f"\n[EXPECTED] Net downward force: {np.sum(net_forces[:, 1]):.6f} N")
+else:
+    print(f"\n[BALANCED] Net force ~zero: {np.sum(net_forces[:, 1]):.6f} N")
 
-    if abs(np.mean(accelerations[:, 1]) + 9.81) > 0.5:
-        print(f"   ⚠️ WARNING: Acceleration significantly different from gravity!")
-        if np.mean(accelerations[:, 1]) > 0:
-            print(f"   ❌ UPWARD acceleration detected! Springs pushing, not pulling!")
-
-    # Now run a full step and check results
-    print(f"\n{'='*60}")
-    print("RUNNING FULL PHYSICS STEP")
-    print("="*60)
-
-    physics_engine.reset()
-    physics_engine.add_robot(robot)
-
-    initial_vel = cp.asnumpy(physics_engine.d_velocities[:physics_engine.num_nodes])
-    print(f"\nBefore step:")
-    print(f"  Avg velocity Y: {np.mean(initial_vel[:, 1]):.3f} m/s")
-
-    physics_engine.step(0.001)
-
-    final_vel = cp.asnumpy(physics_engine.d_velocities[:physics_engine.num_nodes])
-    final_pos = physics_engine.get_positions()
-
-    print(f"\nAfter step:")
-    print(f"  Avg velocity Y: {np.mean(final_vel[:, 1]):.3f} m/s")
-    print(f"  Velocity change Y: {np.mean(final_vel[:, 1]) - np.mean(initial_vel[:, 1]):.6f} m/s")
-    print(f"  Expected change (gravity): {-9.81 * 0.001:.6f} m/s")
-
-    if np.mean(final_vel[:, 1]) > 0:
-        print(f"\n❌ CRITICAL BUG: Velocity is UPWARD after gravity step!")
-        print(f"   This should be impossible - gravity always pulls down")
-
-    print(f"\n{'='*60}")
-
-if __name__ == "__main__":
-    debug_spring_forces()
+print("\nDone!")
