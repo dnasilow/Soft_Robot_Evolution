@@ -288,11 +288,16 @@ class OptimizedCUDAPhysicsEngine:
             scale_factors = 5000.0 / (force_magnitudes + 1e-6)
             self.d_forces[active_slice][force_limit_mask] *= scale_factors[force_limit_mask, cp.newaxis]
         
-        # FIXED: Timestep-adaptive velocity damping
-        # Damping coefficient: 10 s^-1 gives terminal velocity = g/10 = 0.98 m/s
-        # Reduced from 20 s^-1 to allow visible bounces and faster falling
-        # This is timestep-independent: works correctly for any dt
-        damping_coefficient = 10.0  # s^-1 (was 20.0, too aggressive)
+        # BALANCED: Global damping for numerical stability + spring material damping
+        # After testing Options 1-3:
+        # - 0.1 s^-1: Robots fly upward (energy gain from numerical errors)
+        # - 2.0 s^-1: Excessive bouncing (7m bounce from 5m drop!)
+        # - 10.0 s^-1: Stable with visible bounces (CURRENT - best balance)
+        #
+        # Terminal velocity = g / damping = 9.81 / 10 = 0.98 m/s
+        # Not perfectly realistic, but necessary for numerical stability
+        # Spring damping (0.4 in robot.py) provides additional material damping
+        damping_coefficient = 10.0  # s^-1 (stable configuration)
         damping_factor = 1.0 - damping_coefficient * dt
         accelerations = self.d_forces[active_slice] / self.d_masses[active_slice, cp.newaxis]
         self.d_velocities[active_slice] = self.d_velocities[active_slice] * damping_factor + accelerations * dt

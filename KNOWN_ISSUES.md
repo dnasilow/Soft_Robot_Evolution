@@ -99,6 +99,59 @@ This hard constraint prevented nodes from temporarily penetrating ground, which 
 
 ---
 
+## Issue #3: Spring Forces Add Energy to System (ACTIVE - Dec 4, 2024)
+
+### Symptom
+Robots gain energy over time, bouncing progressively higher despite damping.
+
+### Test Results
+**Single cube (160kg) dropped from 1m with damping=10 s⁻¹:**
+```
+Bounce 1: 14.9cm above rest
+Bounce 2: 67.1cm above rest  (4.5× higher!)
+Bounce 3: 125.9cm above rest (8.5× higher!)
+Bounce 4: 188.7cm above rest (12.7× higher!)
+```
+
+Expected: Each bounce should be LOWER (energy dissipation)
+Actual: Each bounce is HIGHER (energy creation!)
+
+### Root Cause
+Spring force calculation has numerical error that adds energy to the system.
+
+**Evidence:**
+1. Damping 0.1 s⁻¹: Robots fly upward indefinitely
+2. Damping 2.0 s⁻¹: Excessive bouncing (7m bounce from 5m drop)
+3. Damping 10.0 s⁻¹: Bounces increase over time (shown above)
+
+The high damping (10 s⁻¹) has been **masking** this bug by dissipating the gained energy quickly enough to prevent runaway behavior.
+
+### Why This Happens
+Possible causes in cuda_physics.py spring force calculation:
+1. **Sparse matrix force distribution** (line 228-231): May have sign errors
+2. **Spring rest length initialization**: Springs may not be at equilibrium initially
+3. **Floating-point accumulation**: Small errors compound over thousands of timesteps
+4. **Force distribution to nodes**: Equal/opposite force law may not be perfectly conserved
+
+### Impact
+- **MEDIUM**: Physics works for short simulations (evolution fitness evaluation)
+- **HIGH**: Long simulations show unrealistic energy gain
+- **WORKAROUND**: High damping (10 s⁻¹) keeps energy bounded
+
+### Current Status
+**REQUIRES INVESTIGATION** - Damping = 10 s⁻¹ provides stable behavior but:
+- Terminal velocity limited to 0.98 m/s (unrealistic)
+- Cannot reduce damping without exposing energy-gain bug
+- Spring-based ground contact makes issue more visible
+
+### Next Steps
+1. Add energy conservation checks (KE + PE + spring PE should be constant - damping)
+2. Verify force distribution matrix conserves momentum
+3. Check spring initialization (are rest lengths = current lengths at t=0?)
+4. Test with explicit Euler vs implicit integration
+
+---
+
 ## Fixed Issues
 
 ### ✅ Timestep-Dependent Damping (Fixed: Dec 2, 2024)
