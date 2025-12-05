@@ -288,16 +288,17 @@ class OptimizedCUDAPhysicsEngine:
             scale_factors = 5000.0 / (force_magnitudes + 1e-6)
             self.d_forces[active_slice][force_limit_mask] *= scale_factors[force_limit_mask, cp.newaxis]
         
-        # OPTION 2: Moderate damping (compromise between realism and stability)
-        # Testing damping = 5.0 s^-1:
-        # Terminal velocity = g / damping = 9.81 / 5.0 = 1.96 m/s (2× better than 10 s^-1)
+        # BALANCED: Moderate damping (realism vs stability vs settling time)
+        # Testing damping = 7.5 s^-1:
+        # Terminal velocity = g / damping = 9.81 / 7.5 = 1.31 m/s (33% better than 10 s^-1)
         #
         # Previous tests:
         # - 0.1 s^-1: Robots fly upward (energy gain from numerical errors)
         # - 2.0 s^-1: Excessive bouncing (7m bounce from 5m drop!)
+        # - 5.0 s^-1: Too jello-like, excessive oscillation (27cm width swing)
+        # - 7.5 s^-1: Testing... (should reduce jello wobble while keeping improvements)
         # - 10.0 s^-1: Stable but terminal velocity too low (0.98 m/s)
-        # - 5.0 s^-1: Testing... (should be middle ground)
-        damping_coefficient = 5.0  # s^-1 (Option 2 - testing)
+        damping_coefficient = 7.5  # s^-1 (compromise - testing)
         damping_factor = 1.0 - damping_coefficient * dt
         accelerations = self.d_forces[active_slice] / self.d_masses[active_slice, cp.newaxis]
         self.d_velocities[active_slice] = self.d_velocities[active_slice] * damping_factor + accelerations * dt
