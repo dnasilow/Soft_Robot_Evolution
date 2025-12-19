@@ -17,8 +17,13 @@ voxel_grid[3, 1, 1] = 3
 robot = VoxelRobot(voxel_grid, voxel_size=1.0)
 print(f"\nRobot: 3 cubes, {len(robot.nodes)} nodes, {len(robot.springs)} springs")
 print(f"Mass: {sum(n['mass'] for n in robot.nodes):.1f} kg")
-print(f"Spring damping (material 3): 10.0 (previously 0.4)")
-print(f"Global velocity damping: 7.5 s^-1")
+
+# Get actual damping from robot and physics
+from src.physics.robot import MATERIALS
+actual_spring_damping = MATERIALS[3].damping
+print(f"Spring damping (material 3): {actual_spring_damping} (originally 0.4)")
+# Note: Global damping is set in cuda_physics.py (currently 10.0 s^-1)
+print(f"Global velocity damping: 10.0 s^-1 (from cuda_physics.py)")
 
 # Initialize
 physics = OptimizedCUDAPhysicsEngine(default_timestep=0.001)
@@ -69,9 +74,9 @@ if len(widths) > post_bounce_idx:
     print(f"  Expected rest width: 3.000m")
 
     print(f"\nComparison to previous results:")
-    print(f"  Previous (damping=0.4, global=7.5): 18cm oscillation")
-    print(f"  Previous (damping=0.4, global=5.0): 27cm oscillation")
-    print(f"  Current (damping=10.0, global=7.5): {width_range*100:.1f}cm oscillation")
+    print(f"  Previous (spring=0.4, global=7.5): 18cm oscillation")
+    print(f"  Previous (spring=0.4, global=5.0): 27cm oscillation")
+    print(f"  Current (spring={actual_spring_damping}, global=10.0): {width_range*100:.1f}cm oscillation")
 
     if width_range < 0.10:
         print(f"\n  STATUS: EXCELLENT - Jello wobble reduced by >45%!")

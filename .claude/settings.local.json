@@ -15,7 +15,14 @@
       "Bash(if not exist srcevolution mkdir srcevolution)",
       "Bash(dir /B *.py)",
       "Bash(if not exist archive mkdir archive)",
-      "Bash(timeout 30 python:*)"
+      "Bash(timeout 30 python:*)",
+      "Bash(timeout 15 python:*)",
+      "Bash(timeout 60 python:*)",
+      "Bash(timeout 45 python:*)",
+      "Bash(timeout 300 python:*)",
+      "Bash(timeout 120 python:*)",
+      "Bash(findstr:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
