@@ -288,21 +288,21 @@ class OptimizedCUDAPhysicsEngine:
             scale_factors = 5000.0 / (force_magnitudes + 1e-6)
             self.d_forces[active_slice][force_limit_mask] *= scale_factors[force_limit_mask, cp.newaxis]
         
-        # INCREASED SPRING DAMPING APPROACH:
-        # Material spring damping increased from 0.4 to 10.0 (25x increase)
-        # Global damping kept moderate to maintain realistic terminal velocity
-        # Terminal velocity = g / damping = 9.81 / 7.5 = 1.31 m/s
+        # COMBINED APPROACH: Moderate spring damping + higher global damping
+        # Material spring damping: 1.2 (3x increase from 0.4)
+        # Global damping: 10.0 s^-1 (necessary to counter energy gain bug)
+        # Terminal velocity = g / damping = 9.81 / 10.0 = 0.98 m/s
         #
         # Previous attempts:
-        # - damping=0.4, global=10.0: Stable but too restrictive (0.98 m/s terminal velocity)
-        # - damping=0.4, global=7.5: Better but 18-27cm jello wobble
-        # - damping=0.4, global=5.0: Too jello-like, excessive oscillation
+        # - damping=0.4, global=10.0: Stable, no jello wobble, but low terminal velocity
+        # - damping=0.4, global=7.5: 18cm jello wobble, doesn't settle
+        # - damping=10.0, global=7.5: Cube flies upward (damping too high!)
         #
-        # New approach (high spring damping + moderate global):
-        # - Spring damping = 10.0 (strong damping opposes oscillations directly)
-        # - Global damping = 7.5 s^-1 prevents energy gain
-        # - Should reduce jello wobble significantly without killing terminal velocity
-        damping_coefficient = 7.5  # s^-1
+        # Corrected approach:
+        # - Spring damping = 1.2 (helps reduce wobble, stays in safe 0-1.5 range)
+        # - Global damping = 10.0 s^-1 (counters energy gain, ensures settling)
+        # - Trade-off: Lower terminal velocity, but stable and wobble-free
+        damping_coefficient = 10.0  # s^-1
         damping_factor = 1.0 - damping_coefficient * dt
         accelerations = self.d_forces[active_slice] / self.d_masses[active_slice, cp.newaxis]
         self.d_velocities[active_slice] = self.d_velocities[active_slice] * damping_factor + accelerations * dt

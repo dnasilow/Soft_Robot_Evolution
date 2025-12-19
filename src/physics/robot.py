@@ -28,11 +28,13 @@ class VoxelMaterial:
 # 160kg robot → 1569N gravity → need ~5000N spring force at 5% compression
 MATERIALS = {
     0: None,  # Empty
-    # INCREASED DAMPING: Higher spring damping to reduce jello-like oscillations
-    1: VoxelMaterial(young_modulus=5.0e4, poisson_ratio=0.35, density=200.0, damping=5.0, is_actuated=True, actuation_phase=0.0, actuation_strength=0.2),      # Green: Active 0°
-    2: VoxelMaterial(young_modulus=5.0e4, poisson_ratio=0.35, density=200.0, damping=5.0, is_actuated=True, actuation_phase=np.pi, actuation_strength=0.2),    # Red: Active 180°
-    3: VoxelMaterial(young_modulus=2.5e4, poisson_ratio=0.45, density=160.0, damping=10.0, is_actuated=False),    # Light Blue: Soft passive (increased from 0.4 to 10.0)
-    4: VoxelMaterial(young_modulus=1.0e5, poisson_ratio=0.25, density=240.0, damping=3.0, is_actuated=False),      # Dark Blue: Stiff passive
+    # REVERTED: Back to original stable configuration
+    # Spring damping must stay in safe range (testing showed 1.2+ causes issues)
+    # Relying on global damping=10.0 for stability instead
+    1: VoxelMaterial(young_modulus=5.0e4, poisson_ratio=0.35, density=200.0, damping=0.3, is_actuated=True, actuation_phase=0.0, actuation_strength=0.2),      # Green: Active 0°
+    2: VoxelMaterial(young_modulus=5.0e4, poisson_ratio=0.35, density=200.0, damping=0.3, is_actuated=True, actuation_phase=np.pi, actuation_strength=0.2),    # Red: Active 180°
+    3: VoxelMaterial(young_modulus=2.5e4, poisson_ratio=0.45, density=160.0, damping=0.4, is_actuated=False),    # Light Blue: Soft passive
+    4: VoxelMaterial(young_modulus=1.0e5, poisson_ratio=0.25, density=240.0, damping=0.2, is_actuated=False),      # Dark Blue: Stiff passive
 }
 
 # Color mapping for visualization
