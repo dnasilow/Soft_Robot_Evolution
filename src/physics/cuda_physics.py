@@ -199,11 +199,11 @@ class OptimizedCUDAPhysicsEngine:
             extensions = self.d_rest_lengths[:self.num_springs] - lengths  # FLIPPED SIGN
             spring_forces = self.d_stiffnesses[:self.num_springs] * extensions  # (num_springs,)
             
-            # Damping forces
+            # Damping forces (simple velocity-proportional damping)
             vel1 = self.d_velocities[self.d_spring_node1[:self.num_springs]]
             vel2 = self.d_velocities[self.d_spring_node2[:self.num_springs]]
             relative_vel = vel2 - vel1  # (num_springs, 3)
-            
+
             # Project relative velocity onto displacement direction
             vel_projections = cp.sum(relative_vel * unit_displacement, axis=1)  # (num_springs,)
             damping_forces = self.d_damping[:self.num_springs] * vel_projections
@@ -288,17 +288,21 @@ class OptimizedCUDAPhysicsEngine:
             scale_factors = 5000.0 / (force_magnitudes + 1e-6)
             self.d_forces[active_slice][force_limit_mask] *= scale_factors[force_limit_mask, cp.newaxis]
         
-        # BALANCED: Moderate damping (realism vs stability vs settling time)
-        # Testing damping = 7.5 s^-1:
-        # Terminal velocity = g / damping = 9.81 / 7.5 = 1.31 m/s (33% better than 10 s^-1)
+        # INCREASED SPRING DAMPING APPROACH:
+        # Material spring damping increased from 0.4 to 10.0 (25x increase)
+        # Global damping kept moderate to maintain realistic terminal velocity
+        # Terminal velocity = g / damping = 9.81 / 7.5 = 1.31 m/s
         #
-        # Previous tests:
-        # - 0.1 s^-1: Robots fly upward (energy gain from numerical errors)
-        # - 2.0 s^-1: Excessive bouncing (7m bounce from 5m drop!)
-        # - 5.0 s^-1: Too jello-like, excessive oscillation (27cm width swing)
-        # - 7.5 s^-1: Testing... (should reduce jello wobble while keeping improvements)
-        # - 10.0 s^-1: Stable but terminal velocity too low (0.98 m/s)
-        damping_coefficient = 7.5  # s^-1 (compromise - testing)
+        # Previous attempts:
+        # - damping=0.4, global=10.0: Stable but too restrictive (0.98 m/s terminal velocity)
+        # - damping=0.4, global=7.5: Better but 18-27cm jello wobble
+        # - damping=0.4, global=5.0: Too jello-like, excessive oscillation
+        #
+        # New approach (high spring damping + moderate global):
+        # - Spring damping = 10.0 (strong damping opposes oscillations directly)
+        # - Global damping = 7.5 s^-1 prevents energy gain
+        # - Should reduce jello wobble significantly without killing terminal velocity
+        damping_coefficient = 7.5  # s^-1
         damping_factor = 1.0 - damping_coefficient * dt
         accelerations = self.d_forces[active_slice] / self.d_masses[active_slice, cp.newaxis]
         self.d_velocities[active_slice] = self.d_velocities[active_slice] * damping_factor + accelerations * dt
