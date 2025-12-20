@@ -373,7 +373,7 @@ class RobotViewer:
                         if idx1 < len(positions) and idx2 < len(positions):
                             pos1 = positions[idx1]
                             pos2 = positions[idx2]
-                            
+
                             # CAMERA-DEPENDENT OCCLUSION CULLING
                             should_draw = False
                             if camera_below_ground:
@@ -382,13 +382,48 @@ class RobotViewer:
                             else:
                                 # When above ground: only show parts that are above ground
                                 should_draw = (pos1[1] >= -0.1 and pos2[1] >= -0.1)
-                            
+
                             if should_draw:
                                 screen_pos1, _ = self.project_3d_to_2d(pos1)
                                 screen_pos2, _ = self.project_3d_to_2d(pos2)
-                                
-                                # All springs same color (green)
-                                pygame.draw.line(self.screen, self.spring_color, screen_pos1, screen_pos2, 2)
+
+                                # Color springs based on material type
+                                spring_color = self.spring_color  # Default green
+                                spring_width = 2
+
+                                # Get material information if available
+                                if 'material' in springs and i < len(springs['material']):
+                                    material = springs['material'][i]
+                                    is_actuator = springs['is_actuator'][i] if 'is_actuator' in springs else False
+
+                                    if is_actuator and hasattr(material, 'actuation_phase'):
+                                        # Active materials: color by actuation phase
+                                        if abs(material.actuation_phase) < 0.1:
+                                            # Phase 0° - Active material (expands)
+                                            spring_color = (0, 200, 0)  # Bright green
+                                            spring_width = 3
+                                        else:
+                                            # Phase 180° - Active material (contracts)
+                                            spring_color = (200, 0, 0)  # Bright red
+                                            spring_width = 3
+                                    else:
+                                        # Passive materials: color by stiffness
+                                        if hasattr(material, 'young_modulus'):
+                                            if material.young_modulus > 100000:
+                                                # Stiff passive (blue)
+                                                spring_color = (0, 100, 200)
+                                                spring_width = 2
+                                            else:
+                                                # Soft passive (cyan)
+                                                spring_color = (0, 180, 180)
+                                                spring_width = 2
+                                elif 'is_actuator' in springs and i < len(springs['is_actuator']):
+                                    # Fallback: just check if actuator
+                                    if springs['is_actuator'][i]:
+                                        spring_color = (0, 200, 0)  # Green for actuators
+                                        spring_width = 3
+
+                                pygame.draw.line(self.screen, spring_color, screen_pos1, screen_pos2, spring_width)
             
             # Draw nodes - CAMERA-DEPENDENT OCCLUSION
             for i, pos in enumerate(positions):
@@ -446,16 +481,14 @@ class RobotViewer:
                 f"Robot Height: {robot_center[1]:.2f} m",
                 f"Robot Center: [{robot_center[0]:.1f}, {robot_center[1]:.1f}, {robot_center[2]:.1f}]",
                 f"{visibility_info}",
-                f"{shadow_info}",
-                f"Grid squares: {squares_drawn}",
                 "",
-                "REALISTIC SHADOWS (research-based):",
-                "• Soft-edged with gradient falloff",
-                "• Elliptical shape (not circle)",
-                "• Directional offset from light source",
-                "• Multiple layers for smooth transition",
+                "MATERIAL LEGEND (Spring Colors):",
+                "• GREEN (thick) - Active 0° (expands)",
+                "• RED (thick) - Active 180° (contracts)",
+                "• CYAN - Soft passive",
+                "• BLUE - Stiff passive",
                 "",
-                "Camera Presets (test occlusion):",
+                "Camera Presets:",
                 "• R: Reset isometric (25°, 45°)",
                 "• 1: Above ground (25°, 45°)",
                 "• 2: Side view (0°, 45°)", 

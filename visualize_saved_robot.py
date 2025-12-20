@@ -102,10 +102,20 @@ def load_and_visualize(robot_file='best_robot.pkl', simulation_time=5.0, use_gra
         # Update 3D viewer
         if use_graphics and viewer and step % physics_steps_per_frame == 0:
             positions = physics.get_positions()
-            springs = robot.springs
+
+            # Convert springs to format expected by viewer
+            spring_data = {
+                'indices': [],
+                'is_actuator': [],
+                'material': []
+            }
+            for spring in robot.springs:
+                spring_data['indices'].append(spring['indices'])
+                spring_data['is_actuator'].append(spring['is_actuator'])
+                spring_data['material'].append(spring['material'])
 
             # Render (returns False if window closed)
-            if not viewer.render(positions, springs):
+            if not viewer.render(positions, spring_data):
                 print("\nViewer window closed by user")
                 break
 
