@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from src.physics.robot import VoxelRobot
 from src.physics.true_parallel_evaluator import TrueParallelBatchEvaluator
+from src.evolution.genome_config import *
 
 # ==================== CONFIGURATION ====================
 POPULATION_SIZE = 50
@@ -39,10 +40,10 @@ print("="*70)
 # ==================== GENOME FUNCTIONS ====================
 def create_random_robot():
     """Create a random voxel robot"""
-    voxel_grid = np.zeros((5, 5, 5), dtype=np.int8)
-    num_voxels = np.random.randint(6, 15)
+    voxel_grid = create_empty_grid()
+    num_voxels = get_num_voxels()
     for _ in range(num_voxels):
-        x, y, z = np.random.randint(1, 4, 3)
+        x, y, z = get_random_interior_position()
         voxel_grid[x, y, z] = np.random.choice([1, 2, 3, 4])
     return voxel_grid
 
@@ -54,7 +55,7 @@ def mutate_genome(voxel_grid, mutation_rate=MUTATION_RATE):
         num_mutations = np.random.randint(1, 5)
         for _ in range(num_mutations):
             if np.random.random() < 0.5:
-                x, y, z = np.random.randint(1, 4, 3)
+                x, y, z = get_random_interior_position()
                 mutated[x, y, z] = np.random.choice([1, 2, 3, 4])
             else:
                 occupied = np.argwhere(mutated != 0)
@@ -68,11 +69,11 @@ def crossover(parent1, parent2):
     """3D crossover between two genomes"""
     child = np.zeros_like(parent1)
     split_axis = np.random.randint(0, 3)
-    split_point = np.random.randint(1, 4)
+    split_point = np.random.randint(VOXEL_INTERIOR_MIN, VOXEL_INTERIOR_MAX)
 
-    for x in range(5):
-        for y in range(5):
-            for z in range(5):
+    for x in range(VOXEL_GRID_SHAPE[0]):
+        for y in range(VOXEL_GRID_SHAPE[1]):
+            for z in range(VOXEL_GRID_SHAPE[2]):
                 coords = [x, y, z]
                 if coords[split_axis] < split_point:
                     child[x, y, z] = parent1[x, y, z]

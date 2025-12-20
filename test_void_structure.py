@@ -1,4 +1,4 @@
-"""Test example: 2×4×2 robot with void at (1,2,1)"""
+"""Test example: 2×4×2 robot with void at (2,2,2)"""
 import numpy as np
 from src.physics.robot import VoxelRobot
 from src.physics.cuda_physics import OptimizedCUDAPhysicsEngine
@@ -6,21 +6,21 @@ from src.visualization.viewer import RobotViewer
 import cupy as cp
 
 print("="*70)
-print("VOID STRUCTURE TEST - 2×4×2 with missing (1,2,1)")
+print("VOID STRUCTURE TEST - 2×4×2 with missing (2,2,2)")
 print("="*70)
 
-# Create 2×4×2 structure with void at (1,2,1)
-voxel_grid = np.zeros((5, 5, 5), dtype=np.int8)
+# Create 2×4×2 structure with void at (2,2,2)
+voxel_grid = np.zeros((8, 8, 8), dtype=np.int8)
 
-# Define 2×4×2 structure (X: 1-2, Y: 1-4, Z: 1-2)
+# Define 2×4×2 structure (X: 2-3, Y: 2-5, Z: 2-3)
 print("\nBuilding structure:")
 voxel_count = 0
 
-for x in range(1, 3):  # X: 1-2 (2 voxels)
-    for y in range(1, 5):  # Y: 1-4 (4 voxels)
-        for z in range(1, 3):  # Z: 1-2 (2 voxels)
-            # Skip the void at (1, 2, 1)
-            if (x, y, z) == (1, 2, 1):
+for x in range(2, 4):  # X: 2-3 (2 voxels)
+    for y in range(2, 6):  # Y: 2-5 (4 voxels)
+        for z in range(2, 4):  # Z: 2-3 (2 voxels)
+            # Skip the void at (2, 2, 2)
+            if (x, y, z) == (2, 2, 2):
                 print(f"  ({x}, {y}, {z}): VOID (empty)")
                 continue
 
@@ -45,7 +45,7 @@ for x in range(1, 3):  # X: 1-2 (2 voxels)
             print(f"  ({x}, {y}, {z}): {mat_names[material]}")
 
 print(f"\nTotal voxels: {voxel_count} (out of 2×4×2 = 16 possible)")
-print(f"Voids: 1 at (1,2,1)")
+print(f"Voids: 1 at (2,2,2)")
 
 # Count each material type
 print("\nMaterial composition:")
@@ -65,15 +65,15 @@ print(f"  Nodes: {len(robot.nodes)}")
 print(f"  Springs: {len(robot.springs)}")
 print(f"  Actuators: {len([s for s in robot.springs if s['is_actuator']])}")
 
-# Verify void - node at (1,2,1) corner should not have springs
-print(f"\nVerifying void at (1,2,1)...")
+# Verify void - node at (2,2,2) corner should not have springs
+print(f"\nVerifying void at (2,2,2)...")
 
 # Check if nodes around void have reduced connectivity
 void_corner_nodes = []
 for dx in [0, 1]:
     for dy in [0, 1]:
         for dz in [0, 1]:
-            corner_pos = (1 + dx, 2 + dy, 1 + dz)
+            corner_pos = (2 + dx, 2 + dy, 2 + dz)
             # Find node at this position
             for i, node in enumerate(robot.nodes):
                 node_grid_pos = tuple((node['position'] / 0.01).astype(int))
@@ -97,7 +97,7 @@ print(f"\n" + "="*70)
 print("PHYSICS SIMULATION")
 print("="*70)
 
-physics = OptimizedCUDAPhysicsEngine(default_timestep=0.001)
+physics = OptimizedCUDAPhysicsEngine(default_timestep=0.0005)
 physics.add_robot(robot)
 
 # Position robot on ground
@@ -114,7 +114,7 @@ print(f"\nInitial COM: ({initial_com[0]:.4f}, {initial_com[1]:.4f}, {initial_com
 print(f"\nLaunching 3D visualization...")
 print(f"\nYou should see:")
 print(f"  - 2×4×2 voxel structure")
-print(f"  - Missing voxel at (1,2,1) creating internal void")
+print(f"  - Missing voxel at (2,2,2) creating internal void")
 print(f"  - GREEN springs (Active 0°)")
 print(f"  - RED springs (Active 180°)")
 print(f"  - CYAN springs (Soft passive at top)")
@@ -195,5 +195,5 @@ print(f"\nInitial COM: ({initial_com[0]:.4f}, {initial_com[1]:.4f}, {initial_com
 print(f"Final COM:   ({final_com[0]:.4f}, {final_com[1]:.4f}, {final_com[2]:.4f})")
 print(f"\nXZ Displacement: {total_displacement:.4f}m ({total_displacement*100:.1f}cm)")
 print(f"\nVoid structure test complete!")
-print(f"The missing voxel at (1,2,1) created an internal cavity")
+print(f"The missing voxel at (2,2,2) created an internal cavity")
 print("="*70)

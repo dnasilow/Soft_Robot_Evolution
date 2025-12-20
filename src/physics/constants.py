@@ -12,10 +12,10 @@ across all scripts and prevent conflicting values.
 # Stability limit: dt_max ≈ 0.0028s
 # Current value provides 2.8× safety margin
 
-GLOBAL_TIMESTEP = 0.001  # 1 millisecond (STABLE, TESTED)
+GLOBAL_TIMESTEP = 0.0005  # 0.5 millisecond (HIGHER ACCURACY, 2× slower)
 
-# Alternative values (uncomment to use):
-# GLOBAL_TIMESTEP = 0.0005  # 0.5ms - Higher accuracy, 2× slower
+# Alternative values:
+# GLOBAL_TIMESTEP = 0.001  # 1ms - Standard (faster)
 # GLOBAL_TIMESTEP = 0.0002  # 0.2ms - Maximum accuracy, 5× slower
 
 # DO NOT EXCEED 0.001 without stability testing!
@@ -88,7 +88,8 @@ MIN_NODE_MASS = 0.001  # 1 gram
 
 # Maximum spring extension ratio
 # Prevents springs from stretching to infinity
-MAX_SPRING_EXTENSION_RATIO = 2.0  # 2× rest length maximum
+MAX_SPRING_EXTENSION_RATIO = 1.2  # 1.2× rest length maximum (20% stretch)
+MAX_SPRING_COMPRESSION_RATIO = 0.2  # 0.2× rest length minimum (80% compression)
 
 # Enable spring extension clamping (recommended for stability)
 CLAMP_SPRING_EXTENSION = True
