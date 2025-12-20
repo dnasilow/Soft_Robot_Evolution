@@ -1,16 +1,17 @@
-"""Visualize a saved robot from evolution"""
+"""Visualize a saved robot from evolution - WITH 3D GRAPHICS"""
 import numpy as np
 import pickle
 import sys
 from src.physics.robot import VoxelRobot
 from src.physics.cuda_physics import OptimizedCUDAPhysicsEngine
+from src.visualization.viewer import RobotViewer
 import cupy as cp
 
-def load_and_visualize(robot_file='best_robot.pkl', simulation_time=5.0):
-    """Load and simulate a saved robot"""
+def load_and_visualize(robot_file='best_robot.pkl', simulation_time=5.0, use_graphics=True):
+    """Load and simulate a saved robot with optional 3D visualization"""
 
     print("="*70)
-    print("ROBOT VISUALIZATION")
+    print("ROBOT VISUALIZATION" + (" - 3D GRAPHICS MODE" if use_graphics else ""))
     print("="*70)
 
     # Load robot genome
@@ -64,22 +65,66 @@ def load_and_visualize(robot_file='best_robot.pkl', simulation_time=5.0):
 
     print(f"  Initial COM: ({initial_com[0]:.4f}, {initial_com[1]:.4f}, {initial_com[2]:.4f})")
 
+    # Create 3D viewer if graphics enabled
+    viewer = None
+    if use_graphics:
+        print(f"\nLaunching 3D viewer...")
+        print(f"\nControls:")
+        print(f"  - Left-drag mouse: Rotate view")
+        print(f"  - Scroll wheel: Zoom in/out")
+        print(f"  - R key: Reset camera to isometric view")
+        print(f"  - 1 key: Above ground view")
+        print(f"  - 2 key: Side view")
+        print(f"  - 3 key: Below ground view")
+        print(f"  - ESC: Exit")
+        print(f"\n" + "="*70 + "\n")
+
+        try:
+            viewer = RobotViewer(width=1280, height=720)
+        except Exception as e:
+            print(f"Warning: Could not initialize 3D viewer: {e}")
+            print(f"Falling back to text-only mode\n")
+            use_graphics = False
+
     # Run simulation
-    print(f"\nRunning {simulation_time:.1f}s simulation...")
-    print(f"\nTime  | X-pos   | Y-pos   | Z-pos   | XZ-Displacement")
-    print("-" * 60)
+    print(f"Running {simulation_time:.1f}s simulation...")
+
+    if not use_graphics:
+        print(f"\nTime  | X-pos   | Y-pos   | Z-pos   | XZ-Displacement")
+        print("-" * 60)
 
     steps = int(simulation_time / 0.001)
+    physics_steps_per_frame = 5  # Run 5 physics steps per frame for smooth 60fps rendering
 
     for step in range(steps):
         physics.step(0.001)
 
-        if step % 500 == 0:  # Every 0.5s
+        # Update 3D viewer
+        if use_graphics and viewer and step % physics_steps_per_frame == 0:
+            positions = physics.get_positions()
+            springs = robot.springs
+
+            # Render (returns False if window closed)
+            if not viewer.render(positions, springs):
+                print("\nViewer window closed by user")
+                break
+
+        # Print every 0.5 seconds (text mode or alongside graphics)
+        if step % 500 == 0:
             pos = physics.get_positions()
             com = robot.get_center_of_mass(pos)
             xz_disp = np.sqrt((com[0]-initial_com[0])**2 + (com[2]-initial_com[2])**2)
             time = step * 0.001
-            print(f"{time:4.1f}s | {com[0]:7.4f} | {com[1]:7.4f} | {com[2]:7.4f} | {xz_disp:7.4f}m")
+
+            if use_graphics:
+                print(f"t={time:4.1f}s: COM=({com[0]:7.4f}, {com[1]:7.4f}, {com[2]:7.4f}), Disp={xz_disp:7.4f}m")
+            else:
+                print(f"{time:4.1f}s | {com[0]:7.4f} | {com[1]:7.4f} | {com[2]:7.4f} | {xz_disp:7.4f}m")
+
+    # Cleanup viewer
+    if viewer:
+        import pygame
+        pygame.quit()
 
     # Final results
     final_pos = physics.get_positions()
@@ -109,6 +154,15 @@ def load_and_visualize(robot_file='best_robot.pkl', simulation_time=5.0):
     return fitness
 
 if __name__ == "__main__":
-    # Can pass filename as argument
-    robot_file = sys.argv[1] if len(sys.argv) > 1 else 'best_robot.pkl'
-    load_and_visualize(robot_file, simulation_time=5.0)
+    # Parse command line arguments
+    use_graphics = True
+    robot_file = 'best_robot.pkl'
+
+    for arg in sys.argv[1:]:
+        if arg == '--no-graphics':
+            use_graphics = False
+            print("Running in text-only mode (--no-graphics flag)\n")
+        elif not arg.startswith('--'):
+            robot_file = arg
+
+    load_and_visualize(robot_file, simulation_time=5.0, use_graphics=use_graphics)

@@ -1,191 +1,159 @@
-#!/usr/bin/env python
-"""Simple evolution test - 2 generations with visual playback of best robot"""
-
+"""Simple evolution test - 2 generations with TRUE parallel evaluation"""
 import numpy as np
 import sys
 import os
+import time
+import pickle
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from src.evolution.evolutionary_algorithm import EvolutionaryAlgorithm
-from src.evolution.genomes import DirectVoxelGenome
-from src.evolution.controllers import CPGController
-from src.physics.robot import TurboChargedBatchEvaluator
-from src.physics.cuda_physics import CUDAPhysicsEngine
-from src.visualization.viewer import RobotViewer
+from src.physics.robot import VoxelRobot
+from src.physics.true_parallel_evaluator import TrueParallelBatchEvaluator
 
 print("="*70)
-print("SIMPLE EVOLUTION TEST")
+print("SIMPLE EVOLUTION TEST - TRUE Parallel GPU")
 print("="*70)
 print("\nRunning 2 generations with 5 robots per generation")
 print("This will test:")
-print("  - Genome -> Robot conversion")
-print("  - Fitness evaluation")
+print("  - Random robot generation")
+print("  - Fitness evaluation (TRUE parallel)")
 print("  - Selection and reproduction")
-print("  - GPU batch processing")
+print("  - Best robot saving")
 print("\n" + "="*70 + "\n")
 
-# Create evaluator
-evaluator = TurboChargedBatchEvaluator(
-    num_environments=5,      # Batch size (same as population)
+# Create evaluator with TRUE parallel processing
+evaluator = TrueParallelBatchEvaluator(
     actuation_cycles=3,      # 3 actuation cycles (3 seconds at 1Hz)
-    actuation_freq=1.0       # 1 Hz actuation frequency
+    actuation_freq=1.0,      # 1 Hz actuation frequency
+    timestep=0.001
 )
 
-# Create evolution algorithm
-evo = EvolutionaryAlgorithm(
-    population_size=5,
-    genome_class=DirectVoxelGenome,
-    controller_class=CPGController,
-    evaluator=evaluator,
-    selection_method='tournament'
-)
+# Simple evolution parameters
+POPULATION_SIZE = 5
+GENERATIONS = 2
+MUTATION_RATE = 0.3
+ELITE_SIZE = 1
 
-print("Evolution initialized:")
-print(f"  - Population: {evo.population_size}")
-print(f"  - Genome: DirectVoxelGenome")
-print(f"  - Controller: CPGController")
-print(f"  - Selection: tournament")
-print("\nStarting evolution...")
-print("-" * 70)
+def create_random_robot():
+    """Create a random voxel robot"""
+    voxel_grid = np.zeros((5, 5, 5), dtype=np.int8)
+    num_voxels = np.random.randint(5, 15)
+    for _ in range(num_voxels):
+        x, y, z = np.random.randint(1, 4, 3)
+        voxel_grid[x, y, z] = np.random.choice([1, 2, 3, 4])
+    return voxel_grid
 
-# Run 2 generations
-try:
-    for gen in range(2):
-        print(f"\nGeneration {gen + 1}/2...")
-        evo.step()
+def mutate_genome(voxel_grid):
+    """Mutate a voxel genome"""
+    mutated = voxel_grid.copy()
 
-        # Print stats
-        if evo.history['best_fitness']:
-            best = evo.history['best_fitness'][-1]
-            mean = evo.history['mean_fitness'][-1]
-            print(f"  Best fitness: {best:.4f}")
-            print(f"  Mean fitness: {mean:.4f}")
+    # Random mutations
+    num_mutations = np.random.randint(1, 4)
+    for _ in range(num_mutations):
+        if np.random.random() < 0.5:
+            # Add voxel
+            x, y, z = np.random.randint(1, 4, 3)
+            mutated[x, y, z] = np.random.choice([1, 2, 3, 4])
+        else:
+            # Remove voxel
+            occupied = np.argwhere(mutated != 0)
+            if len(occupied) > 0:
+                idx = occupied[np.random.randint(len(occupied))]
+                mutated[tuple(idx)] = 0
 
-    print("\n" + "="*70)
-    print("Evolution completed successfully!")
-    print("="*70)
-except Exception as e:
-    print(f"\nERROR during evolution: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+    return mutated
 
-# Get best robot
-print("\nFinding best robot from final generation...")
-if hasattr(evo, 'best_individual') and evo.best_individual:
-    best_individual = evo.best_individual
-    best_genome = best_individual.genome
-    best_controller = best_individual.controller
-    best_fitness = best_individual.fitness
+# Initialize population
+print("Initializing population...")
+population = [create_random_robot() for _ in range(POPULATION_SIZE)]
+
+best_fitness_history = []
+mean_fitness_history = []
+
+for gen in range(GENERATIONS):
+    gen_start = time.perf_counter()
+
+    print(f"\n{'='*70}")
+    print(f"Generation {gen + 1}/{GENERATIONS}")
+    print(f"{'='*70}")
+
+    # Convert genomes to robots
+    robots = []
+    for i, genome in enumerate(population):
+        robot = VoxelRobot(genome, voxel_size=0.01)
+        robots.append(robot)
+        print(f"  Robot {i+1}: {len(robot.nodes)} nodes, {len(robot.springs)} springs")
+
+    # Evaluate fitness
+    print(f"\nEvaluating fitness (TRUE parallel)...")
+    controllers = [None] * POPULATION_SIZE  # Passive robots
+    fitness_scores = evaluator.evaluate_batch(robots, controllers)
+
+    best_fitness = np.max(fitness_scores)
+    mean_fitness = np.mean(fitness_scores)
+    worst_fitness = np.min(fitness_scores)
+
+    best_fitness_history.append(best_fitness)
+    mean_fitness_history.append(mean_fitness)
+
+    gen_time = time.perf_counter() - gen_start
+
+    print(f"\nResults:")
+    print(f"  Best fitness: {best_fitness:.4f}")
+    print(f"  Mean fitness: {mean_fitness:.4f}")
+    print(f"  Worst fitness: {worst_fitness:.4f}")
+    print(f"  Generation time: {gen_time:.1f}s")
+
+    # Selection and reproduction (simple elitism + mutation)
+    if gen < GENERATIONS - 1:
+        # Sort by fitness
+        sorted_indices = np.argsort(fitness_scores)[::-1]
+
+        # Keep elite
+        new_population = [population[i].copy() for i in sorted_indices[:ELITE_SIZE]]
+
+        # Fill rest with mutated copies of best individuals
+        while len(new_population) < POPULATION_SIZE:
+            parent_idx = sorted_indices[np.random.randint(0, min(3, POPULATION_SIZE))]
+            child = mutate_genome(population[parent_idx])
+            new_population.append(child)
+
+        population = new_population
+        print(f"\n  Created new generation (elite={ELITE_SIZE}, mutated={POPULATION_SIZE-ELITE_SIZE})")
+
+# Final summary
+print("\n" + "="*70)
+print("EVOLUTION COMPLETE")
+print("="*70)
+
+# Save best robot
+best_idx = np.argmax(fitness_scores)
+best_genome = population[best_idx]
+best_fitness = fitness_scores[best_idx]
+
+with open('best_robot.pkl', 'wb') as f:
+    pickle.dump(best_genome, f)
+
+print(f"\nBest robot:")
+print(f"  Fitness: {best_fitness:.4f}")
+print(f"  Voxels: {np.sum(best_genome != 0)}")
+print(f"  Saved to: best_robot.pkl")
+
+print(f"\nFitness progression:")
+for i, (best, mean) in enumerate(zip(best_fitness_history, mean_fitness_history)):
+    print(f"  Gen {i+1}: Best={best:.4f}, Mean={mean:.4f}")
+
+improvement = best_fitness_history[-1] - best_fitness_history[0]
+print(f"\nImprovement: {improvement:+.4f}")
+
+if improvement > 0.01:
+    print(f"  Status: IMPROVING - Evolution working!")
+elif improvement > -0.01:
+    print(f"  Status: STABLE - May need more generations")
 else:
-    # Fallback: get from population
-    best_individual = evo.population[0]
-    best_genome = best_individual.genome
-    best_controller = best_individual.controller
-    best_fitness = best_individual.fitness
+    print(f"  Status: DECLINING - Check fitness function")
 
-print(f"\nBest robot fitness: {best_fitness:.4f}")
-
-# Create robot from best genome
-print("\nCreating robot from best genome...")
-best_robot = best_genome.develop()
-
-# Count voxels and actuators
-voxel_grid = best_genome.develop_voxel_grid()
-num_voxels = np.sum(voxel_grid != 0)
-num_actuators = np.sum(best_genome.develop_actuator_grid())
-
-print(f"Best robot structure:")
-print(f"  - Total voxels: {num_voxels}")
-print(f"  - Nodes: {len(best_robot.nodes)}")
-print(f"  - Springs: {len(best_robot.springs)}")
-print(f"  - Actuators: {num_actuators}")
-
-# Visualize best robot
-print("\n" + "="*70)
-print("VISUALIZING BEST ROBOT")
+print(f"\n" + "="*70)
+print("Visualize best robot with:")
+print("  python visualize_saved_robot.py")
 print("="*70)
-print("\nStarting 5-second simulation with visualization...")
-print("Controls:")
-print("  - Left-drag mouse: Rotate view")
-print("  - Scroll wheel: Zoom")
-print("  - R: Reset camera")
-print("  - ESC: Exit")
-print("\n" + "="*70 + "\n")
-
-# Initialize physics for best robot
-physics_engine = CUDAPhysicsEngine(max_nodes=500, max_springs=2000)
-physics_engine.reset()
-physics_engine.add_robot(best_robot)
-
-# Get controller signals
-controller = best_genome.develop_controller(len(best_robot.springs))
-initial_signals = controller.get_signals(np.zeros(12))  # 12 sensor inputs (dummy)
-physics_engine.set_actuator_signals(initial_signals)
-
-# Create viewer
-viewer = RobotViewer(width=1280, height=720)
-
-# Track metrics
-timestep = 0.001
-sim_time = 0.0
-max_sim_time = 5.0
-physics_steps_per_frame = 5
-
-initial_pos = physics_engine.get_positions()
-initial_com = best_robot.get_center_of_mass(initial_pos)
-
-print(f"Initial COM: [{initial_com[0]:.3f}, {initial_com[1]:.3f}, {initial_com[2]:.3f}]")
-
-running = True
-last_print = 0.0
-while running and sim_time < max_sim_time:
-    # Run physics
-    for _ in range(physics_steps_per_frame):
-        physics_engine.step(timestep)
-        sim_time += timestep
-
-    # Get current state
-    positions = physics_engine.get_positions()
-    springs = best_robot.get_springs()
-    com = best_robot.get_center_of_mass(positions)
-
-    # Print progress
-    if sim_time - last_print >= 1.0:
-        distance = np.linalg.norm(com[:2] - initial_com[:2])  # XZ distance
-        print(f"t={sim_time:.1f}s: COM=[{com[0]:.3f}, {com[1]:.3f}, {com[2]:.3f}], distance={distance:.3f}m")
-        last_print = sim_time
-
-    # Render
-    if not viewer.render(positions, springs):
-        running = False
-        break
-
-    viewer.clock.tick(60)
-
-# Final stats
-final_pos = physics_engine.get_positions()
-final_com = best_robot.get_center_of_mass(final_pos)
-final_distance = np.linalg.norm(final_com[:2] - initial_com[:2])
-
-print("\n" + "="*70)
-print("SIMULATION COMPLETE")
-print("="*70)
-print(f"Initial COM: [{initial_com[0]:.3f}, {initial_com[1]:.3f}, {initial_com[2]:.3f}]")
-print(f"Final COM:   [{final_com[0]:.3f}, {final_com[1]:.3f}, {final_com[2]:.3f}]")
-print(f"Distance traveled: {final_distance:.4f} m")
-print(f"Fitness score: {best_fitness:.4f}")
-
-print("\n" + "="*70)
-print("TEST SUMMARY")
-print("="*70)
-
-if final_distance > 0.1:
-    print("[SUCCESS] Robot moved! Evolution is working!")
-elif final_distance > 0.01:
-    print("[OK] Robot moved slightly - evolution started working")
-else:
-    print("[INFO] Robot didn't move much - may need more generations")
-
-print("\nEvolution test complete!")
