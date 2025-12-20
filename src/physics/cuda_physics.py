@@ -197,6 +197,14 @@ class OptimizedCUDAPhysicsEngine:
             # - If rest < current (stretched): F < 0, pulls nodes together (contracts)
             # Previous code had: F = k * (current - rest) which is backwards!
             extensions = self.d_rest_lengths[:self.num_springs] - lengths  # FLIPPED SIGN
+
+            # ADDED: Clamp spring extensions to prevent explosions (2024-12-19)
+            # Limit maximum stretch to 2× rest length, compression to 0.2× rest length
+            rest_lengths_safe = self.d_rest_lengths[:self.num_springs]
+            max_extension = rest_lengths_safe * 0.8  # Allow 80% compression
+            min_extension = -rest_lengths_safe * 1.0  # Allow 100% stretch (2× total)
+            extensions = cp.clip(extensions, min_extension, max_extension)
+
             spring_forces = self.d_stiffnesses[:self.num_springs] * extensions  # (num_springs,)
             
             # Damping forces (simple velocity-proportional damping)
