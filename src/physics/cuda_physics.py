@@ -45,6 +45,7 @@ class OptimizedCUDAPhysicsEngine:
         self.d_spring_node1 = cp.zeros(max_springs, dtype=cp.int32)
         self.d_spring_node2 = cp.zeros(max_springs, dtype=cp.int32)
         self.d_rest_lengths = cp.zeros(max_springs, dtype=cp.float32)
+        self.d_original_rest_lengths = cp.zeros(max_springs, dtype=cp.float32)  # Backup for actuation
         self.d_stiffnesses = cp.zeros(max_springs, dtype=cp.float32)
         self.d_damping = cp.zeros(max_springs, dtype=cp.float32)
         
@@ -98,7 +99,9 @@ class OptimizedCUDAPhysicsEngine:
         spring_indices = springs['indices'] + self.num_nodes
         self.d_spring_node1[self.num_springs:self.num_springs+s] = cp.asarray(spring_indices[:, 0], dtype=cp.int32)
         self.d_spring_node2[self.num_springs:self.num_springs+s] = cp.asarray(spring_indices[:, 1], dtype=cp.int32)
-        self.d_rest_lengths[self.num_springs:self.num_springs+s] = cp.asarray(springs['rest_length'], dtype=cp.float32)
+        rest_lengths = cp.asarray(springs['rest_length'], dtype=cp.float32)
+        self.d_rest_lengths[self.num_springs:self.num_springs+s] = rest_lengths
+        self.d_original_rest_lengths[self.num_springs:self.num_springs+s] = rest_lengths  # Backup for actuation
         self.d_stiffnesses[self.num_springs:self.num_springs+s] = cp.asarray(springs['stiffness'], dtype=cp.float32)
         self.d_damping[self.num_springs:self.num_springs+s] = cp.asarray(springs['damping'], dtype=cp.float32)
         
@@ -266,17 +269,18 @@ class OptimizedCUDAPhysicsEngine:
         """Vectorized actuator force application"""
         if self.num_actuators == 0:
             return
-            
+
         # Get all actuator data at once
         spring_ids = self.d_actuator_spring_ids[:self.num_actuators]
         phases = self.d_actuator_phases[:self.num_actuators]
         signals = self.d_actuator_signals[:self.num_actuators]
-        
+
         # Vectorized sinusoidal actuation
         actuation = cp.sin(self.time * 2 * cp.pi * self.actuation_frequency + phases) * signals
-        
+
+        # FIXED: Use original rest lengths to prevent compounding actuation bug
         # Modify rest lengths (±20% actuation as per Lipson)
-        original_lengths = self.d_rest_lengths[spring_ids]
+        original_lengths = self.d_original_rest_lengths[spring_ids]
         self.d_rest_lengths[spring_ids] = original_lengths * (1.0 + 0.2 * actuation)
 
     def integrate_positions_vectorized(self, dt):
