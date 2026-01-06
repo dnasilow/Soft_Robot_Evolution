@@ -23,7 +23,8 @@ print(f"  Gravity: {model.opt.gravity}")
 # Position cube above ground
 initial_height = 0.05  # 5cm above ground
 # qpos for free joint: [x, y, z, qw, qx, qy, qz]
-data.qpos[1] = initial_height  # Y position (index 1 for free joint)
+# Z is height in MuJoCo (gravity = [0, 0, -9.81])
+data.qpos[2] = initial_height  # Z position = HEIGHT
 
 print(f"\nInitial height: {initial_height*100:.1f}cm")
 print("\nSimulating 3 seconds...")
@@ -39,10 +40,10 @@ for i in range(steps):
     # Print every 0.5 seconds
     if i % 1000 == 0:
         t = i * timestep
-        h = data.qpos[1]  # Y position for free joint
+        h = data.qpos[2]  # Z position = HEIGHT
         print(f"  t={t:.2f}s: height={h*1000:6.2f}mm")
 
-final_height = data.qpos[1]  # Y position for free joint
+final_height = data.qpos[2]  # Z position = HEIGHT
 
 print(f"\n" + "="*70)
 print("RESULTS")

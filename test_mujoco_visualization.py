@@ -29,7 +29,8 @@ model = mujoco.MjModel.from_xml_string(xml)
 data = mujoco.MjData(model)
 
 # Position 20cm above ground
-data.qpos[1] = 0.20  # Y position (free joint: x,y,z,qw,qx,qy,qz)
+# Z is height in MuJoCo (gravity = [0, 0, -9.81])
+data.qpos[2] = 0.20  # Z position = HEIGHT
 data.qpos[3] = 1.0   # Quaternion w component (identity rotation)
 
 # Launch interactive viewer
@@ -71,7 +72,7 @@ model = mujoco.MjModel.from_xml_string(xml)
 data = mujoco.MjData(model)
 
 # Position higher up
-data.qpos[1] = 0.15  # Y position
+data.qpos[2] = 0.15  # Z position = HEIGHT
 data.qpos[3] = 1.0   # Quaternion w
 
 start_time = time.time()
