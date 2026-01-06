@@ -27,8 +27,8 @@ model = mujoco.MjModel.from_xml_string(xml)
 data = mujoco.MjData(model)
 
 # Position 30cm above ground for a nice drop
-data.qpos[1] = 0.30  # Y position (free joint: x,y,z,qw,qx,qy,qz)
-data.qpos[3] = 1.0   # Quaternion w component (identity rotation)
+# NOTE: Using index 2 for height (like test_mujoco_stability.py)
+data.qpos[2] = 0.30  # Height position
 
 print("\nStarting visualization...")
 print("Close the window or press ESC to exit.\n")

@@ -52,6 +52,12 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01) -> str
     if len(voxels) == 0:
         raise ValueError("No voxels in grid!")
 
+    # Center the robot at origin by subtracting center of mass
+    positions = np.array([v['pos'] for v in voxels])
+    center = np.mean(positions, axis=0)
+    for voxel in voxels:
+        voxel['pos'] = voxel['pos'] - center
+
     # Build XML
     half_size = voxel_size / 2.0
 
@@ -74,8 +80,8 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01) -> str
         '  </asset>',
         '',
         '  <worldbody>',
-        '    <!-- Checkered ground plane -->',
-        '    <geom name="ground" type="plane" size="1 1 0.1" material="grid"/>',
+        '    <!-- Checkered ground plane with collision -->',
+        '    <geom name="ground" type="plane" size="1 1 0.1" material="grid" friction="1 0.005 0.0001" condim="3"/>',
         '    ',
         '    <!-- Lighting -->',
         '    <light pos="0 1 1" dir="0 -1 -0.5" diffuse="0.8 0.8 0.8"/>',
@@ -96,9 +102,9 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01) -> str
 
         xml_parts.append(f'    <body name="voxel_{i}" pos="{x:.6f} {y:.6f} {z:.6f}">')
 
-        # Add box geometry
+        # Add box geometry with collision properties
         xml_parts.append(f'      <geom name="geom_{i}" type="box" size="{half_size} {half_size} {half_size}" '
-                        f'rgba="{mat["color"]}" mass="{voxel["mass"]:.6f}"/>')
+                        f'rgba="{mat["color"]}" mass="{voxel["mass"]:.6f}" friction="1 0.005 0.0001" condim="3"/>')
 
         if joint_type:
             xml_parts.append(f'      <joint name="root_joint" type="{joint_type}"/>')
