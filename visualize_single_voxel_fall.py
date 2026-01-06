@@ -27,22 +27,22 @@ model = mujoco.MjModel.from_xml_string(xml)
 data = mujoco.MjData(model)
 
 # Position 30cm above ground for a nice drop
-# NOTE: Using index 2 for height (like test_mujoco_stability.py)
-data.qpos[2] = 0.30  # Height position
+# Gravity is [0, -9.81, 0] which acts on Y axis
+# So Y is UP/DOWN (height), not Z!
+data.qpos[1] = 0.30  # Y position = HEIGHT
 
 print("\nStarting visualization...")
 print("Close the window or press ESC to exit.\n")
 
 # Launch interactive viewer (runs indefinitely until closed)
 with mujoco.viewer.launch_passive(model, data) as viewer:
-    # Force forward kinematics to get actual voxel position
-    mujoco.mj_forward(model, data)
-
-    # Set camera to look at the voxel
-    viewer.cam.lookat[:] = data.xpos[1]  # Look at voxel body position
-    viewer.cam.distance = 0.5  # Distance from lookat point
-    viewer.cam.azimuth = 45    # 45 degree angle
-    viewer.cam.elevation = -20  # Look down slightly
+    # Set camera to look at origin where axis markers are
+    viewer.cam.lookat[0] = 0.0   # X
+    viewer.cam.lookat[1] = 0.15  # Y (look halfway to voxel height)
+    viewer.cam.lookat[2] = 0.0   # Z
+    viewer.cam.distance = 0.6    # Distance from lookat point
+    viewer.cam.azimuth = 45      # 45 degree angle
+    viewer.cam.elevation = -30   # Look down to see origin and cube
 
     while viewer.is_running():
         mujoco.mj_step(model, data)

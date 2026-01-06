@@ -22,7 +22,14 @@
       "Bash(timeout 300 python:*)",
       "Bash(timeout 120 python:*)",
       "Bash(findstr:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(if not exist \"KNOWN_ISSUES.md\" echo.)",
+      "Bash(pip install:*)",
+      "Bash(conda activate:*)",
+      "Bash(conda env list:*)",
+      "Bash(C:UsersdnasilowskiAppDataLocalminiconda3envssoftrobotpython.exe -m pip install mujoco)",
+      "Bash(conda run:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []
