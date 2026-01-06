@@ -48,12 +48,13 @@ print("Close the window or press ESC to exit.\n")
 # Launch viewer
 with mujoco.viewer.launch_passive(model, data) as viewer:
     # Set camera for better view of the cube
-    viewer.cam.distance = 0.5  # Closer view
+    mujoco.mj_forward(model, data)
+    # Look at center of mass of all voxels
+    center_pos = np.mean([data.xpos[i] for i in range(1, model.nbody)], axis=0)
+    viewer.cam.lookat[:] = center_pos
+    viewer.cam.distance = 0.6  # Closer view
     viewer.cam.azimuth = 130   # Good angle to see cube
     viewer.cam.elevation = -25  # Look down at the action
-    viewer.cam.lookat[0] = 0.04  # Center on cube (3x3x3 centered at 4,4,4)
-    viewer.cam.lookat[1] = 0.1   # Look near ground
-    viewer.cam.lookat[2] = 0.04
 
     while viewer.is_running():
         mujoco.mj_step(model, data)

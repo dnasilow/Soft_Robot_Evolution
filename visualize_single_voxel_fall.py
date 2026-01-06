@@ -35,13 +35,14 @@ print("Close the window or press ESC to exit.\n")
 
 # Launch interactive viewer (runs indefinitely until closed)
 with mujoco.viewer.launch_passive(model, data) as viewer:
-    # Set camera closer to the action
-    viewer.cam.distance = 0.3  # Much closer (default is ~2-3)
+    # Force forward kinematics to get actual voxel position
+    mujoco.mj_forward(model, data)
+
+    # Set camera to look at the voxel
+    viewer.cam.lookat[:] = data.xpos[1]  # Look at voxel body position
+    viewer.cam.distance = 0.5  # Distance from lookat point
     viewer.cam.azimuth = 45    # 45 degree angle
     viewer.cam.elevation = -20  # Look down slightly
-    viewer.cam.lookat[0] = 0.0  # Look at origin
-    viewer.cam.lookat[1] = 0.1  # Slightly above ground
-    viewer.cam.lookat[2] = 0.0
 
     while viewer.is_running():
         mujoco.mj_step(model, data)

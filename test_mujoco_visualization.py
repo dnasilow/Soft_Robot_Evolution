@@ -35,13 +35,12 @@ data.qpos[3] = 1.0   # Quaternion w component (identity rotation)
 # Launch interactive viewer
 start_time = time.time()
 with mujoco.viewer.launch_passive(model, data) as viewer:
-    # Set camera closer to the action
-    viewer.cam.distance = 0.3
+    # Set camera to look at voxel
+    mujoco.mj_forward(model, data)
+    viewer.cam.lookat[:] = data.xpos[1]
+    viewer.cam.distance = 0.5
     viewer.cam.azimuth = 45
     viewer.cam.elevation = -20
-    viewer.cam.lookat[0] = 0.0
-    viewer.cam.lookat[1] = 0.1
-    viewer.cam.lookat[2] = 0.0
 
     # Simulation loop - run for at least 10 seconds
     while time.time() - start_time < 10.0:
@@ -78,12 +77,11 @@ data.qpos[3] = 1.0   # Quaternion w
 start_time = time.time()
 with mujoco.viewer.launch_passive(model, data) as viewer:
     # Camera for 3 stacked voxels
-    viewer.cam.distance = 0.35
+    mujoco.mj_forward(model, data)
+    viewer.cam.lookat[:] = data.xpos[1]
+    viewer.cam.distance = 0.5
     viewer.cam.azimuth = 60
     viewer.cam.elevation = -15
-    viewer.cam.lookat[0] = 0.04
-    viewer.cam.lookat[1] = 0.05
-    viewer.cam.lookat[2] = 0.04
 
     while time.time() - start_time < 10.0:
         mujoco.mj_step(model, data)
@@ -122,12 +120,13 @@ print("Robot will sit statically on ground. Next step: add sinusoidal actuation!
 start_time = time.time()
 with mujoco.viewer.launch_passive(model, data) as viewer:
     # Camera for 4-voxel robot on ground
-    viewer.cam.distance = 0.25
+    mujoco.mj_forward(model, data)
+    # Average position of first few voxels
+    center_pos = np.mean([data.xpos[i] for i in range(1, min(5, model.nbody))], axis=0)
+    viewer.cam.lookat[:] = center_pos
+    viewer.cam.distance = 0.3
     viewer.cam.azimuth = 45
     viewer.cam.elevation = -25
-    viewer.cam.lookat[0] = 0.035  # Center of 4 voxels (2,3,4,5 in X)
-    viewer.cam.lookat[1] = 0.01   # Ground level
-    viewer.cam.lookat[2] = 0.03
 
     while time.time() - start_time < 10.0:
         mujoco.mj_step(model, data)
