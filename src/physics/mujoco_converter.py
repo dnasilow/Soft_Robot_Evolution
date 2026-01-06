@@ -63,7 +63,7 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01) -> str
 
     xml_parts = [
         '<mujoco model="voxel_robot">',
-        '  <option timestep="0.0005" gravity="0 -9.81 0"/>',
+        '  <option timestep="0.0005" gravity="0 0 -9.81"/>',
         '',
         '  <visual>',
         '    <headlight diffuse="0.6 0.6 0.6" ambient="0.5 0.5 0.5" specular="0 0 0"/>',
@@ -86,7 +86,7 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01) -> str
         '    <!-- Red origin marker -->',
         '    <geom name="origin_marker" type="sphere" size="0.005" pos="0 0 0" rgba="1 0 0 1" contype="0" conaffinity="0"/>',
         '    ',
-        '    <!-- XYZ Axis indicators: X=Red, Y=Green (UP!), Z=Blue -->',
+        '    <!-- XYZ Axis indicators: X=Red, Y=Green, Z=Blue (UP!) -->',
         '    <geom name="x_axis" type="capsule" fromto="0 0 0 0.05 0 0" size="0.001" rgba="1 0 0 0.8" contype="0" conaffinity="0"/>',
         '    <geom name="y_axis" type="capsule" fromto="0 0 0 0 0.05 0" size="0.001" rgba="0 1 0 0.8" contype="0" conaffinity="0"/>',
         '    <geom name="z_axis" type="capsule" fromto="0 0 0 0 0 0.05" size="0.001" rgba="0 0 1 0.8" contype="0" conaffinity="0"/>',

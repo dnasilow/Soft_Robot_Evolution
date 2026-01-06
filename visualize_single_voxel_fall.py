@@ -27,9 +27,9 @@ model = mujoco.MjModel.from_xml_string(xml)
 data = mujoco.MjData(model)
 
 # Position 30cm above ground for a nice drop
-# Gravity is [0, -9.81, 0] which acts on Y axis
-# So Y is UP/DOWN (height), not Z!
-data.qpos[1] = 0.30  # Y position = HEIGHT
+# Gravity is [0, 0, -9.81] which acts on Z axis
+# Z is UP/DOWN (height) in MuJoCo!
+data.qpos[2] = 0.30  # Z position = HEIGHT
 
 print("\nStarting visualization...")
 print("Close the window or press ESC to exit.\n")
@@ -38,8 +38,8 @@ print("Close the window or press ESC to exit.\n")
 with mujoco.viewer.launch_passive(model, data) as viewer:
     # Set camera to look at origin where axis markers are
     viewer.cam.lookat[0] = 0.0   # X
-    viewer.cam.lookat[1] = 0.15  # Y (look halfway to voxel height)
-    viewer.cam.lookat[2] = 0.0   # Z
+    viewer.cam.lookat[1] = 0.0   # Y
+    viewer.cam.lookat[2] = 0.15  # Z (look halfway to voxel height)
     viewer.cam.distance = 0.6    # Distance from lookat point
     viewer.cam.azimuth = 45      # 45 degree angle
     viewer.cam.elevation = -30   # Look down to see origin and cube
