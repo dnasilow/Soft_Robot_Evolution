@@ -4,6 +4,7 @@ import mujoco
 import mujoco.viewer
 import time
 from src.physics.mujoco_converter import voxel_to_mujoco_xml
+from src.physics.mujoco_physics import MuJoCoPhysicsEngine
 
 print("="*70)
 print("MUJOCO VISUALIZATION TESTS")
@@ -100,35 +101,34 @@ print("GREEN = Active 0°, RED = Active 180°, CYAN = Soft passive, BLUE = Stiff
 print("Starting visualization...")
 
 voxel_grid = np.zeros((8, 8, 8), dtype=np.int8)
-# 4 voxels in a line, on ground level (Y=1)
-voxel_grid[2, 1, 3] = 1  # Active 0° (green)
-voxel_grid[3, 1, 3] = 2  # Active 180° (red)
+# 4 voxels in a line, on ground level
+voxel_grid[2, 1, 3] = 1  # Active 0 deg (green)
+voxel_grid[3, 1, 3] = 2  # Active 180 deg (red)
 voxel_grid[4, 1, 3] = 3  # Soft passive (cyan)
 voxel_grid[5, 1, 3] = 4  # Stiff passive (blue)
 
-xml = voxel_to_mujoco_xml(voxel_grid, voxel_size=0.01)
-model = mujoco.MjModel.from_xml_string(xml)
-data = mujoco.MjData(model)
-
-# Start on ground (default position)
-data.qpos[3] = 1.0  # Quaternion w
-
-print("\nNOTE: Actuation not yet implemented in this version.")
-print("Robot will sit statically on ground. Next step: add sinusoidal actuation!")
+# Use MuJoCoPhysicsEngine with actuation
+print("\nActuation: Modulating constraint stiffness at 2Hz with 50% amplitude")
+engine = MuJoCoPhysicsEngine(default_timestep=0.0005, actuation_frequency=2.0)
+engine.actuation_amplitude = 0.50
+engine.load_robot(voxel_grid, voxel_size=0.01, initial_height=0.0)
 
 start_time = time.time()
-with mujoco.viewer.launch_passive(model, data) as viewer:
+with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
     # Camera for 4-voxel robot on ground
-    mujoco.mj_forward(model, data)
-    # Average position of first few voxels
-    center_pos = np.mean([data.xpos[i] for i in range(1, min(5, model.nbody))], axis=0)
+    mujoco.mj_forward(engine.model, engine.data)
+    center_pos = np.mean([engine.data.xpos[i] for i in range(1, min(5, engine.model.nbody))], axis=0)
     viewer.cam.lookat[:] = center_pos
     viewer.cam.distance = 0.3
     viewer.cam.azimuth = 45
     viewer.cam.elevation = -25
 
+    # Enable contact visualization
+    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = True
+    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTFORCE] = True
+
     while time.time() - start_time < 10.0:
-        mujoco.mj_step(model, data)
+        engine.step()  # This applies actuation automatically
         viewer.sync()
 
         if not viewer.is_running():
@@ -141,8 +141,10 @@ print("Test 3 complete!\n")
 print("="*70)
 print("ALL VISUALIZATIONS COMPLETE")
 print("="*70)
-print("\nNext steps:")
-print("  - Implement actuation (sinusoidal control of spring rest lengths)")
-print("  - Add force sensors and contact visualization")
-print("  - Create MuJoCoPhysicsEngine wrapper for evolution integration")
+print("\nImplementation Status:")
+print("  ✓ Actuation: Implemented (stiffness modulation at 2Hz)")
+print("  ✓ Contact visualization: Enabled (green points, force arrows)")
+print("  ✓ MuJoCoPhysicsEngine: Implemented in src/physics/mujoco_physics.py")
+print("\nNote: Actuation currently modulates constraint stiffness.")
+print("      For stronger visible movement, consider actuator-based approach.")
 print("="*70)
