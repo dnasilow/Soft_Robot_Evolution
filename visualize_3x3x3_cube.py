@@ -28,14 +28,13 @@ for x in range(3, 6):  # 3x3x3 cube centered in grid
 
 print(f"\nBuilding 3×3×3 cube (27 voxels)...")
 
-xml = voxel_to_mujoco_xml(voxel_grid, voxel_size=0.01)
+xml = voxel_to_mujoco_xml(voxel_grid, voxel_size=0.01, initial_height=0.25)
 model = mujoco.MjModel.from_xml_string(xml)
 data = mujoco.MjData(model)
 
 print(f"Model created: {model.nbody} bodies, {model.neq} constraints")
 
-# Position 25cm above ground
-data.qpos[2] = 0.25  # Z position = HEIGHT
+# Robot starts 25cm above ground (specified in XML via initial_height parameter)
 data.qpos[3] = 1.0   # Quaternion w
 # Add slight rotation for interesting dynamics
 data.qpos[4] = 0.1   # Small x rotation

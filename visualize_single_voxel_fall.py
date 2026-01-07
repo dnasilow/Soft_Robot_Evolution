@@ -22,14 +22,13 @@ print("="*70)
 voxel_grid = np.zeros((8, 8, 8), dtype=np.int8)
 voxel_grid[4, 4, 4] = 4  # Single stiff passive voxel (blue)
 
-xml = voxel_to_mujoco_xml(voxel_grid, voxel_size=0.01)
+xml = voxel_to_mujoco_xml(voxel_grid, voxel_size=0.01, initial_height=0.30)
 model = mujoco.MjModel.from_xml_string(xml)
 data = mujoco.MjData(model)
 
-# Position 30cm above ground for a nice drop
-# Gravity is [0, 0, -9.81] which acts on Z axis
+# Robot starts 30cm above ground (specified in XML via initial_height parameter)
+# Gravity is [0, 0, -9.81] which acts on Z axis - voxel will fall down!
 # Z is UP/DOWN (height) in MuJoCo!
-data.qpos[2] = 0.30  # Z position = HEIGHT
 
 print("\nStarting visualization...")
 print("Close the window or press ESC to exit.\n")

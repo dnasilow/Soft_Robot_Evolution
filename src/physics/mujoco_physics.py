@@ -37,16 +37,17 @@ class MuJoCoPhysicsEngine:
         self.voxel_materials = None  # Material ID for each voxel
         self.num_voxels = 0
 
-    def load_robot(self, voxel_grid: np.ndarray, voxel_size: float = 0.01) -> None:
+    def load_robot(self, voxel_grid: np.ndarray, voxel_size: float = 0.01, initial_height: float = 0.0) -> None:
         """
         Load a robot from voxel grid.
 
         Args:
             voxel_grid: 3D numpy array with material IDs
             voxel_size: Size of each voxel in meters (default: 0.01m = 1cm)
+            initial_height: Initial height offset in meters (default: 0.0 = start on ground)
         """
         # Convert voxel grid to MuJoCo XML
-        xml = voxel_to_mujoco_xml(voxel_grid, voxel_size)
+        xml = voxel_to_mujoco_xml(voxel_grid, voxel_size, initial_height)
 
         # Create MuJoCo model
         self.model = mujoco.MjModel.from_xml_string(xml)

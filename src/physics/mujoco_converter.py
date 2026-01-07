@@ -2,7 +2,7 @@
 import numpy as np
 from typing import Dict, List, Tuple
 
-def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01) -> str:
+def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01, initial_height: float = 0.0) -> str:
     """
     Convert voxel grid to MuJoCo XML model
 
@@ -10,6 +10,7 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01) -> str
         voxel_grid: 3D numpy array (X, Y, Z) with material IDs
                    0 = empty, 1 = Active 0°, 2 = Active 180°, 3 = Soft passive, 4 = Stiff passive
         voxel_size: Size of each voxel in meters (default 0.01m = 1cm)
+        initial_height: Additional height offset in meters (default 0.0 = start on ground)
 
     Returns:
         MuJoCo XML string
@@ -52,11 +53,18 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01) -> str
     if len(voxels) == 0:
         raise ValueError("No voxels in grid!")
 
-    # Center the robot at origin by subtracting center of mass
+    # Center the robot horizontally (X, Y) and place bottom at Z=0 + initial_height
     positions = np.array([v['pos'] for v in voxels])
-    center = np.mean(positions, axis=0)
+    center_xy = np.mean(positions[:, :2], axis=0)  # Only X and Y
+    min_z = np.min(positions[:, 2])  # Lowest Z coordinate
+
     for voxel in voxels:
-        voxel['pos'] = voxel['pos'] - center
+        # Center X and Y, shift Z so bottom is at ground level (Z=0) + initial_height
+        voxel['pos'][0] -= center_xy[0]
+        voxel['pos'][1] -= center_xy[1]
+        voxel['pos'][2] -= min_z
+        voxel['pos'][2] += voxel_size / 2.0  # Add half voxel size so bottom sits on Z=0
+        voxel['pos'][2] += initial_height     # Add initial height offset
 
     # Build XML
     half_size = voxel_size / 2.0

@@ -24,13 +24,12 @@ print("Starting visualization...")
 voxel_grid = np.zeros((8, 8, 8), dtype=np.int8)
 voxel_grid[4, 4, 4] = 4  # Single stiff passive voxel
 
-xml = voxel_to_mujoco_xml(voxel_grid, voxel_size=0.01)
+xml = voxel_to_mujoco_xml(voxel_grid, voxel_size=0.01, initial_height=0.20)
 model = mujoco.MjModel.from_xml_string(xml)
 data = mujoco.MjData(model)
 
-# Position 20cm above ground
+# Robot starts 20cm above ground (specified in XML via initial_height parameter)
 # Z is height in MuJoCo (gravity = [0, 0, -9.81])
-data.qpos[2] = 0.20  # Z position = HEIGHT
 data.qpos[3] = 1.0   # Quaternion w component (identity rotation)
 
 # Launch interactive viewer
@@ -67,12 +66,11 @@ voxel_grid[4, 3, 4] = 4  # Bottom - Stiff passive (blue)
 voxel_grid[4, 4, 4] = 3  # Middle - Soft passive (cyan)
 voxel_grid[4, 5, 4] = 4  # Top - Stiff passive (blue)
 
-xml = voxel_to_mujoco_xml(voxel_grid, voxel_size=0.01)
+xml = voxel_to_mujoco_xml(voxel_grid, voxel_size=0.01, initial_height=0.15)
 model = mujoco.MjModel.from_xml_string(xml)
 data = mujoco.MjData(model)
 
-# Position higher up
-data.qpos[2] = 0.15  # Z position = HEIGHT
+# Robot starts 15cm above ground (specified in XML via initial_height parameter)
 data.qpos[3] = 1.0   # Quaternion w
 
 start_time = time.time()

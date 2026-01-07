@@ -9,16 +9,16 @@ print("="*70)
 print("ACTUATION TEST - MuJoCo Physics with Sinusoidal Control")
 print("="*70)
 
-# Create 4-voxel robot: Active 0°, Active 180°, Soft passive, Stiff passive
+# Create 4-voxel robot: Active 0 deg, Active 180 deg, Soft passive, Stiff passive
 voxel_grid = np.zeros((8, 8, 8), dtype=np.int8)
-voxel_grid[2, 0, 3] = 1  # Active 0° (green)
-voxel_grid[3, 0, 3] = 2  # Active 180° (red)
+voxel_grid[2, 0, 3] = 1  # Active 0 deg (green)
+voxel_grid[3, 0, 3] = 2  # Active 180 deg (red)
 voxel_grid[4, 0, 3] = 3  # Soft passive (cyan)
 voxel_grid[5, 0, 3] = 4  # Stiff passive (blue)
 
 print("\nCreating robot with actuation...")
-print("  Material 1 (Green): Active 0° - oscillates at phase 0")
-print("  Material 2 (Red): Active 180° - oscillates at phase π")
+print("  Material 1 (Green): Active 0 deg - oscillates at phase 0")
+print("  Material 2 (Red): Active 180 deg - oscillates at phase pi")
 print("  Material 3 (Cyan): Soft passive - no actuation")
 print("  Material 4 (Blue): Stiff passive - no actuation")
 
@@ -31,11 +31,11 @@ print(f"  Bodies: {engine.model.nbody}")
 print(f"  Constraints: {engine.model.neq}")
 print(f"  Timestep: {engine.default_timestep}s")
 print(f"  Actuation frequency: {engine.actuation_frequency} Hz")
-print(f"  Actuation amplitude: ±{engine.actuation_amplitude*100}%")
+print(f"  Actuation amplitude: +/-{engine.actuation_amplitude*100}%")
 
 print("\nStarting visualization...")
 print("Watch the robot oscillate with 2Hz sinusoidal actuation!")
-print("Green and Red voxels should pulse (180° out of phase)")
+print("Green and Red voxels should pulse (180 deg out of phase)")
 print("Close window or press ESC to exit.\n")
 
 # Launch viewer
