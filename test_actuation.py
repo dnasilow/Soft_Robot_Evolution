@@ -22,9 +22,10 @@ print("  Material 2 (Red): Active 180 deg - oscillates at phase pi")
 print("  Material 3 (Cyan): Soft passive - no actuation")
 print("  Material 4 (Blue): Stiff passive - no actuation")
 
-# Create physics engine
+# Create physics engine with increased actuation for better visibility
 engine = MuJoCoPhysicsEngine(default_timestep=0.0005, actuation_frequency=2.0)
-engine.load_robot(voxel_grid, voxel_size=0.01)
+engine.actuation_amplitude = 0.80  # Increase to 80% for VERY visible actuation
+engine.load_robot(voxel_grid, voxel_size=0.01, initial_height=0.03)  # Start 3cm above ground
 
 print(f"\nRobot loaded:")
 print(f"  Bodies: {engine.model.nbody}")
@@ -40,13 +41,13 @@ print("Close window or press ESC to exit.\n")
 
 # Launch viewer
 with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
-    # Set camera to see the robot
-    viewer.cam.lookat[0] = 0.035  # Center of robot
+    # Set camera to see the robot clearly
+    viewer.cam.lookat[0] = 0.0    # Center of robot (horizontally centered)
     viewer.cam.lookat[1] = 0.0
-    viewer.cam.lookat[2] = 0.02   # Slightly above ground
-    viewer.cam.distance = 0.15
-    viewer.cam.azimuth = 90
-    viewer.cam.elevation = -15
+    viewer.cam.lookat[2] = 0.015  # Look at robot height
+    viewer.cam.distance = 0.12    # Closer view
+    viewer.cam.azimuth = 45       # Angle to see actuation
+    viewer.cam.elevation = -20    # Look slightly down
 
     # Simulate for 10 seconds
     start_time = time.time()

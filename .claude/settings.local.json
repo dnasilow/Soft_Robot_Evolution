@@ -31,7 +31,11 @@
       "Bash(conda run:*)",
       "Bash(git reset:*)",
       "Bash(dir:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(git fetch:*)",
+      "Bash(git stash:*)",
+      "Bash(timeout 10 python:*)",
+      "Bash(timeout 5 python:*)"
     ],
     "deny": [],
     "ask": []

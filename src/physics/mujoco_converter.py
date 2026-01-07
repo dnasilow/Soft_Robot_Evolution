@@ -110,11 +110,9 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01, initia
         x, y, z = voxel['pos']
         mat = voxel['material']
 
-        # First voxel is free-floating (6-DOF), others connect via ball joints
-        if i == 0:
-            joint_type = 'free'
-        else:
-            joint_type = None  # Will add ball joints between voxels
+        # All voxels need free joints to be able to move
+        # They are connected via equality constraints (soft springs)
+        joint_type = 'free'
 
         xml_parts.append(f'    <body name="voxel_{i}" pos="{x:.6f} {y:.6f} {z:.6f}">')
 
@@ -122,8 +120,8 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01, initia
         xml_parts.append(f'      <geom name="geom_{i}" type="box" size="{half_size} {half_size} {half_size}" '
                         f'rgba="{mat["color"]}" mass="{voxel["mass"]:.6f}" friction="1 0.005 0.0001" condim="3"/>')
 
-        if joint_type:
-            xml_parts.append(f'      <joint name="root_joint" type="{joint_type}"/>')
+        # Each voxel gets its own free joint so it can move
+        xml_parts.append(f'      <joint name="joint_{i}" type="{joint_type}"/>')
 
         xml_parts.append(f'    </body>')
 
