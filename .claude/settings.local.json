@@ -30,7 +30,8 @@
       "Bash(C:UsersdnasilowskiAppDataLocalminiconda3envssoftrobotpython.exe -m pip install mujoco)",
       "Bash(conda run:*)",
       "Bash(git reset:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []
