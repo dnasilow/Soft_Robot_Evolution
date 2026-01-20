@@ -129,22 +129,44 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01, initia
     xml_parts.append('  </worldbody>')
     xml_parts.append('')
 
-    # Use equality constraints to connect voxels (simpler than tendons for initial version)
+    # Use equality constraints to connect voxels
+    # Connect via edges, face diagonals, and space diagonals for full structural integrity
     xml_parts.append('  <equality>')
+
+    # Calculate connection distances
+    edge_dist = voxel_size  # Face-adjacent (edge neighbors)
+    face_diag_dist = voxel_size * np.sqrt(2)  # Face diagonal
+    space_diag_dist = voxel_size * np.sqrt(3)  # Space diagonal
 
     for i, v1 in enumerate(voxels):
         for j, v2 in enumerate(voxels):
             if j <= i:
                 continue
 
-            # Check if voxels are adjacent
+            # Check distance between voxels
             dist = np.linalg.norm(v1['pos'] - v2['pos'])
+            tolerance = voxel_size * 0.01  # 1% tolerance
 
-            # Edge connection
-            if abs(dist - voxel_size) < voxel_size * 0.01:
-                # Connect constraint maintains soft distance
+            # Determine connection type and stiffness
+            connection_type = None
+            solref = None
+
+            if abs(dist - edge_dist) < tolerance:
+                # Edge connection (face-adjacent neighbors)
+                connection_type = "edge"
+                solref = "0.02 1"  # Stiff springs for edges
+            elif abs(dist - face_diag_dist) < tolerance:
+                # Face diagonal connection
+                connection_type = "face_diag"
+                solref = "0.03 1"  # Slightly softer for diagonals
+            elif abs(dist - space_diag_dist) < tolerance:
+                # Space diagonal connection
+                connection_type = "space_diag"
+                solref = "0.04 1"  # Even softer for space diagonals
+
+            if connection_type:
                 xml_parts.append(f'    <connect body1="voxel_{i}" body2="voxel_{j}" '
-                               f'anchor="0 0 0" solimp="0.9 0.95 0.001" solref="0.02 1"/>')
+                               f'anchor="0 0 0" solimp="0.9 0.95 0.001" solref="{solref}"/>')
 
     xml_parts.append('  </equality>')
     xml_parts.append('')
