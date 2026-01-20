@@ -15,7 +15,7 @@ class MuJoCoActuatedPhysics:
     Physics engine with rest-length based actuation (±20% oscillation)
     """
 
-    def __init__(self, default_timestep: float = 0.0005, actuation_frequency: float = 2.0):
+    def __init__(self, default_timestep: float = 0.0005, actuation_frequency: float = 10.0):
         self.default_timestep = default_timestep
         self.actuation_frequency = actuation_frequency
         self.actuation_amplitude = 0.20  # ±20% rest length modulation

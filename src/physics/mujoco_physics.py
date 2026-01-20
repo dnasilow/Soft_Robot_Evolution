@@ -16,13 +16,13 @@ class MuJoCoPhysicsEngine:
     - Energy-conservative integration
     """
 
-    def __init__(self, default_timestep: float = 0.0005, actuation_frequency: float = 2.0):
+    def __init__(self, default_timestep: float = 0.0005, actuation_frequency: float = 10.0):
         """
         Initialize MuJoCo physics engine.
 
         Args:
             default_timestep: Simulation timestep in seconds (default: 0.0005s = 0.5ms)
-            actuation_frequency: Frequency of sinusoidal actuation in Hz (default: 2Hz)
+            actuation_frequency: Frequency of sinusoidal actuation in Hz (default: 10Hz)
         """
         self.default_timestep = default_timestep
         self.actuation_frequency = actuation_frequency

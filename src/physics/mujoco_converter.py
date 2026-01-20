@@ -117,8 +117,9 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01, initia
         xml_parts.append(f'    <body name="voxel_{i}" pos="{x:.6f} {y:.6f} {z:.6f}">')
 
         # Add box geometry with collision properties
+        # Friction: [sliding, torsional, rolling] - using 0.6 for realistic soft material
         xml_parts.append(f'      <geom name="geom_{i}" type="box" size="{half_size} {half_size} {half_size}" '
-                        f'rgba="{mat["color"]}" mass="{voxel["mass"]:.6f}" friction="1 0.005 0.0001" condim="3"/>')
+                        f'rgba="{mat["color"]}" mass="{voxel["mass"]:.6f}" friction="0.6 0.005 0.0001" condim="3"/>')
 
         # Each voxel gets its own free joint so it can move
         xml_parts.append(f'      <joint name="joint_{i}" type="{joint_type}"/>')
