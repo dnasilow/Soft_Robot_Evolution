@@ -56,8 +56,8 @@ with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
     viewer.cam.azimuth = 45
     viewer.cam.elevation = -20
 
-    # Enable visualizations
-    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_COM] = True
+    # Disable COM markers - they clutter the view
+    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_COM] = False
     viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = True
 
     # Settle for a moment
