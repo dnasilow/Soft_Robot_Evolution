@@ -49,8 +49,8 @@ with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
     viewer.cam.azimuth = 45
     viewer.cam.elevation = -20
 
-    # Enable center of mass visualization
-    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_COM] = True
+    # Disable center of mass markers (clutters view)
+    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_COM] = False
 
     # Let it settle for a moment
     print("Letting cube settle for 2 seconds...")

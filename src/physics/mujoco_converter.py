@@ -89,7 +89,7 @@ def voxel_to_mujoco_xml(voxel_grid: np.ndarray, voxel_size: float = 0.01, initia
         '',
         '  <worldbody>',
         '    <!-- Checkered ground plane with collision -->',
-        '    <geom name="ground" type="plane" size="1 1 0.1" material="grid" friction="1 0.005 0.0001" condim="3"/>',
+        '    <geom name="ground" type="plane" size="1 1 0.1" material="grid" friction="0.7 0.005 0.0001" condim="3"/>',
         '    ',
         '    <!-- Red origin marker -->',
         '    <geom name="origin_marker" type="sphere" size="0.005" pos="0 0 0" rgba="1 0 0 1" contype="0" conaffinity="0"/>',
