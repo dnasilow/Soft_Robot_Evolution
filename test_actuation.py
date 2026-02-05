@@ -23,7 +23,7 @@ print("  Material 3 (Cyan): Soft passive - no actuation")
 print("  Material 4 (Blue): Stiff passive - no actuation")
 
 # Create physics engine with increased actuation for better visibility
-engine = MuJoCoPhysicsEngine(default_timestep=0.0005, actuation_frequency=2.0)
+engine = MuJoCoPhysicsEngine(default_timestep=0.0005, actuation_frequency=10.0)
 engine.actuation_amplitude = 0.80  # Increase to 80% for VERY visible actuation
 engine.load_robot(voxel_grid, voxel_size=0.01, initial_height=0.03)  # Start 3cm above ground
 
@@ -35,7 +35,7 @@ print(f"  Actuation frequency: {engine.actuation_frequency} Hz")
 print(f"  Actuation amplitude: +/-{engine.actuation_amplitude*100}%")
 
 print("\nStarting visualization...")
-print("Watch the robot oscillate with 2Hz sinusoidal actuation!")
+print("Watch the robot oscillate with 10Hz sinusoidal actuation!")
 print("Green and Red voxels should pulse (180 deg out of phase)")
 print("Close window or press ESC to exit.\n")
 
