@@ -128,14 +128,27 @@ class MuJoCoActuatedPhysics:
                         # This simulates a spring with changing rest length
                         dist_error = current_dist - target_dist
 
-                        # Strong stiffness modulation to enforce rest length
+                        # VERY AGGRESSIVE stiffness modulation to enforce rest length
                         # Lower timeconst = stiffer = stronger enforcement
+                        # Using EXTREME values to force visible motion
                         if actuation > 0:  # Expanding
-                            # Make spring softer to allow expansion
-                            self.model.eq_solref[i, 0] = 0.04  # Softer
+                            # Make spring VERY soft to allow expansion
+                            self.model.eq_solref[i, 0] = 0.2  # Very soft (was 0.04)
                         else:  # Contracting
-                            # Make spring stiffer to force contraction
-                            self.model.eq_solref[i, 0] = 0.01  # Stiffer
+                            # Make spring VERY stiff to force contraction
+                            self.model.eq_solref[i, 0] = 0.001  # Very stiff (was 0.01)
+
+                        # Also apply direct force proportional to distance error
+                        # This adds extra "push" to help overcome damping
+                        force_scale = 100.0  # Strong force
+                        if abs(dist_error) > 0.0001:  # If not at target
+                            # Calculate force direction (from body1 to body2)
+                            direction = (pos2 - pos1) / (current_dist + 1e-10)
+                            # Force magnitude proportional to error
+                            force_mag = force_scale * dist_error
+                            # Apply equal and opposite forces
+                            self.data.xfrc_applied[body1_id, :3] += direction * force_mag
+                            self.data.xfrc_applied[body2_id, :3] -= direction * force_mag
 
     def step(self) -> None:
         """Advance simulation by one timestep with actuation"""
