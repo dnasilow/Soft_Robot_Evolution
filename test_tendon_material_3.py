@@ -1,0 +1,85 @@
+"""
+Tendon Test - Material 3: Soft Passive
+5x5x5 cube, all voxels Soft Passive (cyan)
+Expected: NO oscillation - tendons just hold rest lengths
+"""
+import numpy as np
+import mujoco
+import mujoco.viewer
+import time
+from src.physics.mujoco_tendon_physics import MuJoCoTendonPhysics
+
+print("=" * 70)
+print("TENDON TEST - Material 3: Soft Passive (Cyan)")
+print("=" * 70)
+print("\n5x5x5 cube - ALL voxels Soft Passive")
+print("No actuation - tendons hold rest lengths only")
+print("Expected: NO oscillation (control test)")
+print("=" * 70)
+
+voxel_grid = np.zeros((8, 8, 8), dtype=np.int8)
+for x in range(2, 7):
+    for y in range(2, 7):
+        for z in range(2, 7):
+            voxel_grid[x, y, z] = 3  # Soft passive
+
+print("\nBuilding robot...")
+engine = MuJoCoTendonPhysics(
+    default_timestep=0.0005,
+    actuation_frequency=10.0,
+    actuation_amplitude=0.20,
+)
+engine.load_robot(voxel_grid, voxel_size=0.01, initial_height=0.0, kp=100)
+
+print(f"  Voxels:   {np.count_nonzero(voxel_grid)}")
+print(f"  Tendons:  {len(engine.tendon_info)}")
+print(f"  Note: No active materials - tendons hold rest lengths only")
+
+print("\nStarting 15-second test...")
+print("Should see NO oscillation (control test)\n")
+
+with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
+    viewer.cam.lookat[:] = [0.0, 0.0, 0.05]
+    viewer.cam.distance = 0.30
+    viewer.cam.azimuth = 45
+    viewer.cam.elevation = -20
+    viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_COM] = False
+
+    # Settle
+    for _ in range(2000):
+        engine.step()
+        viewer.sync()
+        time.sleep(0.001)
+
+    sizes = []
+    start_time = time.time()
+    step = 0
+
+    while time.time() - start_time < 15.0 and viewer.is_running():
+        engine.step()
+        viewer.sync()
+        time.sleep(0.001)
+
+        if step % 200 == 0:
+            positions = np.array([engine.data.xpos[i] for i in range(1, engine.model.nbody)])
+            size = np.linalg.norm(np.max(positions, axis=0) - np.min(positions, axis=0))
+            sizes.append(size)
+
+            if step % 1000 == 0 and len(sizes) > 1:
+                variation = (max(sizes) - min(sizes)) / np.mean(sizes) * 100
+                print(f"  t={engine.current_time:.1f}s: size={size*100:.2f}cm  variation=+-{variation:.2f}%")
+
+        step += 1
+
+print("\n" + "=" * 70)
+print("TENDON MATERIAL 3 RESULTS: Soft Passive (CONTROL)")
+print("=" * 70)
+if len(sizes) > 1:
+    variation = (max(sizes) - min(sizes)) / np.mean(sizes) * 100
+    print(f"Size variation: +-{variation:.2f}%")
+    print(f"Min: {min(sizes)*100:.2f}cm  Max: {max(sizes)*100:.2f}cm  Avg: {np.mean(sizes)*100:.2f}cm")
+    if variation > 0.5:
+        print("\n[WARN] Unexpected variation (should be near zero for passive material)")
+    else:
+        print("\n[PASS] Correct: No oscillation (as expected for passive material)")
+print("=" * 70)
