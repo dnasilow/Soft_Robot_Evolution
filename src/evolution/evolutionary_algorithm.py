@@ -4,6 +4,7 @@ import pickle
 from tqdm import tqdm
 import os
 import copy
+from src.physics.mujoco_tendon_converter import count_active_tendons
 
 class Individual:
     """Container for genome and fitness"""
@@ -74,9 +75,11 @@ class EvolutionaryAlgorithm:
             else:
                 genome = self.genome_class((10, 10, 10))
             
-            # Create controller
-            robot = genome.to_phenotype()
-            num_actuators = len([s for s in robot.springs if s['is_actuator']])
+            # Create controller — sized from tendon count, not old robot.springs
+            if hasattr(genome, 'voxels'):
+                num_actuators = count_active_tendons(genome.voxels)
+            else:
+                num_actuators = 0
             controller = self.controller_class(num_actuators) if num_actuators > 0 else None
             
             # Create individual
@@ -89,30 +92,36 @@ class EvolutionaryAlgorithm:
         """Evaluate entire population (used only for generation 0)"""
         print(f"Generation {self.generation}: Evaluating entire population...")
         
-        # Prepare batch data
-        robots = []
+        # Prepare batch data — pass raw voxel grids, not VoxelRobot objects
+        genomes = []
         controllers = []
-        
+
         for individual in self.population:
-            robot = individual.genome.to_phenotype()
-            robots.append(robot)
-            
-            # Update controller if needed
-            num_actuators = len([s for s in robot.springs if s['is_actuator']])
-            if num_actuators > 0 and individual.controller is None:
-                individual.controller = self.controller_class(num_actuators)
+            voxels = individual.genome.voxels if hasattr(individual.genome, 'voxels') else None
+            genomes.append(voxels)
+
+            # Lazily create controller if missing or wrong size
+            if voxels is not None:
+                num_active = count_active_tendons(voxels)
+                if num_active > 0 and (
+                    individual.controller is None or
+                    individual.controller.num_actuators != num_active
+                ):
+                    individual.controller = self.controller_class(num_active)
             controllers.append(individual.controller)
-        
+
         # Batch evaluation
-        fitness_scores = self.evaluator.evaluate_batch(robots, controllers)
+        fitness_scores = self.evaluator.evaluate_batch(genomes, controllers)
         
         # Update fitness values
         for i, fitness in enumerate(fitness_scores):
-            diversity_bonus = self._calculate_individual_diversity(self.population[i]) * 0.5
+            # Diversity bonus scaled down (0.05 not 0.5) so it nudges but
+            # never dominates selection pressure over real locomotion fitness.
+            diversity_bonus = self._calculate_individual_diversity(self.population[i]) * 0.05
             self.population[i].fitness = fitness + diversity_bonus
             self.population[i].age += 1
             self.population[i].needs_evaluation = False  # Mark as evaluated
-            
+
             # Debug info
             self.population[i].base_fitness = fitness
             self.population[i].diversity_bonus = diversity_bonus
@@ -133,20 +142,24 @@ class EvolutionaryAlgorithm:
         for i, individual in enumerate(self.population):
             if individual.needs_evaluation:
                 needs_eval_indices.append(i)
-                robot = individual.genome.to_phenotype()
-                robots_to_evaluate.append(robot)
-                
-                # Update controller if needed
-                num_actuators = len([s for s in robot.springs if s['is_actuator']])
-                if num_actuators > 0 and individual.controller is None:
-                    individual.controller = self.controller_class(num_actuators)
+                voxels = individual.genome.voxels if hasattr(individual.genome, 'voxels') else None
+                robots_to_evaluate.append(voxels)
+
+                # Lazily create/fix controller
+                if voxels is not None:
+                    num_active = count_active_tendons(voxels)
+                    if num_active > 0 and (
+                        individual.controller is None or
+                        individual.controller.num_actuators != num_active
+                    ):
+                        individual.controller = self.controller_class(num_active)
                 controllers_to_evaluate.append(individual.controller)
         
         if len(robots_to_evaluate) > 0:
             num_elite = self.population_size - len(robots_to_evaluate)
             print(f"Evaluating {len(robots_to_evaluate)} new individuals (keeping {num_elite} elite)")
-            
-            # Batch evaluation of only new individuals
+
+            # Batch evaluation of only new individuals (voxel grids + controllers)
             fitness_scores = self.evaluator.evaluate_batch(robots_to_evaluate, controllers_to_evaluate)
             
             # Update fitness values for evaluated individuals only
