@@ -14,9 +14,9 @@ from src.physics.mujoco_tendon_physics import MuJoCoTendonPhysics
 
 print("=" * 70)
 print("BREATHING TEST — Material 4: Stiff Passive (BLUE)")
-print("All tendons: kp=200 (stiff springs)  |  ctrl = rest length")
+print("All tendons: kp=100 (stiff springs)  |  ctrl = rest length")
 print("Expected: NO oscillation — robot settles rigid and still")
-print("Compare: mat3 cyan (kp=50) vs mat4 blue (kp=200) — same shape, different rigidity")
+print("Compare: mat3 cyan (kp=50) vs mat4 blue (kp=100) — cyan deforms 2x more under same force")
 print("Close the window to exit.")
 print("=" * 70)
 

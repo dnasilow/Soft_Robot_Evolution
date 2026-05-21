@@ -8,8 +8,9 @@ Generates MuJoCo XML with:
 
 Material kp values:
   Active (mat1/mat2): kp = 100
-  Soft passive (mat3): kp = 50
-  Stiff passive (mat4): kp = 200
+  Soft passive (mat3): kp = 50   (2x softer than stiff)
+  Stiff passive (mat4): kp = 100  (same as active — kp=200 is unstable for
+                                   fully-connected interior voxels in dense cubes)
   Mixed: kp = min(kp1, kp2)
 
 Boundary phase (mat1 + mat2 tendon): pi/2  (average of 0 and pi)
@@ -22,7 +23,7 @@ from typing import List, Tuple, Dict, Optional
 # -----------------------------------------------------------------
 # Constants
 # -----------------------------------------------------------------
-_KP = {1: 100.0, 2: 100.0, 3: 50.0, 4: 200.0}
+_KP = {1: 100.0, 2: 100.0, 3: 50.0, 4: 100.0}
 _PHASE = {1: 0.0, 2: np.pi}   # passive materials have no entry
 
 # 13 neighbour offsets that enumerate every unique pair once (j > i guaranteed
