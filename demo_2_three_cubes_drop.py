@@ -42,12 +42,18 @@ edges       = [t for t in engine.tendon_info if t['connection_type'] == 'edge']
 active_t    = [t for t in engine.tendon_info if t['is_active']]
 passive_t   = [t for t in engine.tendon_info if not t['is_active']]
 
+# Compute kp values dynamically from actual tendon_info (no hardcoding)
+kp_gc = next((t['kp'] for t in edges if {t['mat1'],t['mat2']}=={1,3}), None)
+kp_cb = next((t['kp'] for t in passive_t if {t['mat1'],t['mat2']}=={3,4}), None)
+kp_cc = next((t['kp'] for t in passive_t if t['mat1']==3 and t['mat2']==3), None)
+kp_bb = next((t['kp'] for t in passive_t if t['mat1']==4 and t['mat2']==4), None)
+
 print(f"\nVoxels: 3   |   Tendons: {len(engine.tendon_info)}")
 print(f"Active tendons (green involved): {len(active_t)}")
-print(f"  - green-cyan edge: kp={[t['kp'] for t in edges if {t['mat1'],t['mat2']}=={1,3}][0] if any({t['mat1'],t['mat2']}=={1,3} for t in edges) else 'none'}")
+print(f"  - green-cyan edge: kp={kp_gc}  (min of active=100, soft=50 → 50)")
 print(f"Passive tendons (cyan-blue):    {len(passive_t)}")
-print(f"  - cyan-cyan: kp=50   blue-blue: kp=200   cyan-blue: kp=50 (min rule)")
-print(f"Actuation: 10Hz +-20%\n")
+print(f"  - cyan-blue kp={kp_cb}  (min rule: soft=50, stiff=100 → 50)")
+print(f"Separation printed every 0.5s — watch it oscillate ~+-2mm (the breathing)\n")
 
 with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
     viewer.cam.lookat[:] = [0.0, 0.0, 0.12]
@@ -56,7 +62,9 @@ with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
     viewer.cam.elevation = -15
     viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_COM] = False
 
-    t_print = 0.0
+    t_print    = 0.0
+    sep_history = []
+
     while viewer.is_running():
         engine.step()
         viewer.sync()
@@ -64,7 +72,17 @@ with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
 
         if engine.current_time - t_print >= 0.5:
             positions = engine.data.xpos[1:engine.model.nbody]
-            zs = [f"{p[2]*100:.1f}cm" for p in positions]
+            zs  = [f"{p[2]*100:.1f}cm" for p in positions]
             sep = np.linalg.norm(positions[0] - positions[-1])
-            print(f"  t={engine.current_time:.1f}s   heights={zs}   separation={sep*100:.2f}cm")
+            sep_history.append(sep)
+
+            if len(sep_history) > 1:
+                osc_mm = (max(sep_history) - min(sep_history)) * 1000
+                note = f"  <- green-cyan spring breathing +-{osc_mm:.1f}mm" if osc_mm > 0.5 else ""
+            else:
+                note = ""
+
+            print(f"  t={engine.current_time:.1f}s  "
+                  f"heights={zs}  "
+                  f"green-blue sep={sep*100:.2f}cm{note}")
             t_print = engine.current_time

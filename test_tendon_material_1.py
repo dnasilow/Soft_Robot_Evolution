@@ -2,9 +2,21 @@
 Tendon Breathing Test — Material 1: Active 0deg (Green)
 =========================================================
 5x5x5 cube, all voxels Active 0deg.
-ALL 1036 tendons oscillate IN PHASE at 10Hz.
-Expected: strong uniform breathing — cube expands and contracts like a lung.
-Watch the size pulsing. Terminal prints +-% oscillation live.
+ALL 1036 tendons oscillate IN PHASE at 10Hz, +-20% rest length.
+
+What "breathing" means here:
+  Each tendon is a spring connecting two voxels. The spring's target
+  length (ctrl) oscillates: ctrl = rest * (1 + 0.20 * sin(2pi*10*t))
+  So every adjacent pair alternately pushes apart and pulls together
+  at 10 cycles per second.
+
+Metric used: average distance of each voxel from their collective
+  centre-of-mass.  This is IMMUNE to rolling/translation — it only
+  responds to voxels moving relative to each other (true breathing).
+  Expected ~+-20% variation matching the actuation amplitude.
+
+Note: the cube WILL roll on the ground (ground breaks symmetry —
+  bottom voxels can't push down). That is real physics, not a bug.
 """
 import numpy as np
 import mujoco
@@ -14,8 +26,8 @@ from src.physics.mujoco_tendon_physics import MuJoCoTendonPhysics
 
 print("=" * 70)
 print("BREATHING TEST — Material 1: Active 0deg (GREEN)")
-print("All tendons phase=0  |  10Hz  |  +-20% rest length")
-print("Expected: strong uniform pulsing (all voxels in phase)")
+print("All 1036 tendons: phase=0, kp=100, +-20% rest length, 10Hz")
+print("Metric: avg voxel distance from COM  (immune to rolling/tumbling)")
 print("Close the window to exit.")
 print("=" * 70)
 
@@ -33,7 +45,15 @@ engine = MuJoCoTendonPhysics(
 engine.load_robot(grid, voxel_size=0.01, initial_height=0.0)
 
 print(f"\nVoxels: {np.count_nonzero(grid)}   |   Tendons: {len(engine.tendon_info)}")
-print(f"Active tendons: {engine.num_active_tendons}   |   Passive: 0\n")
+print(f"Active tendons: {engine.num_active_tendons}")
+print(f"Actuation: sin(2*pi*10*t + 0)  ->  ctrl oscillates +-20% around rest length\n")
+
+def avg_spread(xpos, nbody):
+    """Average distance of each voxel from their collective COM.
+    Pure deformation metric — invariant to translation and rotation."""
+    pos = xpos[1:nbody]                          # skip worldbody
+    com = np.mean(pos, axis=0)
+    return float(np.mean(np.linalg.norm(pos - com, axis=1)))
 
 with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
     viewer.cam.lookat[:] = [0.0, 0.0, 0.03]
@@ -42,15 +62,18 @@ with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
     viewer.cam.elevation = -20
     viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_COM] = False
 
-    # Settle 1 second
+    # Settle 1 second (actuation running)
     for _ in range(2000):
         engine.step()
         viewer.sync()
         time.sleep(0.0003)
 
-    sizes  = []
-    t_prev = 0.0
-    step   = 0
+    print("  [Settled — now measuring breathing]")
+    print(f"  {'Time':>6}  {'AvgDist(cm)':>12}  {'Osc%':>8}  Notes")
+    print("  " + "-"*50)
+
+    spreads = []
+    step = 0
 
     while viewer.is_running():
         engine.step()
@@ -59,10 +82,14 @@ with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
         step += 1
 
         if step % 100 == 0:
-            pos  = engine.data.xpos[1:engine.model.nbody]
-            size = np.linalg.norm(np.max(pos, axis=0) - np.min(pos, axis=0))
-            sizes.append(size)
+            s = avg_spread(engine.data.xpos, engine.model.nbody)
+            spreads.append(s)
 
-            if len(sizes) > 2 and step % 500 == 0:
-                var = (max(sizes) - min(sizes)) / np.mean(sizes) * 100
-                print(f"  t={engine.current_time:.1f}s   size={size*100:.2f}cm   oscillation=+-{var:.1f}%")
+            if len(spreads) > 2 and step % 500 == 0:
+                var = (max(spreads) - min(spreads)) / np.mean(spreads) * 100
+                note = ("BREATHING" if var > 10
+                        else "weak" if var > 3
+                        else "almost still")
+                print(f"  {engine.current_time:6.1f}s  "
+                      f"{s*100:12.3f}  "
+                      f"{var:+7.1f}%  {note}")

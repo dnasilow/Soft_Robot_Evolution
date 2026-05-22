@@ -2,10 +2,13 @@
 Tendon Breathing Test — Material 2: Active 180deg (Red)
 =========================================================
 5x5x5 cube, all voxels Active 180deg.
-ALL tendons oscillate at 10Hz with phase=PI.
-Expected: same strong breathing as Material 1 but half-cycle offset.
-(When mat1 expands, mat2 contracts — this opposition creates locomotion
- when the two materials are combined in one robot.)
+Phase = pi (opposite to Material 1).
+
+When mat1 is expanding, mat2 is contracting, and vice versa.
+This phase opposition is what drives locomotion in a mixed robot:
+  left half = mat1, right half = mat2 → alternating push/pull → movement.
+
+Same metric as mat1: average distance from COM (immune to rolling).
 """
 import numpy as np
 import mujoco
@@ -15,8 +18,9 @@ from src.physics.mujoco_tendon_physics import MuJoCoTendonPhysics
 
 print("=" * 70)
 print("BREATHING TEST — Material 2: Active 180deg (RED)")
-print("All tendons phase=pi  |  10Hz  |  +-20% rest length")
-print("Expected: strong uniform pulsing (OPPOSITE phase to Material 1)")
+print("All 1036 tendons: phase=pi, kp=100, +-20% rest length, 10Hz")
+print("OPPOSITE phase to Material 1 — when green expands, red contracts.")
+print("Metric: avg voxel distance from COM  (immune to rolling/tumbling)")
 print("Close the window to exit.")
 print("=" * 70)
 
@@ -34,7 +38,13 @@ engine = MuJoCoTendonPhysics(
 engine.load_robot(grid, voxel_size=0.01, initial_height=0.0)
 
 print(f"\nVoxels: {np.count_nonzero(grid)}   |   Tendons: {len(engine.tendon_info)}")
-print(f"Active tendons: {engine.num_active_tendons}   |   Passive: 0\n")
+print(f"Active tendons: {engine.num_active_tendons}")
+print(f"Actuation: sin(2*pi*10*t + pi)  ->  starts contracting, then expands\n")
+
+def avg_spread(xpos, nbody):
+    pos = xpos[1:nbody]
+    com = np.mean(pos, axis=0)
+    return float(np.mean(np.linalg.norm(pos - com, axis=1)))
 
 with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
     viewer.cam.lookat[:] = [0.0, 0.0, 0.03]
@@ -48,8 +58,13 @@ with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
         viewer.sync()
         time.sleep(0.0003)
 
-    sizes = []
-    step  = 0
+    print("  [Settled — now measuring breathing]")
+    print(f"  {'Time':>6}  {'AvgDist(cm)':>12}  {'Osc%':>8}  Notes")
+    print("  " + "-"*50)
+
+    spreads = []
+    step = 0
+
     while viewer.is_running():
         engine.step()
         viewer.sync()
@@ -57,9 +72,14 @@ with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
         step += 1
 
         if step % 100 == 0:
-            pos  = engine.data.xpos[1:engine.model.nbody]
-            size = np.linalg.norm(np.max(pos, axis=0) - np.min(pos, axis=0))
-            sizes.append(size)
-            if len(sizes) > 2 and step % 500 == 0:
-                var = (max(sizes) - min(sizes)) / np.mean(sizes) * 100
-                print(f"  t={engine.current_time:.1f}s   size={size*100:.2f}cm   oscillation=+-{var:.1f}%")
+            s = avg_spread(engine.data.xpos, engine.model.nbody)
+            spreads.append(s)
+
+            if len(spreads) > 2 and step % 500 == 0:
+                var = (max(spreads) - min(spreads)) / np.mean(spreads) * 100
+                note = ("BREATHING" if var > 10
+                        else "weak" if var > 3
+                        else "almost still")
+                print(f"  {engine.current_time:6.1f}s  "
+                      f"{s*100:12.3f}  "
+                      f"{var:+7.1f}%  {note}")
