@@ -57,11 +57,12 @@ with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
         time.sleep(0.0003)
         step += 1
 
-        if step % 100 == 0:
+        if step % 17 == 0:  # non-resonant with 10Hz period (100ms = 200 steps)
             pos  = engine.data.xpos[1:engine.model.nbody]
-            size = np.linalg.norm(np.max(pos, axis=0) - np.min(pos, axis=0))
+            com  = np.mean(pos, axis=0)
+            size = float(np.mean(np.linalg.norm(pos - com, axis=1)))
             sizes.append(size)
-            if len(sizes) > 2 and step % 500 == 0:
+            if len(sizes) > 10 and step % 500 == 0:
                 var = (max(sizes) - min(sizes)) / np.mean(sizes) * 100
                 label = "PASS - no oscillation" if var < 0.5 else "WARN - unexpected motion"
                 print(f"  t={engine.current_time:.1f}s   size={size*100:.2f}cm   oscillation=+-{var:.1f}%  [{label}]")

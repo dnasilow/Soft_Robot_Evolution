@@ -81,11 +81,14 @@ with mujoco.viewer.launch_passive(engine.model, engine.data) as viewer:
         time.sleep(0.0003)
         step += 1
 
-        if step % 100 == 0:
+        # Sample every 17 steps = 8.5ms — NOT a multiple of the 100ms
+        # cycle period, so we hit all phases of the oscillation.
+        # (every 100 steps = 50ms = exactly half-period → zero-crossings only → aliasing)
+        if step % 17 == 0:
             s = avg_spread(engine.data.xpos, engine.model.nbody)
             spreads.append(s)
 
-            if len(spreads) > 2 and step % 500 == 0:
+            if len(spreads) > 10 and step % 500 == 0:
                 var = (max(spreads) - min(spreads)) / np.mean(spreads) * 100
                 note = ("BREATHING" if var > 10
                         else "weak" if var > 3
