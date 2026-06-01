@@ -8,6 +8,7 @@ import mujoco
 import mujoco.viewer
 from src.physics.mujoco_tendon_physics import MuJoCoTendonPhysics
 from src.physics.mujoco_tendon_converter import count_active_tendons
+from src.evolution.genome_config import keep_largest_component
 
 PKL = "best_robot_tendon.pkl"
 
@@ -17,6 +18,13 @@ with open(PKL, "rb") as f:
 genome     = saved["genome"]
 controller = saved.get("controller")
 fitness    = saved.get("fitness", float("nan"))
+
+# Strip any orphan voxels that may have slipped through in older evolved robots
+clean = keep_largest_component(genome)
+removed = int((genome != 0).sum()) - int((clean != 0).sum())
+if removed > 0:
+    print(f"  [visualizer] Stripped {removed} disconnected voxel(s) from saved genome.")
+genome = clean
 
 num_voxels  = int((genome != 0).sum())
 num_active  = count_active_tendons(genome)

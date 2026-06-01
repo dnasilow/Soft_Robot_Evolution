@@ -32,6 +32,7 @@ from src.evolution.genome_config import (
     VOXEL_GRID_SHAPE, VOXEL_INTERIOR_MIN, VOXEL_INTERIOR_MAX,
     MATERIAL_TYPES, MATERIAL_PROBABILITIES,
     create_empty_grid, get_random_interior_position, get_num_voxels,
+    create_connected_genome, keep_largest_component,
 )
 
 # ──────────────────────────────────────────────────────────────────
@@ -52,16 +53,12 @@ DEFAULT_AMP         = 0.08   # ±8% rest length (matches material test scripts)
 # Genome helpers
 # ──────────────────────────────────────────────────────────────────
 def create_random_genome() -> np.ndarray:
-    """Random voxel grid with 10–30 voxels placed in the interior."""
-    grid = create_empty_grid()
-    for _ in range(get_num_voxels()):
-        x, y, z = get_random_interior_position()
-        grid[x, y, z] = np.random.choice(MATERIAL_TYPES, p=MATERIAL_PROBABILITIES)
-    return grid
+    """Connected voxel body via growth algorithm (guaranteed no orphan voxels)."""
+    return create_connected_genome()
 
 
 def mutate(grid: np.ndarray, rate: float = DEFAULT_MUT_RATE) -> np.ndarray:
-    """Randomly add/remove/change voxels."""
+    """Randomly add/remove/change voxels, then drop any orphaned clusters."""
     g = grid.copy()
     if np.random.random() < rate:
         n_muts = np.random.randint(1, 5)
@@ -71,14 +68,18 @@ def mutate(grid: np.ndarray, rate: float = DEFAULT_MUT_RATE) -> np.ndarray:
                 g[x, y, z] = np.random.choice(MATERIAL_TYPES, p=MATERIAL_PROBABILITIES)
             else:
                 occupied = np.argwhere(g != 0)
-                if len(occupied) > 2:
+                if len(occupied) > 3:
                     idx = occupied[np.random.randint(len(occupied))]
                     g[tuple(idx)] = 0
+    g = keep_largest_component(g)
+    # Fallback: if mutation reduced the robot to nothing, return original
+    if np.count_nonzero(g) < 3:
+        return grid.copy()
     return g
 
 
 def crossover_3d(p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
-    """Planar split crossover along a random axis."""
+    """Planar split crossover along a random axis, then drop orphan clusters."""
     child = np.zeros_like(p1)
     axis  = np.random.randint(0, 3)
     split = np.random.randint(VOXEL_INTERIOR_MIN, VOXEL_INTERIOR_MAX)
@@ -87,7 +88,8 @@ def crossover_3d(p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
             for z in range(p1.shape[2]):
                 coord = [x, y, z][axis]
                 child[x, y, z] = p1[x, y, z] if coord < split else p2[x, y, z]
-    if np.sum(child != 0) < 3:
+    child = keep_largest_component(child)
+    if np.count_nonzero(child) < 3:
         child = p1.copy()
     return child
 
