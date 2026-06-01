@@ -2,21 +2,11 @@
 Tendon Breathing Test — Material 1: Active 0deg (Green)
 =========================================================
 5x5x5 cube, all voxels Active 0deg.
-ALL 1036 tendons oscillate IN PHASE at 10Hz, +-20% rest length.
+ALL 1036 tendons oscillate IN PHASE at 10Hz, +-8% rest length.
 
-What "breathing" means here:
-  Each tendon is a spring connecting two voxels. The spring's target
-  length (ctrl) oscillates: ctrl = rest * (1 + 0.20 * sin(2pi*10*t))
-  So every adjacent pair alternately pushes apart and pulls together
-  at 10 cycles per second.
-
-Metric used: average distance of each voxel from their collective
-  centre-of-mass.  This is IMMUNE to rolling/translation — it only
-  responds to voxels moving relative to each other (true breathing).
-  Expected ~+-20% variation matching the actuation amplitude.
-
-Note: the cube WILL roll on the ground (ground breaks symmetry —
-  bottom voxels can't push down). That is real physics, not a bug.
+Amplitude reduced from 0.20 to 0.08 so the cube stays roughly in
+place on the ground instead of rolling away. Rolling is correct physics
+(ground asymmetry) but makes the breathing hard to observe visually.
 """
 import numpy as np
 import mujoco
@@ -26,7 +16,7 @@ from src.physics.mujoco_tendon_physics import MuJoCoTendonPhysics
 
 print("=" * 70)
 print("BREATHING TEST — Material 1: Active 0deg (GREEN)")
-print("All 1036 tendons: phase=0, kp=100, +-20% rest length, 10Hz")
+print("All 1036 tendons: phase=0, kp=100, +-8% rest length, 10Hz")
 print("Metric: avg voxel distance from COM  (immune to rolling/tumbling)")
 print("Close the window to exit.")
 print("=" * 70)
@@ -40,13 +30,13 @@ for x in range(2, 7):
 engine = MuJoCoTendonPhysics(
     default_timestep=0.0005,
     actuation_frequency=10.0,
-    actuation_amplitude=0.20,
+    actuation_amplitude=0.08,
 )
 engine.load_robot(grid, voxel_size=0.01, initial_height=0.0)
 
 print(f"\nVoxels: {np.count_nonzero(grid)}   |   Tendons: {len(engine.tendon_info)}")
 print(f"Active tendons: {engine.num_active_tendons}")
-print(f"Actuation: sin(2*pi*10*t + 0)  ->  ctrl oscillates +-20% around rest length\n")
+print(f"Actuation: sin(2*pi*10*t + 0)  ->  ctrl oscillates +-8% around rest length\n")
 
 def avg_spread(xpos, nbody):
     """Average distance of each voxel from their collective COM.

@@ -6,9 +6,9 @@ Phase = pi (opposite to Material 1).
 
 When mat1 is expanding, mat2 is contracting, and vice versa.
 This phase opposition is what drives locomotion in a mixed robot:
-  left half = mat1, right half = mat2 → alternating push/pull → movement.
+  left half = mat1, right half = mat2 -> alternating push/pull -> movement.
 
-Same metric as mat1: average distance from COM (immune to rolling).
+Amplitude 0.08 (reduced from 0.20) to keep the cube from rolling away.
 """
 import numpy as np
 import mujoco
@@ -18,7 +18,7 @@ from src.physics.mujoco_tendon_physics import MuJoCoTendonPhysics
 
 print("=" * 70)
 print("BREATHING TEST — Material 2: Active 180deg (RED)")
-print("All 1036 tendons: phase=pi, kp=100, +-20% rest length, 10Hz")
+print("All 1036 tendons: phase=pi, kp=100, +-8% rest length, 10Hz")
 print("OPPOSITE phase to Material 1 — when green expands, red contracts.")
 print("Metric: avg voxel distance from COM  (immune to rolling/tumbling)")
 print("Close the window to exit.")
@@ -33,7 +33,7 @@ for x in range(2, 7):
 engine = MuJoCoTendonPhysics(
     default_timestep=0.0005,
     actuation_frequency=10.0,
-    actuation_amplitude=0.20,
+    actuation_amplitude=0.08,
 )
 engine.load_robot(grid, voxel_size=0.01, initial_height=0.0)
 
