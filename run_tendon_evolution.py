@@ -45,7 +45,7 @@ DEFAULT_ELITE       = 2
 DEFAULT_MUT_RATE    = 0.3
 DEFAULT_XOVER_RATE  = 0.7
 DEFAULT_FREQ        = 10.0   # Hz
-DEFAULT_AMP         = 0.20   # ±20% rest length
+DEFAULT_AMP         = 0.08   # ±8% rest length (matches material test scripts)
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ def run_evolution(
     print(f"  Population : {population_size}")
     print(f"  Generations: {generations}")
     print(f"  Sim time   : {sim_time}s  +  {settle_time}s settle")
-    print(f"  Actuation  : {actuation_freq}Hz  ±{actuation_amp*100:.0f}%")
+    print(f"  Actuation  : {actuation_freq}Hz  +-{actuation_amp*100:.0f}%")
     print(f"  Elite      : {elite_size}")
     print(f"  Output dir : {out}")
     print("=" * 70)

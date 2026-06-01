@@ -34,7 +34,7 @@ class MuJoCoTendonEvaluator:
         settle_time:         float = 0.5,
         timestep:            float = 0.0005,
         actuation_frequency: float = 10.0,
-        actuation_amplitude: float = 0.20,
+        actuation_amplitude: float = 0.08,
         voxel_size:          float = 0.01,
         initial_height:      float = 0.0,
     ):
