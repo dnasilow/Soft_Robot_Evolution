@@ -3,14 +3,21 @@ MuJoCo Tendon-Based Converter
 
 Generates MuJoCo XML with:
 - Sites on every voxel body (attachment points for tendons)
-- Spatial tendons for ALL adjacent pairs (edge + face diagonal + space diagonal)
+- Spatial tendons for FACE-ADJACENT pairs only (6-connectivity)
 - Position actuators with per-tendon kp based on material type
+
+Only face neighbours (Manhattan distance = 1) are connected by springs.
+Diagonal connections (edge-diagonal, space-diagonal) are excluded because:
+  - Faces physically touch and share area; diagonals share only an edge or
+    a point — there is no physical interface to transmit force through.
+  - 26 springs per interior voxel generated forces of 200+g, launching
+    robots into the air. 6 face springs reduces peak force by ~4x.
+  - Matches the Voxelyze/Cheney-2013 standard for voxel soft-robot sims.
 
 Material kp values:
   Active (mat1/mat2): kp = 100
   Soft passive (mat3): kp = 50   (2x softer than stiff)
-  Stiff passive (mat4): kp = 100  (same as active — kp=200 is unstable for
-                                   fully-connected interior voxels in dense cubes)
+  Stiff passive (mat4): kp = 100
   Mixed: kp = min(kp1, kp2)
 
 Boundary phase (mat1 + mat2 tendon): pi/2  (average of 0 and pi)
@@ -23,32 +30,15 @@ from typing import List, Tuple, Dict, Optional
 # -----------------------------------------------------------------
 # Constants
 # -----------------------------------------------------------------
-_KP = {1: 100.0, 2: 100.0, 3: 50.0, 4: 100.0}
+_KP    = {1: 100.0, 2: 100.0, 3: 50.0, 4: 100.0}
 _PHASE = {1: 0.0, 2: np.pi}   # passive materials have no entry
 
-# 13 neighbour offsets that enumerate every unique pair once (j > i guaranteed
-# by only walking in the "positive" half-space):
-#   edge:       Manhattan distance 1
-#   face_diag:  exactly 2 coordinates differ by 1
-#   space_diag: all 3 coordinates differ by 1
-_EDGE_OFFSETS = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]
+# 3 face-neighbour offsets that enumerate every unique face-adjacent pair
+# once (we only walk in the "positive" half-space; the reverse direction is
+# covered when the neighbour processes its own row).
+_FACE_OFFSETS = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]
 
-_FACE_DIAG_OFFSETS = [
-    (1, 1, 0), (1, -1, 0),
-    (1, 0, 1), (1, 0, -1),
-    (0, 1, 1), (0, 1, -1),
-]
-
-_SPACE_DIAG_OFFSETS = [
-    (1, 1, 1), (1, 1, -1),
-    (1, -1, 1), (1, -1, -1),
-]
-
-_ALL_OFFSETS = (
-    [('edge', o) for o in _EDGE_OFFSETS] +
-    [('face_diag', o) for o in _FACE_DIAG_OFFSETS] +
-    [('space_diag', o) for o in _SPACE_DIAG_OFFSETS]
-)
+_ALL_OFFSETS = [('face', o) for o in _FACE_OFFSETS]
 
 
 # -----------------------------------------------------------------

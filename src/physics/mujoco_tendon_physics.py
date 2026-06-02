@@ -160,31 +160,38 @@ class MuJoCoTendonPhysics:
         settle_time:     float = 0.5,
     ) -> float:
         """
-        Run simulation and return horizontal distance (X-Y plane) travelled.
+        Run simulation and return ground-penalised horizontal distance.
 
-        Args:
-            simulation_time: Duration to measure after settling (seconds)
-            settle_time:     Settling period before measurement starts (seconds)
-                             Actuation runs during settling so the robot reaches
-                             its oscillating steady-state before we record position.
+        fitness = horizontal_displacement * ground_fraction
+
+        ground_fraction = fraction of measurement steps where the robot's
+        COM stays below 3x its settled height.  A robot that launches itself
+        into the air covers horizontal distance in flight but receives little
+        credit; one that crawls on the ground gets full credit.
         """
-        # Settle — run actuation but don't count this movement
         settle_steps = int(settle_time / self.default_timestep)
         for _ in range(settle_steps):
             self.step()
 
-        # Record position after settling
         initial_pos = self.get_position()
+        # Threshold: 3x settled COM height, minimum 5 cm
+        ground_threshold = max(initial_pos[2] * 3.0, 0.05)
 
-        # Measure
-        measure_steps = int(simulation_time / self.default_timestep)
+        measure_steps  = int(simulation_time / self.default_timestep)
+        grounded_steps = 0
+        nbody          = self.model.nbody
+
         for _ in range(measure_steps):
             self.step()
+            com_z = float(np.mean(self.data.xpos[1:nbody, 2]))
+            if com_z < ground_threshold:
+                grounded_steps += 1
 
-        final_pos = self.get_position()
+        final_pos      = self.get_position()
+        ground_fraction = grounded_steps / measure_steps
 
-        # Horizontal displacement (Z is vertical in MuJoCo Z-up)
-        return float(np.sqrt(
+        horizontal = float(np.sqrt(
             (final_pos[0] - initial_pos[0]) ** 2 +
             (final_pos[1] - initial_pos[1]) ** 2
         ))
+        return horizontal * ground_fraction

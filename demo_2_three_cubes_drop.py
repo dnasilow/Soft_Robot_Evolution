@@ -38,7 +38,7 @@ engine = MuJoCoTendonPhysics(
 engine.load_robot(grid, voxel_size=0.02, initial_height=0.25)
 
 # Print tendon breakdown
-edges       = [t for t in engine.tendon_info if t['connection_type'] == 'edge']
+edges       = [t for t in engine.tendon_info if t['connection_type'] == 'face']
 active_t    = [t for t in engine.tendon_info if t['is_active']]
 passive_t   = [t for t in engine.tendon_info if not t['is_active']]
 

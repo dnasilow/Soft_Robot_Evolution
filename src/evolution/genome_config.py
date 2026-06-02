@@ -20,22 +20,23 @@ MATERIAL_PROBABILITIES = [0.25, 0.25, 0.25, 0.25]
 
 # ==================== CONNECTIVITY ====================
 
-# All 26 immediate 3-D neighbours (face + edge-diag + space-diag)
-_OFFSETS_26 = [
-    (dx, dy, dz)
-    for dx in (-1, 0, 1)
-    for dy in (-1, 0, 1)
-    for dz in (-1, 0, 1)
-    if not (dx == 0 and dy == 0 and dz == 0)
+# 6 face-neighbours only — matches the face-only spring connectivity in the
+# physics engine.  A voxel that only touches the body diagonally has zero
+# springs connecting it and is physically isolated, so it must be excluded.
+_FACE_OFFSETS = [
+    (1, 0, 0), (-1, 0, 0),
+    (0, 1, 0), (0, -1, 0),
+    (0, 0, 1), (0, 0, -1),
 ]
 
 
 def keep_largest_component(grid: np.ndarray) -> np.ndarray:
-    """Return a copy of grid containing only the largest 26-connected voxel cluster.
+    """Return a copy of grid containing only the largest face-connected voxel cluster.
 
-    Voxels that are isolated from the main body are zeroed out.
-    Empty spaces (material 0) inside the main body are preserved untouched —
-    hollow morphologies are fully supported.
+    Uses 6-connectivity (face neighbours only) to match the physics engine's
+    face-only spring topology.  Voxels isolated from the main body are zeroed.
+    Empty spaces (material 0) inside the body are preserved — hollow
+    morphologies remain fully supported.
     """
     occupied = set(map(tuple, np.argwhere(grid != 0).tolist()))
     if not occupied:
@@ -52,7 +53,7 @@ def keep_largest_component(grid: np.ndarray) -> np.ndarray:
         while q:
             x, y, z = q.popleft()
             comp.append((x, y, z))
-            for dx, dy, dz in _OFFSETS_26:
+            for dx, dy, dz in _FACE_OFFSETS:
                 nb = (x + dx, y + dy, z + dz)
                 if nb in unvisited:
                     unvisited.discard(nb)
@@ -109,12 +110,12 @@ def create_connected_genome() -> np.ndarray:
     placed   = 1
 
     while placed < target_n and frontier:
-        fi      = np.random.randint(len(frontier))
+        fi         = np.random.randint(len(frontier))
         fx, fy, fz = frontier[fi]
 
-        # Empty interior neighbours of this frontier voxel
+        # Empty interior FACE neighbours of this frontier voxel
         candidates = []
-        for dx, dy, dz in _OFFSETS_26:
+        for dx, dy, dz in _FACE_OFFSETS:
             nx, ny, nz = fx + dx, fy + dy, fz + dz
             if (VOXEL_INTERIOR_MIN <= nx < VOXEL_INTERIOR_MAX and
                     VOXEL_INTERIOR_MIN <= ny < VOXEL_INTERIOR_MAX and
