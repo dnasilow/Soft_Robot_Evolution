@@ -5,15 +5,15 @@ import numpy as np
 
 # ==================== VOXEL GRID CONFIGURATION ====================
 
-VOXEL_GRID_SHAPE   = (8, 8, 8)
+VOXEL_GRID_SHAPE   = (16, 16, 16)
 VOXEL_INTERIOR_MIN = 1
-VOXEL_INTERIOR_MAX = 7   # exclusive → usable indices 1-6 (6×6×6 = 216 positions)
+VOXEL_INTERIOR_MAX = 15  # exclusive → usable indices 1-14 (14×14×14 = 2744 positions)
 VOXEL_SIZE         = 0.01  # metres per voxel edge
 
 # ==================== POPULATION PARAMETERS ====================
 
 MIN_VOXELS_PER_ROBOT = 20
-MAX_VOXELS_PER_ROBOT = 50
+MAX_VOXELS_PER_ROBOT = 100
 
 MATERIAL_TYPES         = [1, 2, 3, 4]
 MATERIAL_PROBABILITIES = [0.25, 0.25, 0.25, 0.25]
