@@ -35,7 +35,11 @@
       "Bash(git fetch:*)",
       "Bash(git stash:*)",
       "Bash(timeout 10 python:*)",
-      "Bash(timeout 5 python:*)"
+      "Bash(timeout 5 python:*)",
+      "Bash(mkdir -p c:/SoftRobotEvolution/archive)",
+      "Bash(cp c:/SoftRobotEvolution/src/physics/mujoco_physics.py c:/SoftRobotEvolution/archive/)",
+      "Bash(cp c:/SoftRobotEvolution/src/physics/mujoco_actuated_physics.py c:/SoftRobotEvolution/archive/)",
+      "Bash(cp c:/SoftRobotEvolution/src/physics/mujoco_converter.py c:/SoftRobotEvolution/archive/)"
     ],
     "deny": [],
     "ask": []

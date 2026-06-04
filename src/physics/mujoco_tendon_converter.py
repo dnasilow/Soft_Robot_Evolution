@@ -118,7 +118,7 @@ def voxel_to_tendon_xml(
         3: '0 1 1 0.6',   # cyan
         4: '0 0 1 0.6',   # blue
     }
-    _density = {1: 200.0, 2: 200.0, 3: 200.0, 4: 200.0}
+    _density = {1: 1000.0, 2: 1000.0, 3: 1000.0, 4: 1000.0}
 
     # ------------------------------------------------------------------
     # 1. Collect voxels, store integer grid coordinates
@@ -254,7 +254,7 @@ def voxel_to_tendon_xml(
     xml.append('  <actuator>')
     for k, info in enumerate(tendon_info):
         xml.append(f'    <position name="act_{k}" tendon="tendon_{k}"'
-                   f' kp="{info["kp"]:.1f}" kv="0" ctrlrange="0 0.05"/>')
+                   f' kp="{info["kp"]:.1f}" kv="0.1" ctrlrange="0 0.05"/>')
     xml.append('  </actuator>')
     xml.append('')
     xml.append('</mujoco>')
