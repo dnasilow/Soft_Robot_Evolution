@@ -19,6 +19,7 @@ Usage
 import argparse
 import copy
 import json
+import os
 import pickle
 import time
 from pathlib import Path
@@ -47,6 +48,7 @@ DEFAULT_MUT_RATE    = 0.3
 DEFAULT_XOVER_RATE  = 0.7
 DEFAULT_FREQ        = 10.0   # Hz
 DEFAULT_AMP         = 0.08   # ±8% rest length (matches material test scripts)
+DEFAULT_WORKERS     = max(1, (os.cpu_count() or 4) - 2)   # leave 2 cores for OS
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -143,6 +145,7 @@ def run_evolution(
     crossover_rate:  float = DEFAULT_XOVER_RATE,
     actuation_freq:  float = DEFAULT_FREQ,
     actuation_amp:   float = DEFAULT_AMP,
+    n_workers:       int  = DEFAULT_WORKERS,
     results_dir:     str  = "results",
     name:            str  = "tendon_run",
     seed:            int  = 42,
@@ -159,15 +162,17 @@ def run_evolution(
     print(f"  Sim time   : {sim_time}s  +  {settle_time}s settle")
     print(f"  Actuation  : {actuation_freq}Hz  +-{actuation_amp*100:.0f}%")
     print(f"  Elite      : {elite_size}")
+    print(f"  Workers    : {n_workers}")
     print(f"  Output dir : {out}")
     print("=" * 70)
 
-    # ── Evaluator (one engine, reused) ──────────────────────────────
+    # ── Evaluator ───────────────────────────────────────────────────
     evaluator = MuJoCoTendonEvaluator(
         simulation_time     = sim_time,
         settle_time         = settle_time,
         actuation_frequency = actuation_freq,
         actuation_amplitude = actuation_amp,
+        n_workers           = n_workers,
     )
 
     # ── Sanity check (1 robot, catch import/physics errors early) ──
@@ -219,6 +224,11 @@ def run_evolution(
         print(f"Gen {gen+1:3d}/{generations}  "
               f"best={gen_best:.4f}m  mean={gen_mean:.4f}m  "
               f"worst={gen_wst:.4f}m  [{elapsed:.1f}s]")
+
+        # Per-generation checkpoint — safe to Ctrl+C after this line
+        with open('best_robot_tendon.pkl', 'wb') as f:
+            pickle.dump({'genome': best_genome, 'controller': best_controller,
+                         'fitness': best_fitness}, f)
 
         # Save per-generation JSON
         with open(out / f"gen_{gen+1:03d}.json", "w") as f:
@@ -306,6 +316,8 @@ if __name__ == "__main__":
     parser.add_argument("--xover",     type=float, default=DEFAULT_XOVER_RATE)
     parser.add_argument("--freq",      type=float, default=DEFAULT_FREQ)
     parser.add_argument("--amp",       type=float, default=DEFAULT_AMP)
+    parser.add_argument("--workers",   type=int,   default=DEFAULT_WORKERS,
+                        help=f"parallel worker processes (default: {DEFAULT_WORKERS})")
     parser.add_argument("--name",      type=str,   default="tendon_run")
     parser.add_argument("--seed",      type=int,   default=42)
     args = parser.parse_args()
@@ -320,6 +332,7 @@ if __name__ == "__main__":
         crossover_rate  = args.xover,
         actuation_freq  = args.freq,
         actuation_amp   = args.amp,
+        n_workers       = args.workers,
         name            = args.name,
         seed            = args.seed,
     )
