@@ -271,6 +271,7 @@ def run_evolution(
     ages        = np.ones(population_size, dtype=int)
 
     print(f"Evaluating initial population...")
+    t_gen_start = time.perf_counter()
     fitnesses = np.array(evaluator.evaluate_batch(genomes, controllers), dtype=float)
 
     history = {
@@ -284,7 +285,8 @@ def run_evolution(
 
     # ── Evolution loop ──────────────────────────────────────────────
     for gen in range(generations):
-        t_start = time.perf_counter()
+        # elapsed = time since end of previous evaluation (or initial eval)
+        elapsed = time.perf_counter() - t_gen_start
 
         # ── Stats ──────────────────────────────────────────────────
         best_idx = int(np.argmax(fitnesses))
@@ -301,7 +303,6 @@ def run_evolution(
             best_genome     = genomes[best_idx].copy()
             best_controller = copy.deepcopy(controllers[best_idx])
 
-        elapsed   = time.perf_counter() - t_start
         age_str   = f"  max_age={int(np.max(ages))}" if use_age_pareto else ""
         print(f"Gen {gen+1:3d}/{generations}  "
               f"best={gen_best:.4f}m  mean={gen_mean:.4f}m  "
@@ -363,6 +364,7 @@ def run_evolution(
                 new_ages.append(0)
 
             # Evaluate only the new individuals (survivors keep cached fitness)
+            t_gen_start = time.perf_counter()
             new_fitnesses = np.array(
                 evaluator.evaluate_batch(new_genomes, new_controllers), dtype=float
             )
@@ -407,6 +409,7 @@ def run_evolution(
             ages        = np.ones(population_size, dtype=int)
 
             # Re-evaluate new population (no fitness caching in standard mode)
+            t_gen_start = time.perf_counter()
             fitnesses = np.array(
                 evaluator.evaluate_batch(genomes, controllers), dtype=float
             )
