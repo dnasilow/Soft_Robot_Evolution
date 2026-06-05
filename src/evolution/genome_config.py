@@ -13,7 +13,7 @@ VOXEL_SIZE         = 0.01  # metres per voxel edge
 # ==================== POPULATION PARAMETERS ====================
 
 MIN_VOXELS_PER_ROBOT = 20
-MAX_VOXELS_PER_ROBOT = 200
+MAX_VOXELS_PER_ROBOT = (VOXEL_INTERIOR_MAX - VOXEL_INTERIOR_MIN) ** 3  # 18³ = 5832
 
 MATERIAL_TYPES         = [1, 2, 3, 4]
 MATERIAL_PROBABILITIES = [0.25, 0.25, 0.25, 0.25]

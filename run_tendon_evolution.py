@@ -53,7 +53,7 @@ from src.evolution.cppn_genome import CPPNGenome, InnovationCounter
 # ──────────────────────────────────────────────────────────────────
 DEFAULT_POP         = 10
 DEFAULT_GEN         = 20
-DEFAULT_SIM_TIME    = 3.0    # seconds per evaluation (after settling)
+DEFAULT_SIM_TIME    = 2.5    # seconds per evaluation = 25 cycles at 10 Hz (after settling)
 DEFAULT_SETTLE_TIME = 0.5    # seconds settling before measuring
 DEFAULT_ELITE       = 2
 DEFAULT_MUT_RATE    = 0.3
