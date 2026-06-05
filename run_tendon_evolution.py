@@ -3,7 +3,10 @@ Tendon-Based Soft Robot Evolution
 ==================================
 Canonical entry point for evolving soft robots using the MuJoCo tendon physics.
 
-Genome: direct voxel grid (16x16x16, materials 0-4)
+Genome: CPPN (Compositional Pattern Producing Network) → voxel grid decoder
+        Maps (x,y,z,dist) → material type at each grid position.
+        Enables meaningful NEAT-style crossover in weight-space.
+        Reference: Cheney et al., "Unshackling Evolution", GECCO 2013.
 Physics: MuJoCoTendonPhysics (spatial tendons + position actuators)
 Controller: CPGController per robot (one oscillator per active tendon)
 Fitness: horizontal distance travelled in simulation_time after settling,
@@ -43,6 +46,7 @@ from src.evolution.genome_config import (
     create_empty_grid, get_random_interior_position, get_num_voxels,
     create_connected_genome, keep_largest_component,
 )
+from src.evolution.cppn_genome import CPPNGenome, InnovationCounter
 
 # ──────────────────────────────────────────────────────────────────
 # Defaults
@@ -61,47 +65,52 @@ DEFAULT_INJECT_FRAC = 0.10   # fraction of pop injected as fresh random each gen
 
 
 # ──────────────────────────────────────────────────────────────────
-# Genome helpers
+# CPPN helpers
 # ──────────────────────────────────────────────────────────────────
-def create_random_genome() -> np.ndarray:
-    """Connected voxel body via growth algorithm (guaranteed no orphan voxels)."""
-    return create_connected_genome()
+def _make_valid_cppn(innov: InnovationCounter,
+                     rng: np.random.Generator,
+                     max_tries: int = 50) -> tuple[CPPNGenome, np.ndarray]:
+    """Create a random CPPN whose decoded grid meets minimum voxel count."""
+    for _ in range(max_tries):
+        cppn = CPPNGenome(innov, rng)
+        grid = cppn.to_voxel_grid()
+        if grid is not None:
+            return cppn, grid
+    raise RuntimeError("Failed to generate a valid CPPN genome — check MIN_VOXELS_PER_ROBOT")
 
 
-def mutate(grid: np.ndarray, rate: float = DEFAULT_MUT_RATE) -> np.ndarray:
-    """Randomly add/remove/change voxels, then drop any orphaned clusters."""
-    g = grid.copy()
-    if np.random.random() < rate:
-        n_muts = np.random.randint(1, 5)
-        for _ in range(n_muts):
-            if np.random.random() < 0.5:
-                x, y, z = get_random_interior_position()
-                g[x, y, z] = np.random.choice(MATERIAL_TYPES, p=MATERIAL_PROBABILITIES)
-            else:
-                occupied = np.argwhere(g != 0)
-                if len(occupied) > 3:
-                    idx = occupied[np.random.randint(len(occupied))]
-                    g[tuple(idx)] = 0
-    g = keep_largest_component(g)
-    if np.count_nonzero(g) < 3:
-        return grid.copy()
-    return g
+def _breed_child(parent_cppn1: CPPNGenome,
+                 parent_cppn2: CPPNGenome,
+                 fitness1: float,
+                 fitness2: float,
+                 innov: InnovationCounter,
+                 rng: np.random.Generator,
+                 crossover_rate: float,
+                 mutation_rate: float) -> tuple[CPPNGenome, np.ndarray]:
+    """
+    Produce a child CPPN + decoded grid.
+    Falls back to parent 1 (unchanged) if child grid is invalid after 5 tries.
+    """
+    for _ in range(5):
+        if rng.random() < crossover_rate:
+            child_cppn = CPPNGenome.crossover(
+                parent_cppn1, parent_cppn2, fitness1, fitness2, rng=rng
+            )
+        else:
+            child_cppn = parent_cppn1.copy()
+        child_cppn = child_cppn.mutate(innov, rate=mutation_rate)
+        child_grid = child_cppn.to_voxel_grid()
+        if child_grid is not None:
+            return child_cppn, child_grid
 
-
-def crossover_3d(p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
-    """Planar split crossover along a random axis, then drop orphan clusters."""
-    child = np.zeros_like(p1)
-    axis  = np.random.randint(0, 3)
-    split = np.random.randint(VOXEL_INTERIOR_MIN, VOXEL_INTERIOR_MAX)
-    for x in range(p1.shape[0]):
-        for y in range(p1.shape[1]):
-            for z in range(p1.shape[2]):
-                coord = [x, y, z][axis]
-                child[x, y, z] = p1[x, y, z] if coord < split else p2[x, y, z]
-    child = keep_largest_component(child)
-    if np.count_nonzero(child) < 3:
-        child = p1.copy()
-    return child
+    # Rare fallback: just re-mutate parent 1
+    child_cppn = parent_cppn1.mutate(innov, rate=mutation_rate)
+    child_grid = child_cppn.to_voxel_grid()
+    if child_grid is None:
+        _fb        = parent_cppn1.to_voxel_grid()
+        child_grid = _fb if _fb is not None else create_connected_genome()
+        child_cppn = parent_cppn1.copy()
+    return child_cppn, child_grid
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -142,7 +151,7 @@ def crossover_controller(c1: CPGController | None,
 # ──────────────────────────────────────────────────────────────────
 # Age-Fitness Pareto selection  (Schmidt & Lipson, GECCO 2010)
 # ──────────────────────────────────────────────────────────────────
-def pareto_select(genomes, controllers, fitnesses, ages, target_n):
+def pareto_select(genomes, controllers, fitnesses, ages, target_n, cppns=None):
     """
     Non-dominated Pareto sort on two objectives:
       - fitness : maximise
@@ -151,9 +160,9 @@ def pareto_select(genomes, controllers, fitnesses, ages, target_n):
     Individual A dominates B iff A is >= B on both objectives and
     strictly > on at least one.
 
-    Returns (genomes, controllers, fitnesses, ages) of the top target_n
+    Returns (genomes, controllers, fitnesses, ages, cppns) of the top target_n
     individuals, ordered front-by-front then by fitness within the last
-    partial front.
+    partial front.  cppns element mirrors the input list (may be None).
     """
     n = len(genomes)
     dom_count  = np.zeros(n, dtype=int)      # how many individuals dominate i
@@ -200,6 +209,7 @@ def pareto_select(genomes, controllers, fitnesses, ages, target_n):
         [controllers[i] for i in selected],
         np.array([fitnesses[i] for i in selected], dtype=float),
         np.array([ages[i]      for i in selected], dtype=int),
+        [cppns[i] for i in selected] if cppns is not None else None,
     )
 
 
@@ -224,8 +234,11 @@ def run_evolution(
     seed:            int   = 42,
 ):
     np.random.seed(seed)
+    rng = np.random.default_rng(seed)
     out = Path(results_dir) / name
     out.mkdir(parents=True, exist_ok=True)
+
+    innov = InnovationCounter()
 
     if n_inject is None:
         n_inject = max(1, population_size // 10)
@@ -237,6 +250,7 @@ def run_evolution(
     print(f"  Generations: {generations}")
     print(f"  Sim time   : {sim_time}s  +  {settle_time}s settle")
     print(f"  Actuation  : {actuation_freq}Hz  +-{actuation_amp*100:.0f}%")
+    print(f"  Encoding   : CPPN + NEAT crossover")
     if use_age_pareto:
         print(f"  Selection  : Age-Fitness Pareto  (inject {n_inject}/gen)")
     else:
@@ -255,19 +269,29 @@ def run_evolution(
     )
 
     # ── Sanity check ────────────────────────────────────────────────
-    print("\nRunning sanity check (1 robot)...")
-    test_genome = create_random_genome()
+    print("\nRunning sanity check (1 CPPN robot)...")
+    temp_innov   = InnovationCounter()
+    temp_cppn   = CPPNGenome(temp_innov, rng)
+    _tg         = temp_cppn.to_voxel_grid()
+    test_genome = _tg if _tg is not None else create_connected_genome()
     try:
         test_fit = evaluator.evaluate_single(test_genome)
-        print(f"  Sanity check passed — fitness={test_fit:.4f}m")
+        print(f"  Sanity check passed — fitness={test_fit:.4f}m  "
+              f"voxels={int((test_genome != 0).sum())}")
     except Exception as e:
         print(f"  SANITY CHECK FAILED: {e}")
         raise
 
     # ── Initial population ──────────────────────────────────────────
-    print(f"\nGenerating {population_size} random robots...")
-    genomes     = [create_random_genome() for _ in range(population_size)]
-    controllers = [make_controller(g)     for g in genomes]
+    print(f"\nGenerating {population_size} CPPN robots...")
+    innov.flush_gen_cache()
+    cppns       = []
+    genomes     = []
+    for _ in range(population_size):
+        c, g = _make_valid_cppn(innov, rng)
+        cppns.append(c)
+        genomes.append(g)
+    controllers = [make_controller(g) for g in genomes]
     ages        = np.ones(population_size, dtype=int)
 
     print(f"Evaluating initial population...")
@@ -281,6 +305,7 @@ def run_evolution(
     }
     best_genome     = None
     best_controller = None
+    best_cppn       = None
     best_fitness    = -np.inf
 
     # ── Evolution loop ──────────────────────────────────────────────
@@ -302,16 +327,19 @@ def run_evolution(
             best_fitness    = gen_best
             best_genome     = genomes[best_idx].copy()
             best_controller = copy.deepcopy(controllers[best_idx])
+            best_cppn       = cppns[best_idx].copy()
 
+        best_cppn_now = cppns[best_idx]
+        cppn_str  = f"  cppn=N{best_cppn_now.n_nodes}/E{best_cppn_now.n_connections}"
         age_str   = f"  max_age={int(np.max(ages))}" if use_age_pareto else ""
         print(f"Gen {gen+1:3d}/{generations}  "
               f"best={gen_best:.4f}m  mean={gen_mean:.4f}m  "
-              f"worst={gen_wst:.4f}m  [{elapsed:.1f}s]{age_str}")
+              f"worst={gen_wst:.4f}m  [{elapsed:.1f}s]{age_str}{cppn_str}")
 
         # ── Per-generation checkpoint (Ctrl+C safe after this) ─────
         with open('best_robot_tendon.pkl', 'wb') as f:
             pickle.dump({'genome': best_genome, 'controller': best_controller,
-                         'fitness': best_fitness}, f)
+                         'fitness': best_fitness, 'cppn': best_cppn}, f)
 
         with open(out / f"gen_{gen+1:03d}.json", "w") as f:
             json.dump({
@@ -331,34 +359,38 @@ def run_evolution(
             cands = np.random.choice(population_size, 3, replace=False)
             return int(cands[np.argmax(fitnesses[cands])])
 
+        innov.flush_gen_cache()
+
         if use_age_pareto:
             # ── Age-Fitness Pareto breeding ─────────────────────────
             n_breed = population_size - n_inject
+            new_cppns       = []
             new_genomes     = []
             new_controllers = []
             new_ages        = []
 
             for _ in range(n_breed):
                 p1_i, p2_i = tournament(), tournament()
-                p1_g, p2_g = genomes[p1_i], genomes[p2_i]
                 p1_c, p2_c = controllers[p1_i], controllers[p2_i]
 
-                if np.random.random() < crossover_rate:
-                    child_g = crossover_3d(p1_g, p2_g)
-                else:
-                    child_g = p1_g.copy()
-                child_g = mutate(child_g, mutation_rate)
+                child_cppn, child_g = _breed_child(
+                    cppns[p1_i], cppns[p2_i],
+                    float(fitnesses[p1_i]), float(fitnesses[p2_i]),
+                    innov, rng, crossover_rate, mutation_rate,
+                )
                 n_active = count_active_tendons(child_g)
                 child_c  = crossover_controller(p1_c, p2_c, n_active)
                 child_c  = mutate_controller(child_c, mutation_rate)
 
+                new_cppns.append(child_cppn)
                 new_genomes.append(child_g)
                 new_controllers.append(child_c)
                 new_ages.append(int(max(ages[p1_i], ages[p2_i])))
 
             # Inject fresh random robots (age will become 1 after +1 below)
             for _ in range(n_inject):
-                g = create_random_genome()
+                c, g = _make_valid_cppn(innov, rng)
+                new_cppns.append(c)
                 new_genomes.append(g)
                 new_controllers.append(make_controller(g))
                 new_ages.append(0)
@@ -370,14 +402,15 @@ def run_evolution(
             )
 
             # Pool = current survivors + new individuals (2 × pop_size)
-            pool_g = genomes     + new_genomes
-            pool_c = controllers + new_controllers
-            pool_f = np.concatenate([fitnesses,  new_fitnesses])
-            pool_a = np.concatenate([ages, np.array(new_ages, dtype=int)])
+            pool_cppns = cppns       + new_cppns
+            pool_g     = genomes     + new_genomes
+            pool_c     = controllers + new_controllers
+            pool_f     = np.concatenate([fitnesses, new_fitnesses])
+            pool_a     = np.concatenate([ages, np.array(new_ages, dtype=int)])
 
             # Pareto truncate back to population_size
-            genomes, controllers, fitnesses, ages = pareto_select(
-                pool_g, pool_c, pool_f, pool_a, population_size
+            genomes, controllers, fitnesses, ages, cppns = pareto_select(
+                pool_g, pool_c, pool_f, pool_a, population_size, cppns=pool_cppns
             )
             ages = ages + 1   # everyone survives one more generation
 
@@ -385,25 +418,27 @@ def run_evolution(
             # ── Original tournament-3 + elite-2 ────────────────────
             order = np.argsort(fitnesses)[::-1]
 
-            new_genomes     = [genomes[i].copy()             for i in order[:elite_size]]
-            new_controllers = [copy.deepcopy(controllers[i]) for i in order[:elite_size]]
+            new_cppns       = [cppns[i].copy()               for i in order[:elite_size]]
+            new_genomes     = [genomes[i].copy()              for i in order[:elite_size]]
+            new_controllers = [copy.deepcopy(controllers[i])  for i in order[:elite_size]]
 
             while len(new_genomes) < population_size:
                 p1_i, p2_i = tournament(), tournament()
-                p1_g, p2_g = genomes[p1_i], genomes[p2_i]
                 p1_c, p2_c = controllers[p1_i], controllers[p2_i]
 
-                if np.random.random() < crossover_rate:
-                    child_g = crossover_3d(p1_g, p2_g)
-                else:
-                    child_g = p1_g.copy()
-                child_g  = mutate(child_g, mutation_rate)
+                child_cppn, child_g = _breed_child(
+                    cppns[p1_i], cppns[p2_i],
+                    float(fitnesses[p1_i]), float(fitnesses[p2_i]),
+                    innov, rng, crossover_rate, mutation_rate,
+                )
                 n_active = count_active_tendons(child_g)
                 child_c  = crossover_controller(p1_c, p2_c, n_active)
                 child_c  = mutate_controller(child_c, mutation_rate)
+                new_cppns.append(child_cppn)
                 new_genomes.append(child_g)
                 new_controllers.append(child_c)
 
+            cppns       = new_cppns
             genomes     = new_genomes
             controllers = new_controllers
             ages        = np.ones(population_size, dtype=int)
@@ -421,10 +456,10 @@ def run_evolution(
 
     with open(out / 'best_robot.pkl', 'wb') as f:
         pickle.dump({'genome': best_genome, 'controller': best_controller,
-                     'fitness': best_fitness}, f)
+                     'fitness': best_fitness, 'cppn': best_cppn}, f)
     with open('best_robot_tendon.pkl', 'wb') as f:
         pickle.dump({'genome': best_genome, 'controller': best_controller,
-                     'fitness': best_fitness}, f)
+                     'fitness': best_fitness, 'cppn': best_cppn}, f)
     with open(out / 'history.json', 'w') as f:
         json.dump(history, f, indent=2)
 
