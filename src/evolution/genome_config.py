@@ -13,7 +13,11 @@ VOXEL_SIZE         = 0.01  # metres per voxel edge
 # ==================== POPULATION PARAMETERS ====================
 
 MIN_VOXELS_PER_ROBOT = 20
-MAX_VOXELS_PER_ROBOT = (VOXEL_INTERIOR_MAX - VOXEL_INTERIOR_MIN) ** 3  # 18³ = 5832
+MAX_VOXELS_PER_ROBOT = 300  # MuJoCo's spatial-tendon constraint solver scales
+                            # superlinearly with tendon count (measured: 2.4x tendons
+                            # -> ~300x slower per evaluation), so this stays close to
+                            # the known-tractable ~200-voxel regime while giving the
+                            # CPPN modestly more room (~50% larger bodies)
 
 MATERIAL_TYPES         = [1, 2, 3, 4]
 MATERIAL_PROBABILITIES = [0.25, 0.25, 0.25, 0.25]

@@ -29,6 +29,7 @@ from src.evolution.genome_config import (
     VOXEL_INTERIOR_MIN,
     VOXEL_INTERIOR_MAX,
     MIN_VOXELS_PER_ROBOT,
+    MAX_VOXELS_PER_ROBOT,
     keep_largest_component,
 )
 
@@ -263,11 +264,16 @@ class CPPNGenome:
 
     def to_voxel_grid(self) -> Optional[np.ndarray]:
         """
-        Decode CPPN → voxel grid (up to the full 18³ = 5832 interior positions).
+        Decode CPPN → voxel grid, capped at MAX_VOXELS_PER_ROBOT.
 
         Material 0 = empty; materials 1-4 = physical voxels.
-        argmax over 5 logits determines the material at each position.
-        Empty space emerges wherever logit[0] dominates; no explicit cap is applied.
+        argmax over 5 logits determines the material at each of the 5832 interior
+        positions. Empty space emerges naturally wherever logit[0] dominates.
+
+        When more than MAX_VOXELS_PER_ROBOT positions come out non-empty, only the
+        highest-confidence ones (largest winning-logit value) are kept — this bounds
+        the MuJoCo tendon/actuator count to a tractable size while still letting
+        evolution express bodies anywhere up to that ceiling.
 
         Returns None if the resulting body has fewer than MIN_VOXELS_PER_ROBOT voxels
         after keeping only the largest face-connected component.
@@ -275,6 +281,15 @@ class CPPNGenome:
         coords, interior_dims = _build_coord_grid()
         logits    = self.evaluate_batch(coords)                   # (N, 5)
         materials = np.argmax(logits, axis=1).astype(np.int8)    # (N,)
+
+        non_empty_idx = np.where(materials != 0)[0]
+        if len(non_empty_idx) > MAX_VOXELS_PER_ROBOT:
+            conf    = logits[non_empty_idx, materials[non_empty_idx]]
+            top_k   = np.argpartition(conf, -MAX_VOXELS_PER_ROBOT)[-MAX_VOXELS_PER_ROBOT:]
+            kept    = non_empty_idx[top_k]
+            trimmed = np.zeros(len(materials), dtype=np.int8)
+            trimmed[kept] = materials[kept]
+            materials = trimmed
 
         lo, hi    = VOXEL_INTERIOR_MIN, VOXEL_INTERIOR_MAX
         full_grid = np.zeros(VOXEL_GRID_SHAPE, dtype=np.int8)
