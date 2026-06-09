@@ -156,8 +156,10 @@ class MuJoCoTendonPhysics:
 
     def get_fitness(
         self,
-        simulation_time: float = 5.0,
-        settle_time:     float = 0.5,
+        simulation_time:      float = 5.0,
+        settle_time:          float = 0.5,
+        early_term_fraction:  float = 0.2,
+        early_term_threshold: float = 0.003,
     ) -> float:
         """
         Run simulation and return ground-penalised horizontal distance.
@@ -168,6 +170,15 @@ class MuJoCoTendonPhysics:
         COM stays below 3x its settled height.  A robot that launches itself
         into the air covers horizontal distance in flight but receives little
         credit; one that crawls on the ground gets full credit.
+
+        Early termination: at `early_term_fraction` of the measurement
+        window (default 20% = ~5 cycles of a 25-cycle run), if the robot
+        has displaced less than `early_term_threshold` metres, it is judged
+        non-locomoting (collapsed, stuck, or twitching in place) and the
+        simulation is aborted, returning the partial result. Genuine movers
+        show measurable displacement well within the first fifth of the
+        window, so this only short-circuits the bodies that would have
+        scored ~0 anyway — typically the majority of any population.
         """
         settle_steps = int(settle_time / self.default_timestep)
         for _ in range(settle_steps):
@@ -178,14 +189,25 @@ class MuJoCoTendonPhysics:
         ground_threshold = max(initial_pos[2] * 3.0, 0.05)
 
         measure_steps  = int(simulation_time / self.default_timestep)
+        check_step     = int(measure_steps * early_term_fraction)
         grounded_steps = 0
         nbody          = self.model.nbody
 
-        for _ in range(measure_steps):
+        for step_idx in range(measure_steps):
             self.step()
             com_z = float(np.mean(self.data.xpos[1:nbody, 2]))
             if com_z < ground_threshold:
                 grounded_steps += 1
+
+            if step_idx + 1 == check_step:
+                probe_pos = self.get_position()
+                probe_horizontal = float(np.sqrt(
+                    (probe_pos[0] - initial_pos[0]) ** 2 +
+                    (probe_pos[1] - initial_pos[1]) ** 2
+                ))
+                if probe_horizontal < early_term_threshold:
+                    ground_fraction = grounded_steps / (step_idx + 1)
+                    return probe_horizontal * ground_fraction
 
         final_pos      = self.get_position()
         ground_fraction = grounded_steps / measure_steps
