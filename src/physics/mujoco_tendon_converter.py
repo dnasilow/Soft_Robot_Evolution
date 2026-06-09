@@ -194,7 +194,10 @@ def voxel_to_tendon_xml(
     # ------------------------------------------------------------------
     xml = []
     xml.append('<mujoco model="voxel_tendon_robot">')
-    xml.append('  <option timestep="0.0005" gravity="0 0 -9.81"/>')
+    # CG solver converges faster than Newton for large constraint systems (300+ active tendons).
+    # Reduced iterations/tolerance sufficient for relative fitness ranking in evolution.
+    xml.append('  <option timestep="0.0005" gravity="0 0 -9.81"'
+               ' solver="CG" iterations="30" tolerance="1e-6"/>')
     xml.append('')
     xml.append('  <visual>')
     xml.append('    <headlight diffuse="0.6 0.6 0.6" ambient="0.5 0.5 0.5" specular="0 0 0"/>')
@@ -241,20 +244,35 @@ def voxel_to_tendon_xml(
     xml.append('')
 
     # Tendons
+    # Active tendons (at least one active-material endpoint) get bare spatial
+    # tendons — a position actuator handles the stiffness via ctrl.
+    # Passive-passive tendons get stiffness/damping directly on the tendon element
+    # (force-based spring, no constraint row) so they don't pollute the constraint
+    # matrix that the CG solver must invert every step.
     xml.append('  <tendon>')
-    for k, (i, j, _) in enumerate(tendon_pairs):
-        xml.append(f'    <spatial name="tendon_{k}">')
+    for k, info in enumerate(tendon_info):
+        i, j = info['body1_idx'], info['body2_idx']
+        if info['is_active']:
+            xml.append(f'    <spatial name="tendon_{k}">')
+        else:
+            # Passive spring: stiffness mirrors the kp the position actuator would
+            # have used; springlength equals the face-adjacent voxel-centre distance.
+            kp = info['kp']
+            xml.append(f'    <spatial name="tendon_{k}"'
+                       f' stiffness="{kp:.1f}" damping="0.1"'
+                       f' springlength="{voxel_size:.6f}">')
         xml.append(f'      <site site="site_{i}"/>')
         xml.append(f'      <site site="site_{j}"/>')
         xml.append(f'    </spatial>')
     xml.append('  </tendon>')
     xml.append('')
 
-    # Actuators — each gets its own kp from tendon_info
+    # Actuators — only for ACTIVE tendons; passive springs need no actuator
     xml.append('  <actuator>')
     for k, info in enumerate(tendon_info):
-        xml.append(f'    <position name="act_{k}" tendon="tendon_{k}"'
-                   f' kp="{info["kp"]:.1f}" kv="0.1" ctrlrange="0 0.05"/>')
+        if info['is_active']:
+            xml.append(f'    <position name="act_{k}" tendon="tendon_{k}"'
+                       f' kp="{info["kp"]:.1f}" kv="0.1" ctrlrange="0 0.05"/>')
     xml.append('  </actuator>')
     xml.append('')
     xml.append('</mujoco>')

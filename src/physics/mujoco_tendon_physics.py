@@ -64,25 +64,25 @@ class MuJoCoTendonPhysics:
         self.model = mujoco.MjModel.from_xml_string(xml)
         self.data  = mujoco.MjData(self.model)
         mujoco.mj_forward(self.model, self.data)
-        self.rest_lengths = np.array(self.data.ten_length, copy=True)
+        # Only active tendons have position actuators; rest_lengths tracks those.
+        self.rest_lengths = np.array(self.data.actuator_length, copy=True)
         self.current_time = 0.0
         self._controller  = None
         self._precompute_actuation_arrays()
 
     def _precompute_actuation_arrays(self) -> None:
-        """Build numpy arrays used by the vectorised apply_actuation()."""
-        n = len(self.tendon_info)
-        active_mask = np.zeros(n, dtype=bool)
-        base_phases = np.zeros(n, dtype=float)
+        """Build base-phase array for the open-loop sinusoidal fallback.
 
-        for k, info in enumerate(self.tendon_info):
-            if info['is_active']:
-                active_mask[k] = True
-                base_phases[k] = info['base_phase']
-
-        self._active_mask = active_mask
-        self._base_phases = base_phases
-        self._active_idx  = np.where(active_mask)[0]
+        After the passive-spring optimisation, model.nu == num_active_tendons,
+        so _base_phases is indexed 0..nu-1 and no active-mask indexing is needed.
+        """
+        self._base_phases = np.array(
+            [info['base_phase'] for info in self.tendon_info if info['is_active']],
+            dtype=float,
+        )
+        # Keep _active_mask/_active_idx as None — no longer used.
+        self._active_mask = None
+        self._active_idx  = None
 
     # ------------------------------------------------------------------
     # Controller
@@ -93,46 +93,42 @@ class MuJoCoTendonPhysics:
         The controller must have num_actuators == number of active tendons.
         """
         if controller is not None:
-            expected = int(np.sum(self._active_mask))
-            if controller.num_actuators != expected:
+            if controller.num_actuators != self.num_active_tendons:
                 raise ValueError(
                     f"Controller has {controller.num_actuators} actuators but "
-                    f"robot has {expected} active tendons."
+                    f"robot has {self.num_active_tendons} active tendons."
                 )
         self._controller = controller
 
     @property
     def num_active_tendons(self) -> int:
-        """Number of tendons connected to at least one active voxel."""
-        if self._active_mask is None:
+        """Number of position-actuated (active) tendons == model.nu."""
+        if self.model is None:
             return 0
-        return int(np.sum(self._active_mask))
+        return int(self.model.nu)
 
     # ------------------------------------------------------------------
     # Actuation (vectorised — no Python loop per step)
     # ------------------------------------------------------------------
     def apply_actuation(self) -> None:
-        """Set ctrl for every tendon actuator. O(n) numpy, no Python loop."""
-        if self.rest_lengths is None:
+        """Set ctrl for every active-tendon actuator. O(n) numpy, no Python loop.
+
+        model.nu == num_active_tendons after the passive-spring optimisation,
+        so data.ctrl and rest_lengths are both indexed 0..nu-1 with no masking.
+        """
+        if self.rest_lengths is None or self.model.nu == 0:
             return
 
-        ctrl = self.rest_lengths.copy()   # start from rest
-
         if self._controller is not None:
-            # CPGController path: one signal per active tendon
-            signals = self._controller.step(self.default_timestep)   # (n_active,)
+            signals = self._controller.step(self.default_timestep)   # (nu,)
             signals = np.clip(signals, -1.0, 1.0)
-            ctrl[self._active_idx] *= (1.0 + self.actuation_amplitude * signals)
+            self.data.ctrl[:] = self.rest_lengths * (1.0 + self.actuation_amplitude * signals)
         else:
-            # Hardcoded sinusoidal path (used during testing / no controller)
-            if self._active_mask.any():
-                omega = 2.0 * np.pi * self.actuation_frequency
-                t_sig = self.actuation_amplitude * np.sin(
-                    omega * self.current_time + self._base_phases
-                )
-                ctrl = np.where(self._active_mask, self.rest_lengths * (1.0 + t_sig), ctrl)
-
-        self.data.ctrl[:] = ctrl
+            omega = 2.0 * np.pi * self.actuation_frequency
+            t_sig = self.actuation_amplitude * np.sin(
+                omega * self.current_time + self._base_phases
+            )
+            self.data.ctrl[:] = self.rest_lengths * (1.0 + t_sig)
 
     # ------------------------------------------------------------------
     # Stepping
