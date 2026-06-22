@@ -46,9 +46,13 @@ def _eval_worker(args):
             voxel_size     = params['voxel_size'],
             initial_height = params['initial_height'],
         )
-        controller = _reconcile_controller(controller, engine.num_active_tendons)
-        if controller is not None:
-            engine.set_controller(controller)
+        # When attach_controller is False (A1: Cheney-faithful open-loop), leave the
+        # engine controller-free so apply_actuation() drives each active tendon with the
+        # material-derived base phase at the global actuation frequency.
+        if params.get('attach_controller', True):
+            controller = _reconcile_controller(controller, engine.num_active_tendons)
+            if controller is not None:
+                engine.set_controller(controller)
         return engine.get_fitness(
             simulation_time = params['simulation_time'],
             settle_time     = params['settle_time'],
@@ -76,12 +80,15 @@ class MuJoCoTendonEvaluator:
         voxel_size:          float = 0.01,
         initial_height:      float = 0.0,
         n_workers:           int   = 1,
+        attach_controller:   bool  = True,
     ):
-        self.simulation_time = simulation_time
-        self.settle_time     = settle_time
-        self.voxel_size      = voxel_size
-        self.initial_height  = initial_height
-        self.n_workers       = max(1, n_workers)
+        self.simulation_time   = simulation_time
+        self.settle_time       = settle_time
+        self.voxel_size        = voxel_size
+        self.initial_height    = initial_height
+        self.n_workers         = max(1, n_workers)
+        self.attach_controller = attach_controller
+        self._pool             = None   # persistent worker pool (created lazily)
 
         # Params dict passed to every worker (plain Python types → picklable)
         self._params = {
@@ -92,6 +99,7 @@ class MuJoCoTendonEvaluator:
             'initial_height':      initial_height,
             'simulation_time':     simulation_time,
             'settle_time':         settle_time,
+            'attach_controller':   attach_controller,
         }
 
         # Sequential engine — used when n_workers==1 and by evaluate_single
@@ -122,10 +130,14 @@ class MuJoCoTendonEvaluator:
             controllers = [None] * len(genomes)
 
         # ── Parallel path ──────────────────────────────────────────────
+        # Reuse ONE persistent pool across generations. Re-creating a Pool every
+        # generation re-spawns every worker (re-importing MuJoCo each time) and, on
+        # Windows spawn, rolls the dice on a WinError 5 handle-duplication failure on
+        # each respawn — which kills long runs partway through. One spawn = reliable.
         if self.n_workers > 1:
             args = [(g, c, self._params) for g, c in zip(genomes, controllers)]
-            with Pool(self.n_workers) as pool:
-                fitnesses = pool.map(_eval_worker, args, chunksize=1)
+            pool = self._get_pool()
+            fitnesses = pool.map(_eval_worker, args, chunksize=1)
             return np.array(fitnesses, dtype=float)
 
         # ── Sequential path ────────────────────────────────────────────
@@ -137,11 +149,14 @@ class MuJoCoTendonEvaluator:
                     voxel_size     = self.voxel_size,
                     initial_height = self.initial_height,
                 )
-                controller = _reconcile_controller(
-                    controller, self.engine.num_active_tendons
-                )
-                if controller is not None:
-                    self.engine.set_controller(controller)
+                if self.attach_controller:
+                    controller = _reconcile_controller(
+                        controller, self.engine.num_active_tendons
+                    )
+                    if controller is not None:
+                        self.engine.set_controller(controller)
+                else:
+                    self.engine.set_controller(None)
                 fitness = self.engine.get_fitness(
                     simulation_time = self.simulation_time,
                     settle_time     = self.settle_time,
@@ -157,6 +172,29 @@ class MuJoCoTendonEvaluator:
     def evaluate_single(self, genome: np.ndarray, controller=None) -> float:
         """Convenience wrapper for evaluating one robot."""
         return float(self.evaluate_batch([genome], [controller])[0])
+
+    # ------------------------------------------------------------------
+    # Persistent pool lifecycle
+    # ------------------------------------------------------------------
+    def _get_pool(self) -> Pool:
+        """Create the worker pool on first use, then reuse it for the whole run."""
+        if self._pool is None:
+            self._pool = Pool(self.n_workers)
+        return self._pool
+
+    def close(self) -> None:
+        """Shut the persistent worker pool down. Safe to call multiple times."""
+        if self._pool is not None:
+            self._pool.close()
+            self._pool.join()
+            self._pool = None
+
+    def __del__(self):
+        # Best-effort cleanup if the caller forgets to close().
+        try:
+            self.close()
+        except Exception:
+            pass
 
 
 # ------------------------------------------------------------------

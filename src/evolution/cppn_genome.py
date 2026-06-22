@@ -37,7 +37,7 @@ from src.evolution.genome_config import (
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
 N_INPUTS    = 4   # (x_norm, y_norm, z_norm, dist_norm)
-N_OUTPUTS   = 5   # logits for materials 0 … 4  (0 = empty)
+N_OUTPUTS   = 6   # A2: [presence, mat1, mat2, mat3, mat4] — presence decoupled from material
 ACTIVATIONS = ('tanh', 'sin', 'gaussian', 'abs', 'linear', 'relu')
 
 _FIRST_HIDDEN_ID = N_INPUTS + N_OUTPUTS   # 9; IDs below are reserved for I/O
@@ -279,12 +279,17 @@ class CPPNGenome:
         after keeping only the largest face-connected component.
         """
         coords, interior_dims = _build_coord_grid()
-        logits    = self.evaluate_batch(coords)                   # (N, 5)
-        materials = np.argmax(logits, axis=1).astype(np.int8)    # (N,)
+        logits   = self.evaluate_batch(coords)                    # (N, 6): [presence, m1..m4]
+        # A2 (Cheney-faithful): one output gates presence, the other four pick the
+        # material. This decouples "is a voxel here" from "which material", which the
+        # old argmax-over-5 coupled — and which collapsed bodies to a single material.
+        present   = logits[:, 0] > 0.0
+        material  = (np.argmax(logits[:, 1:N_OUTPUTS], axis=1) + 1).astype(np.int8)  # 1..4
+        materials = np.where(present, material, 0).astype(np.int8)
 
         non_empty_idx = np.where(materials != 0)[0]
         if len(non_empty_idx) > MAX_VOXELS_PER_ROBOT:
-            conf    = logits[non_empty_idx, materials[non_empty_idx]]
+            conf    = logits[non_empty_idx, 0]   # keep the highest-presence voxels
             top_k   = np.argpartition(conf, -MAX_VOXELS_PER_ROBOT)[-MAX_VOXELS_PER_ROBOT:]
             kept    = non_empty_idx[top_k]
             trimmed = np.zeros(len(materials), dtype=np.int8)
@@ -325,12 +330,12 @@ class CPPNGenome:
                 c.enabled = not c.enabled
                 child._invalidate_cache()
 
-        # Add connection (10 %)
-        if rng.random() < 0.10:
+        # Add connection (15 %) — bumped now that speciation protects new structure
+        if rng.random() < 0.15:
             child._add_connection(innov)
 
-        # Add node — split a connection (5 %)
-        if rng.random() < 0.05:
+        # Add node — split a connection (8 %) — bumped to feed CPPN complexification
+        if rng.random() < 0.08:
             child._add_node(innov)
 
         # Change hidden-node activation (8 %)
@@ -374,6 +379,42 @@ class CPPNGenome:
                                                        float(rng.normal(0.0, 1.0)))
                 self._invalidate_cache()
                 return
+
+    # ── NEAT compatibility distance (for speciation) ───────────────────────
+
+    @staticmethod
+    def distance(a: 'CPPNGenome', b: 'CPPNGenome',
+                 c1: float = 1.0, c2: float = 1.0, c3: float = 0.4) -> float:
+        """
+        NEAT genetic distance between two CPPNs, aligned by innovation number:
+            d = c1*E/N + c2*D/N + c3*W̄
+        E = excess genes, D = disjoint genes, W̄ = mean weight diff over matching
+        genes. N is the larger genome's gene count (1 for small genomes, NEAT
+        convention), so a single added node/connection moves the distance enough
+        to split off a protected species.
+        """
+        inn_a = set(a.connections)
+        inn_b = set(b.connections)
+        if not inn_a and not inn_b:
+            return 0.0
+
+        matching = inn_a & inn_b
+        if matching:
+            wd = float(np.mean([abs(a.connections[i].weight - b.connections[i].weight)
+                                for i in matching]))
+        else:
+            wd = 0.0
+
+        border  = min(max(inn_a) if inn_a else 0, max(inn_b) if inn_b else 0)
+        excess  = sum(1 for i in (inn_a ^ inn_b) if i >  border)
+        disjoint = sum(1 for i in (inn_a ^ inn_b) if i <= border)
+
+        # N=1 (NEAT small-genome convention). These CPPNs start topologically
+        # identical (24 genes, weights-only diffs), so normalising by gene count
+        # would bury the structural signal: one added node = 2 new genes, which
+        # must move the distance by ~2 (well above SPECIES_THRESHOLD) so the
+        # complexified variant splits into its own protected species.
+        return c1 * excess + c2 * disjoint + c3 * wd
 
     # ── NEAT crossover ────────────────────────────────────────────────────
 

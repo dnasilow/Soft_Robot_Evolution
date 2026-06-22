@@ -30,7 +30,12 @@ from typing import List, Tuple, Dict, Optional
 # -----------------------------------------------------------------
 # Constants
 # -----------------------------------------------------------------
-_KP    = {1: 100.0, 2: 100.0, 3: 50.0, 4: 100.0}
+# Material stiffness (tendon spring kp). Stiff (mat4) is now a real "bone":
+# 3x muscle so contiguous stiff regions form a rigid skeleton muscles push
+# against (Cheney-faithful). Was 100 (== muscle), which made it dead weight the
+# champion always dropped. Tendon kp = min(both endpoints), so only contiguous
+# stiff-stiff clusters become rigid; the muscle-bone interface stays at 100.
+_KP    = {1: 100.0, 2: 100.0, 3: 50.0, 4: 300.0}
 _PHASE = {1: 0.0, 2: np.pi}   # passive materials have no entry
 
 # 3 face-neighbour offsets that enumerate every unique face-adjacent pair
