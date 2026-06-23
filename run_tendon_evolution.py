@@ -432,6 +432,7 @@ def run_evolution(
     else:
         print(f"  Controller : OPEN-LOOP material-phase (A1, Cheney-faithful) — no CPG")
     print(f"  Encoding   : CPPN + NEAT crossover")
+    print(f"  Fitness    : forward (+X) distance in body-lengths × ground-fraction")
     if use_age_pareto:
         print(f"  Selection  : Age-Fitness Pareto  (inject {n_inject}/gen)")
     else:
@@ -460,7 +461,7 @@ def run_evolution(
     test_genome = _tg if _tg is not None else create_connected_genome()
     try:
         test_fit = evaluator.evaluate_single(test_genome)
-        print(f"  Sanity check passed — fitness={test_fit:.4f}m  "
+        print(f"  Sanity check passed — fitness={test_fit:.4f}BL  "
               f"voxels={int((test_genome != 0).sum())}")
     except Exception as e:
         print(f"  SANITY CHECK FAILED: {e}")
@@ -576,8 +577,8 @@ def run_evolution(
         spec_str  = f"  species={n_species}"
         age_str   = f"  max_age={int(np.max(ages))}" if use_age_pareto else ""
         print(f"Gen {gen+1:3d}/{generations}  "
-              f"best={gen_best:.4f}m  mean={gen_mean:.4f}m  "
-              f"worst={gen_wst:.4f}m  [{elapsed:.1f}s]{age_str}{spec_str}{cppn_str}")
+              f"best={gen_best:.4f}BL  mean={gen_mean:.4f}BL  "
+              f"worst={gen_wst:.4f}BL  [{elapsed:.1f}s]{age_str}{spec_str}{cppn_str}")
 
         # ── Per-generation checkpoint (Ctrl+C safe after this) ─────
         with open('best_robot_tendon.pkl', 'wb') as f:
@@ -720,7 +721,7 @@ def run_evolution(
 
     # ── Save final results ──────────────────────────────────────────
     print("\n" + "=" * 70)
-    print(f"EVOLUTION COMPLETE — best fitness: {best_fitness:.4f}m")
+    print(f"EVOLUTION COMPLETE — best fitness: {best_fitness:.4f} body-lengths (forward +X)")
     print("=" * 70)
 
     with open(out / 'best_robot.pkl', 'wb') as f:
@@ -758,6 +759,189 @@ def run_evolution(
     evaluator.close()   # shut the persistent worker pool down cleanly
     _stop_sleep()       # release the keep-awake request promptly
     return best_genome, best_controller, best_fitness, history
+
+
+# ──────────────────────────────────────────────────────────────────
+# MAP-Elites  (Mouret & Clune 2015) — quality-diversity over a gait archive
+# ──────────────────────────────────────────────────────────────────
+def run_map_elites(
+    population_size: int   = DEFAULT_POP,    # offspring evaluated per iteration
+    generations:     int   = DEFAULT_GEN,    # number of iterations
+    sim_time:        float = DEFAULT_SIM_TIME,
+    settle_time:     float = DEFAULT_SETTLE_TIME,
+    mutation_rate:   float = DEFAULT_MUT_RATE,
+    crossover_rate:  float = DEFAULT_XOVER_RATE,
+    actuation_freq:  float = DEFAULT_FREQ,
+    actuation_amp:   float = DEFAULT_AMP,
+    n_workers:       int   = DEFAULT_WORKERS,
+    results_dir:     str   = "results",
+    name:            str   = "mapelites_run",
+    seed:            int   = 42,
+    archive_bins:    int   = 16,
+    resume:          bool  = True,
+):
+    """
+    Quality-Diversity search. Keeps the best robot of each *gait* cell in a 2-D
+    archive indexed by behaviour descriptors:
+        x = mean COM height (body-lengths)   — crawler ↔ stander
+        y = vertical bounce amplitude        — smooth glide ↔ hopper/jumper
+    Offspring are bred from random archive elites and filed into their cell, kept
+    only if they beat the current occupant. Reaches higher peaks than objective-only
+    search via stepping stones, and yields a whole archive of diverse gaits.
+    """
+    import atexit
+    _stop_sleep = _prevent_sleep()
+    atexit.register(_stop_sleep)
+
+    np.random.seed(seed)
+    rng = np.random.default_rng(seed)
+    out = Path(results_dir) / name
+    out.mkdir(parents=True, exist_ok=True)
+    innov = InnovationCounter()
+
+    # Behaviour-space bounds (body-length units) → discrete cells.
+    H_LO, H_HI = 0.0, 1.5     # mean COM height
+    B_LO, B_HI = 0.0, 0.5     # bounce amplitude
+    n_cells = archive_bins * archive_bins
+
+    def cell_of(desc):
+        h, b = desc
+        i = int(np.clip((h - H_LO) / (H_HI - H_LO) * archive_bins, 0, archive_bins - 1))
+        j = int(np.clip((b - B_LO) / (B_HI - B_LO) * archive_bins, 0, archive_bins - 1))
+        return (i, j)
+
+    print("=" * 70)
+    print("MAP-ELITES — quality-diversity soft-robot evolution")
+    print("=" * 70)
+    print(f"  Batch/iter : {population_size}")
+    print(f"  Iterations : {generations}")
+    print(f"  Sim time   : {sim_time}s  +  {settle_time}s settle")
+    print(f"  Fitness    : forward (+X) body-lengths × ground-fraction")
+    print(f"  Descriptors: COM height x bounce  ->  {archive_bins}x{archive_bins} = {n_cells} cells")
+    print(f"  Workers    : {n_workers}   Output: {out}")
+    print("=" * 70)
+
+    evaluator = MuJoCoTendonEvaluator(
+        simulation_time     = sim_time,
+        settle_time         = settle_time,
+        actuation_frequency = actuation_freq,
+        actuation_amplitude = actuation_amp,
+        n_workers           = n_workers,
+        attach_controller   = False,    # open-loop material-phase (default)
+    )
+
+    archive = {}   # (i,j) -> {'cppn','genome','fitness','desc'}
+
+    def place(cppn, genome, fitness, desc):
+        key = cell_of(desc)
+        cur = archive.get(key)
+        if cur is None or fitness > cur['fitness']:
+            archive[key] = {'cppn': cppn, 'genome': genome,
+                            'fitness': float(fitness), 'desc': desc}
+
+    history   = {'coverage': [], 'max_fitness': [], 'qd_score': []}
+    best      = {'fitness': -np.inf, 'genome': None, 'cppn': None, 'desc': None}
+    start_gen = 0
+    ckpt_path = out / 'checkpoint.pkl'
+
+    if resume and ckpt_path.exists():
+        with open(ckpt_path, 'rb') as f:
+            ck = pickle.load(f)
+        archive      = ck['archive']
+        innov._count = ck['innov_count']
+        history      = ck['history']
+        best         = ck['best']
+        start_gen    = ck['next_gen']
+        np.random.set_state(ck['np_state'])
+        rng.bit_generator.state = ck['rng_state']
+        print(f"\nResumed at iteration {start_gen + 1}/{generations}  "
+              f"(filled {len(archive)}/{n_cells}, best {best['fitness']:.4f}BL)")
+    else:
+        print(f"\nSeeding archive with {population_size} random robots...")
+        innov.flush_gen_cache()
+        cppns, grids = [], []
+        for _ in range(population_size):
+            c, g = _make_valid_cppn(innov, rng)
+            cppns.append(c); grids.append(g)
+        fits, descs = evaluator.evaluate_batch(grids, with_descriptors=True)
+        for c, g, fi, d in zip(cppns, grids, fits, descs):
+            place(c, g, fi, d)
+
+    t0 = time.perf_counter()
+    for gen in range(start_gen, generations):
+        elapsed = time.perf_counter() - t0
+        coverage = len(archive)
+        max_fit  = max((e['fitness'] for e in archive.values()), default=0.0)
+        qd_score = sum(e['fitness'] for e in archive.values())
+        history['coverage'].append(coverage)
+        history['max_fitness'].append(max_fit)
+        history['qd_score'].append(qd_score)
+
+        if max_fit > best['fitness']:
+            be = max(archive.values(), key=lambda e: e['fitness'])
+            best = {'fitness': be['fitness'], 'genome': be['genome'].copy(),
+                    'cppn': be['cppn'].copy(), 'desc': be['desc']}
+
+        print(f"Iter {gen+1:3d}/{generations}  "
+              f"filled={coverage:3d}/{n_cells}  max={max_fit:.4f}BL  "
+              f"QD={qd_score:7.2f}  [{elapsed:.1f}s]")
+
+        with open(out / 'best_robot.pkl', 'wb') as f:
+            pickle.dump({'genome': best['genome'], 'controller': None,
+                         'fitness': best['fitness'], 'cppn': best['cppn']}, f)
+        with open(out / f"gen_{gen+1:03d}.json", 'w') as f:
+            json.dump({'iteration': gen + 1, 'coverage': coverage,
+                       'max_fitness': max_fit, 'qd_score': qd_score}, f)
+        _ck = {'archive': archive, 'innov_count': innov._count, 'history': history,
+               'best': best, 'next_gen': gen,
+               'np_state': np.random.get_state(), 'rng_state': rng.bit_generator.state}
+        _tmp = out / 'checkpoint.pkl.tmp'
+        with open(_tmp, 'wb') as f:
+            pickle.dump(_ck, f)
+        os.replace(_tmp, ckpt_path)
+
+        if gen == generations - 1:
+            break
+
+        # ── Produce a batch of offspring from random archive elites ──────
+        innov.flush_gen_cache()
+        elites = list(archive.values())
+        new_cppns, new_grids = [], []
+        for _ in range(population_size):
+            e1 = elites[int(rng.integers(len(elites)))]
+            e2 = elites[int(rng.integers(len(elites)))]
+            child_cppn, child_g = _breed_child(
+                e1['cppn'], e2['cppn'], e1['fitness'], e2['fitness'],
+                innov, rng, crossover_rate, mutation_rate,
+            )
+            new_cppns.append(child_cppn); new_grids.append(child_g)
+
+        t0   = time.perf_counter()
+        fits, descs = evaluator.evaluate_batch(new_grids, with_descriptors=True)
+        for c, g, fi, d in zip(new_cppns, new_grids, fits, descs):
+            place(c, g, fi, d)
+
+    # ── Save final archive ──────────────────────────────────────────────
+    print("\n" + "=" * 70)
+    print(f"MAP-ELITES COMPLETE — best {best['fitness']:.4f}BL  |  "
+          f"filled {len(archive)}/{n_cells} cells  |  QD-score {history['qd_score'][-1]:.2f}")
+    print("=" * 70)
+    with open(out / 'archive.pkl', 'wb') as f:
+        pickle.dump({'archive': archive, 'archive_bins': archive_bins,
+                     'bounds': {'height': (H_LO, H_HI), 'bounce': (B_LO, B_HI)}}, f)
+    with open(out / 'best_robot.pkl', 'wb') as f:
+        pickle.dump({'genome': best['genome'], 'controller': None,
+                     'fitness': best['fitness'], 'cppn': best['cppn']}, f)
+    with open(out / 'history.json', 'w') as f:
+        json.dump(history, f, indent=2)
+    try:
+        ckpt_path.unlink(missing_ok=True)
+    except Exception:
+        pass
+    evaluator.close()
+    _stop_sleep()
+    print(f"\nSaved: {out/'archive.pkl'}  (the full gait archive),  {out/'best_robot.pkl'}")
+    return archive, best
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -802,26 +986,48 @@ if __name__ == "__main__":
                         help=f"NEAT speciation distance (default {SPECIES_THRESHOLD}). Higher = "
                              f"fewer, larger species (stronger fitness-sharing); try 2.0-2.5 if "
                              f"the run over-speciates.")
+    parser.add_argument("--map-elites", dest="map_elites", action="store_true", default=False,
+                        help="Run MAP-Elites quality-diversity (gait archive: COM height × bounce) "
+                             "instead of the AFPO loop. --pop is the offspring/iteration.")
+    parser.add_argument("--archive-bins", type=int, default=16,
+                        help="MAP-Elites archive resolution per axis (default 16 -> 16x16 cells)")
     args = parser.parse_args()
 
-    run_evolution(
-        population_size = args.pop,
-        generations     = args.gen,
-        sim_time        = args.sim_time,
-        settle_time     = args.settle,
-        elite_size      = args.elite,
-        mutation_rate   = args.mut,
-        crossover_rate  = args.xover,
-        actuation_freq  = args.freq,
-        actuation_amp   = args.amp,
-        n_workers       = args.workers,
-        use_age_pareto  = args.age_pareto,
-        n_inject        = args.inject,
-        name            = args.name,
-        seed            = args.seed,
-        seed_from       = args.seed_from,
-        seed_fraction   = args.seed_frac,
-        use_controller    = args.use_cpg and not args.open_loop,
-        resume            = args.resume,
-        species_threshold = args.species_threshold,
-    )
+    if args.map_elites:
+        run_map_elites(
+            population_size = args.pop,
+            generations     = args.gen,
+            sim_time        = args.sim_time,
+            settle_time     = args.settle,
+            mutation_rate   = args.mut,
+            crossover_rate  = args.xover,
+            actuation_freq  = args.freq,
+            actuation_amp   = args.amp,
+            n_workers       = args.workers,
+            name            = args.name,
+            seed            = args.seed,
+            archive_bins    = args.archive_bins,
+            resume          = args.resume,
+        )
+    else:
+        run_evolution(
+            population_size = args.pop,
+            generations     = args.gen,
+            sim_time        = args.sim_time,
+            settle_time     = args.settle,
+            elite_size      = args.elite,
+            mutation_rate   = args.mut,
+            crossover_rate  = args.xover,
+            actuation_freq  = args.freq,
+            actuation_amp   = args.amp,
+            n_workers       = args.workers,
+            use_age_pareto  = args.age_pareto,
+            n_inject        = args.inject,
+            name            = args.name,
+            seed            = args.seed,
+            seed_from       = args.seed_from,
+            seed_fraction   = args.seed_frac,
+            use_controller    = args.use_cpg and not args.open_loop,
+            resume            = args.resume,
+            species_threshold = args.species_threshold,
+        )

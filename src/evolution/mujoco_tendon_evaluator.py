@@ -35,6 +35,7 @@ from src.physics.mujoco_tendon_converter import count_active_tendons
 def _eval_worker(args):
     """Evaluate one robot in a worker process."""
     genome, controller, params = args
+    want_desc = params.get('return_descriptors', False)
     try:
         engine = MuJoCoTendonPhysics(
             default_timestep    = params['timestep'],
@@ -54,11 +55,12 @@ def _eval_worker(args):
             if controller is not None:
                 engine.set_controller(controller)
         return engine.get_fitness(
-            simulation_time = params['simulation_time'],
-            settle_time     = params['settle_time'],
+            simulation_time    = params['simulation_time'],
+            settle_time        = params['settle_time'],
+            return_descriptors = want_desc,
         )
     except Exception:
-        return 0.0
+        return (0.0, (0.0, 0.0)) if want_desc else 0.0
 
 
 class MuJoCoTendonEvaluator:
@@ -114,7 +116,8 @@ class MuJoCoTendonEvaluator:
         self,
         genomes:     List[np.ndarray],
         controllers: Optional[List] = None,
-    ) -> np.ndarray:
+        with_descriptors: bool = False,
+    ):
         """
         Evaluate a list of voxel-grid genomes.
 
@@ -122,26 +125,32 @@ class MuJoCoTendonEvaluator:
             genomes:     list of 3-D numpy arrays (voxel material IDs)
             controllers: matching list of CPGController / None.
                          Pass None for the whole list to use open-loop actuation.
+            with_descriptors: if True, also return per-robot gait descriptors
+                         (mean COM height, bounce) for MAP-Elites.
 
         Returns:
-            1-D numpy array of fitness values (horizontal distance in metres).
+            1-D numpy array of fitness values (forward body-lengths), or
+            (fitnesses, descriptors) when with_descriptors=True.
         """
         if controllers is None:
             controllers = [None] * len(genomes)
 
-        # ── Parallel path ──────────────────────────────────────────────
-        # Reuse ONE persistent pool across generations. Re-creating a Pool every
-        # generation re-spawns every worker (re-importing MuJoCo each time) and, on
-        # Windows spawn, rolls the dice on a WinError 5 handle-duplication failure on
-        # each respawn — which kills long runs partway through. One spawn = reliable.
+        params = dict(self._params)
+        params['return_descriptors'] = with_descriptors
+
+        # ── Parallel path (one persistent pool — see _get_pool) ────────────
         if self.n_workers > 1:
-            args = [(g, c, self._params) for g, c in zip(genomes, controllers)]
+            args = [(g, c, params) for g, c in zip(genomes, controllers)]
             pool = self._get_pool()
-            fitnesses = pool.map(_eval_worker, args, chunksize=1)
-            return np.array(fitnesses, dtype=float)
+            results = pool.map(_eval_worker, args, chunksize=1)
+            if with_descriptors:
+                fits  = np.array([r[0] for r in results], dtype=float)
+                descs = [r[1] for r in results]
+                return fits, descs
+            return np.array(results, dtype=float)
 
         # ── Sequential path ────────────────────────────────────────────
-        fitnesses = []
+        fitnesses, descs = [], []
         for i, (genome, controller) in enumerate(zip(genomes, controllers)):
             try:
                 self.engine.load_robot(
@@ -157,15 +166,21 @@ class MuJoCoTendonEvaluator:
                         self.engine.set_controller(controller)
                 else:
                     self.engine.set_controller(None)
-                fitness = self.engine.get_fitness(
-                    simulation_time = self.simulation_time,
-                    settle_time     = self.settle_time,
+                res = self.engine.get_fitness(
+                    simulation_time    = self.simulation_time,
+                    settle_time        = self.settle_time,
+                    return_descriptors = with_descriptors,
                 )
-                fitnesses.append(fitness)
+                if with_descriptors:
+                    fitnesses.append(res[0]); descs.append(res[1])
+                else:
+                    fitnesses.append(res)
             except Exception as exc:
                 print(f"  [Evaluator] Robot {i} failed: {exc}")
-                fitnesses.append(0.0)
+                fitnesses.append(0.0); descs.append((0.0, 0.0))
 
+        if with_descriptors:
+            return np.array(fitnesses, dtype=float), descs
         return np.array(fitnesses, dtype=float)
 
     # ------------------------------------------------------------------

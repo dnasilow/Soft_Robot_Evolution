@@ -55,7 +55,9 @@
       "Bash(echo \"python: $\\(powershell.exe -NoProfile -Command \"\\(Get-Process python -ErrorAction SilentlyContinue\\).Count\")",
       "PowerShell(wsl --version 2>&1)",
       "Bash(wsl bash *)",
-      "Bash(echo \"running: python=$\\(powershell.exe -NoProfile -Command \"\\(Get-Process python -ErrorAction SilentlyContinue\\).Count\")"
+      "Bash(echo \"running: python=$\\(powershell.exe -NoProfile -Command \"\\(Get-Process python -ErrorAction SilentlyContinue\\).Count\")",
+      "Bash(echo \"running now: python=$\\(powershell.exe -NoProfile -Command \"\\(Get-Process python -ErrorAction SilentlyContinue\\).Count\")",
+      "Bash(echo \"map-elites flag: $\\(python run_tendon_evolution.py --help)"
     ],
     "deny": [],
     "ask": []

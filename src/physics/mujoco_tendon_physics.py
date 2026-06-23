@@ -33,6 +33,7 @@ class MuJoCoTendonPhysics:
         self.default_timestep    = default_timestep
         self.actuation_frequency = actuation_frequency
         self.actuation_amplitude = actuation_amplitude
+        self.voxel_size          = 0.01   # set per-robot in load_robot; used for body-length norm
 
         self.model: Optional[mujoco.MjModel] = None
         self.data:  Optional[mujoco.MjData]  = None
@@ -60,6 +61,7 @@ class MuJoCoTendonPhysics:
         initial_height: float = 0.0,
     ) -> None:
         """Load robot from voxel grid, record rest lengths, precompute arrays."""
+        self.voxel_size = voxel_size
         xml, self.tendon_info = voxel_to_tendon_xml(voxel_grid, voxel_size, initial_height)
         self.model = mujoco.MjModel.from_xml_string(xml)
         self.data  = mujoco.MjData(self.model)
@@ -155,61 +157,82 @@ class MuJoCoTendonPhysics:
         simulation_time:      float = 5.0,
         settle_time:          float = 0.5,
         early_term_fraction:  float = 0.2,
-        early_term_threshold: float = 0.003,
-    ) -> float:
+        early_term_threshold: float = 0.05,   # body-lengths of forward (+X) progress
+        return_descriptors:   bool  = False,  # also return (mean COM height, bounce) for MAP-Elites
+    ):
         """
-        Run simulation and return ground-penalised horizontal distance.
+        Run simulation and return FORWARD (+X) distance in BODY LENGTHS, penalised
+        by ground_fraction:
 
-        fitness = horizontal_displacement * ground_fraction
+            fitness = max(0, forward_displacement / body_length) * ground_fraction
 
-        ground_fraction = fraction of measurement steps where the robot's
-        COM stays below 3x its settled height.  A robot that launches itself
-        into the air covers horizontal distance in flight but receives little
-        credit; one that crawls on the ground gets full credit.
+        - **Directed** (+X only): spinning, drift and backward motion score 0, so the
+          objective selects for real forward locomotion (more transferable than the
+          old undirected net-displacement metric).
+        - **Body-length normalised**: comparable across body sizes (Cheney's unit).
+          body_length = largest bounding-box extent of the undeformed body + one voxel.
+        - **ground_fraction**: fraction of measurement steps the COM stays below 2× its
+          *robust resting height* — the median COM-z over the final quarter of settling,
+          so a mid-settle bounce no longer inflates the threshold (the old
+          `initial_pos[2]*3.0` bug that quietly rewarded jumping).
 
-        Early termination: at `early_term_fraction` of the measurement
-        window (default 20% = ~5 cycles of a 25-cycle run), if the robot
-        has displaced less than `early_term_threshold` metres, it is judged
-        non-locomoting (collapsed, stuck, or twitching in place) and the
-        simulation is aborted, returning the partial result. Genuine movers
-        show measurable displacement well within the first fifth of the
-        window, so this only short-circuits the bodies that would have
-        scored ~0 anyway — typically the majority of any population.
+        Early termination: at `early_term_fraction` of the window, if forward progress
+        is below `early_term_threshold` body-lengths the robot is judged non-locomoting
+        and the sim aborts with the partial result (short-circuits the non-movers /
+        backward-movers that dominate any population).
+
+        NOTE: this is a NEW metric (forward body-lengths) — values are NOT comparable to
+        the earlier metres-based runs (0.116–0.1837 m).
         """
+        nbody = self.model.nbody
+
+        # Body length from the undeformed layout (positions before any stepping).
+        init_xpos   = np.array(self.data.xpos[1:nbody], copy=True)
+        extents     = init_xpos.max(axis=0) - init_xpos.min(axis=0)
+        body_length = max(float(extents.max()) + self.voxel_size, self.voxel_size)
+
+        # Settle, recording resting COM-z over the final quarter (robust to bounce).
         settle_steps = int(settle_time / self.default_timestep)
-        for _ in range(settle_steps):
+        track_from   = int(settle_steps * 0.75)
+        heights      = []
+        for s in range(settle_steps):
             self.step()
+            if s >= track_from:
+                heights.append(float(np.mean(self.data.xpos[1:nbody, 2])))
+        settled_height   = float(np.median(heights)) if heights \
+            else float(np.mean(self.data.xpos[1:nbody, 2]))
+        ground_threshold = max(settled_height * 2.0, 0.05)
 
-        initial_pos = self.get_position()
-        # Threshold: 3x settled COM height, minimum 5 cm
-        ground_threshold = max(initial_pos[2] * 3.0, 0.05)
-
+        initial_x      = float(self.get_position()[0])
         measure_steps  = int(simulation_time / self.default_timestep)
         check_step     = int(measure_steps * early_term_fraction)
         grounded_steps = 0
-        nbody          = self.model.nbody
+        heights        = []   # COM-z per step → gait descriptors (height, bounce)
+
+        def _result(fit):
+            if not return_descriptors:
+                return fit
+            if heights:
+                h  = np.asarray(heights, dtype=float)
+                d1 = float(h.mean()) / body_length   # mean COM height (body-lengths)
+                d2 = float(h.std())  / body_length   # vertical bounce amplitude (body-lengths)
+            else:
+                d1 = d2 = 0.0
+            return fit, (d1, d2)
 
         for step_idx in range(measure_steps):
             self.step()
             com_z = float(np.mean(self.data.xpos[1:nbody, 2]))
+            heights.append(com_z)
             if com_z < ground_threshold:
                 grounded_steps += 1
 
             if step_idx + 1 == check_step:
-                probe_pos = self.get_position()
-                probe_horizontal = float(np.sqrt(
-                    (probe_pos[0] - initial_pos[0]) ** 2 +
-                    (probe_pos[1] - initial_pos[1]) ** 2
-                ))
-                if probe_horizontal < early_term_threshold:
+                forward_bl = (float(self.get_position()[0]) - initial_x) / body_length
+                if forward_bl < early_term_threshold:
                     ground_fraction = grounded_steps / (step_idx + 1)
-                    return probe_horizontal * ground_fraction
+                    return _result(max(0.0, forward_bl) * ground_fraction)
 
-        final_pos      = self.get_position()
         ground_fraction = grounded_steps / measure_steps
-
-        horizontal = float(np.sqrt(
-            (final_pos[0] - initial_pos[0]) ** 2 +
-            (final_pos[1] - initial_pos[1]) ** 2
-        ))
-        return horizontal * ground_fraction
+        forward_bl      = (float(self.get_position()[0]) - initial_x) / body_length
+        return _result(max(0.0, forward_bl) * ground_fraction)
