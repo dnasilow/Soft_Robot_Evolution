@@ -57,7 +57,8 @@
       "Bash(wsl bash *)",
       "Bash(echo \"running: python=$\\(powershell.exe -NoProfile -Command \"\\(Get-Process python -ErrorAction SilentlyContinue\\).Count\")",
       "Bash(echo \"running now: python=$\\(powershell.exe -NoProfile -Command \"\\(Get-Process python -ErrorAction SilentlyContinue\\).Count\")",
-      "Bash(echo \"map-elites flag: $\\(python run_tendon_evolution.py --help)"
+      "Bash(echo \"map-elites flag: $\\(python run_tendon_evolution.py --help)",
+      "Bash(awk '{print $5, $NF}')"
     ],
     "deny": [],
     "ask": []

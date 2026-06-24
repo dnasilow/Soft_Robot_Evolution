@@ -854,6 +854,8 @@ def run_map_elites(
         start_gen    = ck['next_gen']
         np.random.set_state(ck['np_state'])
         rng.bit_generator.state = ck['rng_state']
+        H_LO, H_HI = ck.get('bounds_h', (H_LO, H_HI))
+        B_LO, B_HI = ck.get('bounds_b', (B_LO, B_HI))
         print(f"\nResumed at iteration {start_gen + 1}/{generations}  "
               f"(filled {len(archive)}/{n_cells}, best {best['fitness']:.4f}BL)")
     else:
@@ -864,6 +866,18 @@ def run_map_elites(
             c, g = _make_valid_cppn(innov, rng)
             cppns.append(c); grids.append(g)
         fits, descs = evaluator.evaluate_batch(grids, with_descriptors=True)
+        # Auto-calibrate the archive bounds to the seed gait distribution (5th–95th
+        # percentile + 25% margin) so the 16×16 grid spans the real gait space instead
+        # of cramming every robot into a corner (gait_qd hit only 11% coverage with the
+        # old fixed [0,1.5]×[0,0.5] bounds).
+        def _calib(x):
+            lo, hi = float(np.percentile(x, 5)), float(np.percentile(x, 95))
+            m = 0.25 * (hi - lo) + 1e-4
+            return max(0.0, lo - m), hi + m
+        H_LO, H_HI = _calib(np.array([d[0] for d in descs]))
+        B_LO, B_HI = _calib(np.array([d[1] for d in descs]))
+        print(f"  Auto-calibrated bounds: COM-height [{H_LO:.3f}, {H_HI:.3f}]  "
+              f"bounce [{B_LO:.3f}, {B_HI:.3f}]")
         for c, g, fi, d in zip(cppns, grids, fits, descs):
             place(c, g, fi, d)
 
@@ -894,6 +908,7 @@ def run_map_elites(
                        'max_fitness': max_fit, 'qd_score': qd_score}, f)
         _ck = {'archive': archive, 'innov_count': innov._count, 'history': history,
                'best': best, 'next_gen': gen,
+               'bounds_h': (H_LO, H_HI), 'bounds_b': (B_LO, B_HI),
                'np_state': np.random.get_state(), 'rng_state': rng.bit_generator.state}
         _tmp = out / 'checkpoint.pkl.tmp'
         with open(_tmp, 'wb') as f:
