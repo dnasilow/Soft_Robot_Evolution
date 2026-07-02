@@ -58,7 +58,10 @@
       "Bash(echo \"running: python=$\\(powershell.exe -NoProfile -Command \"\\(Get-Process python -ErrorAction SilentlyContinue\\).Count\")",
       "Bash(echo \"running now: python=$\\(powershell.exe -NoProfile -Command \"\\(Get-Process python -ErrorAction SilentlyContinue\\).Count\")",
       "Bash(echo \"map-elites flag: $\\(python run_tendon_evolution.py --help)",
-      "Bash(awk '{print $5, $NF}')"
+      "Bash(awk '{print $5, $NF}')",
+      "Bash(powershell -NoProfile -Command '\\(Get-Process python -ErrorAction SilentlyContinue | Measure-Object\\).Count | ForEach-Object { '\\\\''python procs running: '\\\\'' + $_ }')",
+      "Bash(powershell -NoProfile -Command '\\(Get-Process python -ErrorAction SilentlyContinue | Measure-Object\\).Count | ForEach-Object { '\\\\''python procs now: '\\\\'' + $_ }')",
+      "Bash(break)"
     ],
     "deny": [],
     "ask": []

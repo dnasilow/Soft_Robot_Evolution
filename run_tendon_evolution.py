@@ -389,6 +389,7 @@ def run_evolution(
     actuation_amp:   float = DEFAULT_AMP,
     n_workers:       int   = DEFAULT_WORKERS,
     use_age_pareto:  bool  = True,
+    use_flex:        bool  = False,  # B5: native deformable (flex) physics instead of tendon
     n_inject:        int   = None,   # None → pop // 10
     results_dir:     str   = "results",
     name:            str   = "tendon_run",
@@ -451,6 +452,8 @@ def run_evolution(
         actuation_amplitude = actuation_amp,
         n_workers           = n_workers,
         attach_controller   = use_controller,
+        use_flex            = use_flex,
+        voxel_size          = 0.05 if use_flex else 0.01,
     )
 
     # ── Sanity check ────────────────────────────────────────────────
@@ -779,6 +782,7 @@ def run_map_elites(
     seed:            int   = 42,
     archive_bins:    int   = 16,
     resume:          bool  = True,
+    use_flex:        bool  = False,   # B5: native deformable (flex) physics
 ):
     """
     Quality-Diversity search. Keeps the best robot of each *gait* cell in a 2-D
@@ -828,6 +832,8 @@ def run_map_elites(
         actuation_amplitude = actuation_amp,
         n_workers           = n_workers,
         attach_controller   = False,    # open-loop material-phase (default)
+        use_flex            = use_flex,
+        voxel_size          = 0.05 if use_flex else 0.01,
     )
 
     archive = {}   # (i,j) -> {'cppn','genome','fitness','desc'}
@@ -1004,6 +1010,9 @@ if __name__ == "__main__":
     parser.add_argument("--map-elites", dest="map_elites", action="store_true", default=False,
                         help="Run MAP-Elites quality-diversity (gait archive: COM height × bounce) "
                              "instead of the AFPO loop. --pop is the offspring/iteration.")
+    parser.add_argument("--flex", dest="flex", action="store_true", default=False,
+                        help="B5: use native deformable (flex) physics instead of the "
+                             "tendon model (~140x faster; FRESH baseline, open-loop only)")
     parser.add_argument("--archive-bins", type=int, default=16,
                         help="MAP-Elites archive resolution per axis (default 16 -> 16x16 cells)")
     args = parser.parse_args()
@@ -1023,6 +1032,7 @@ if __name__ == "__main__":
             seed            = args.seed,
             archive_bins    = args.archive_bins,
             resume          = args.resume,
+            use_flex        = args.flex,
         )
     else:
         run_evolution(
@@ -1037,6 +1047,7 @@ if __name__ == "__main__":
             actuation_amp   = args.amp,
             n_workers       = args.workers,
             use_age_pareto  = args.age_pareto,
+            use_flex        = args.flex,
             n_inject        = args.inject,
             name            = args.name,
             seed            = args.seed,

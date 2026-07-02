@@ -29,6 +29,20 @@ from src.physics.mujoco_tendon_physics import MuJoCoTendonPhysics
 from src.physics.mujoco_tendon_converter import count_active_tendons
 
 
+def _make_engine(params):
+    """Construct the physics engine (flex or tendon) with the shared 3-arg signature."""
+    if params.get('use_flex', False):
+        from src.physics.mujoco_flex_physics import MuJoCoFlexPhysics
+        cls = MuJoCoFlexPhysics
+    else:
+        cls = MuJoCoTendonPhysics
+    return cls(
+        default_timestep    = params['timestep'],
+        actuation_frequency = params['actuation_frequency'],
+        actuation_amplitude = params['actuation_amplitude'],
+    )
+
+
 # ------------------------------------------------------------------
 # Module-level worker (must be top-level for Windows spawn pickling)
 # ------------------------------------------------------------------
@@ -37,20 +51,17 @@ def _eval_worker(args):
     genome, controller, params = args
     want_desc = params.get('return_descriptors', False)
     try:
-        engine = MuJoCoTendonPhysics(
-            default_timestep    = params['timestep'],
-            actuation_frequency = params['actuation_frequency'],
-            actuation_amplitude = params['actuation_amplitude'],
-        )
+        engine = _make_engine(params)
         engine.load_robot(
             genome,
             voxel_size     = params['voxel_size'],
             initial_height = params['initial_height'],
         )
+        # Flex v1 is open-loop only; skip controller attach entirely for flex.
         # When attach_controller is False (A1: Cheney-faithful open-loop), leave the
         # engine controller-free so apply_actuation() drives each active tendon with the
         # material-derived base phase at the global actuation frequency.
-        if params.get('attach_controller', True):
+        if params.get('attach_controller', True) and not params.get('use_flex', False):
             controller = _reconcile_controller(controller, engine.num_active_tendons)
             if controller is not None:
                 engine.set_controller(controller)
@@ -83,6 +94,7 @@ class MuJoCoTendonEvaluator:
         initial_height:      float = 0.0,
         n_workers:           int   = 1,
         attach_controller:   bool  = True,
+        use_flex:            bool  = False,
     ):
         self.simulation_time   = simulation_time
         self.settle_time       = settle_time
@@ -90,6 +102,7 @@ class MuJoCoTendonEvaluator:
         self.initial_height    = initial_height
         self.n_workers         = max(1, n_workers)
         self.attach_controller = attach_controller
+        self.use_flex          = use_flex
         self._pool             = None   # persistent worker pool (created lazily)
 
         # Params dict passed to every worker (plain Python types → picklable)
@@ -102,14 +115,11 @@ class MuJoCoTendonEvaluator:
             'simulation_time':     simulation_time,
             'settle_time':         settle_time,
             'attach_controller':   attach_controller,
+            'use_flex':            use_flex,
         }
 
         # Sequential engine — used when n_workers==1 and by evaluate_single
-        self.engine = MuJoCoTendonPhysics(
-            default_timestep    = timestep,
-            actuation_frequency = actuation_frequency,
-            actuation_amplitude = actuation_amplitude,
-        )
+        self.engine = _make_engine(self._params)
 
     # ------------------------------------------------------------------
     def evaluate_batch(
@@ -158,7 +168,7 @@ class MuJoCoTendonEvaluator:
                     voxel_size     = self.voxel_size,
                     initial_height = self.initial_height,
                 )
-                if self.attach_controller:
+                if self.attach_controller and not self.use_flex:
                     controller = _reconcile_controller(
                         controller, self.engine.num_active_tendons
                     )
