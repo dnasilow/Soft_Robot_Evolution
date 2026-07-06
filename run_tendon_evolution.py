@@ -390,6 +390,8 @@ def run_evolution(
     n_workers:       int   = DEFAULT_WORKERS,
     use_age_pareto:  bool  = True,
     use_flex:        bool  = False,  # B5: native deformable (flex) physics instead of tendon
+    fitness_mode:    str   = "directed",   # directed | forward | efficiency | stable
+    wave_phase_n           = None,   # flex only: traveling-wave gait wavenumber
     n_inject:        int   = None,   # None → pop // 10
     results_dir:     str   = "results",
     name:            str   = "tendon_run",
@@ -454,6 +456,8 @@ def run_evolution(
         attach_controller   = use_controller,
         use_flex            = use_flex,
         voxel_size          = 0.05 if use_flex else 0.01,
+        fitness_mode        = fitness_mode,
+        wave_phase_n        = wave_phase_n,
     )
 
     # ── Sanity check ────────────────────────────────────────────────
@@ -783,7 +787,15 @@ def run_map_elites(
     archive_bins:    int   = 16,
     resume:          bool  = True,
     use_flex:        bool  = False,   # B5: native deformable (flex) physics
+    seed_from:       str   = None,    # warm-start archive from a prior run's elites
+    fitness_mode:    str   = "directed",   # directed | forward | efficiency | stable
+    wave_phase_n           = None,    # flex only: traveling-wave gait wavenumber
+    parent_select:   str   = "uniform",    # uniform | biased | curiosity
+    evolve_gait:     bool  = False,   # C6: co-evolve per-robot traveling-wave gait genes (flex)
 ):
+    def _gp(cppn_list):
+        """Decode evolved gait params per robot (None list => legacy material gait)."""
+        return [c.to_gait_params() for c in cppn_list] if evolve_gait else None
     """
     Quality-Diversity search. Keeps the best robot of each *gait* cell in a 2-D
     archive indexed by behaviour descriptors:
@@ -834,6 +846,8 @@ def run_map_elites(
         attach_controller   = False,    # open-loop material-phase (default)
         use_flex            = use_flex,
         voxel_size          = 0.05 if use_flex else 0.01,
+        fitness_mode        = fitness_mode,
+        wave_phase_n        = wave_phase_n,
     )
 
     archive = {}   # (i,j) -> {'cppn','genome','fitness','desc'}
@@ -847,6 +861,7 @@ def run_map_elites(
 
     history   = {'coverage': [], 'max_fitness': [], 'qd_score': []}
     best      = {'fitness': -np.inf, 'genome': None, 'cppn': None, 'desc': None}
+    select_count = {}   # cell key -> times chosen as parent (for parent_select='curiosity')
     start_gen = 0
     ckpt_path = out / 'checkpoint.pkl'
 
@@ -865,13 +880,6 @@ def run_map_elites(
         print(f"\nResumed at iteration {start_gen + 1}/{generations}  "
               f"(filled {len(archive)}/{n_cells}, best {best['fitness']:.4f}BL)")
     else:
-        print(f"\nSeeding archive with {population_size} random robots...")
-        innov.flush_gen_cache()
-        cppns, grids = [], []
-        for _ in range(population_size):
-            c, g = _make_valid_cppn(innov, rng)
-            cppns.append(c); grids.append(g)
-        fits, descs = evaluator.evaluate_batch(grids, with_descriptors=True)
         # Auto-calibrate the archive bounds to the seed gait distribution (5th–95th
         # percentile + 25% margin) so the 16×16 grid spans the real gait space instead
         # of cramming every robot into a corner (gait_qd hit only 11% coverage with the
@@ -880,6 +888,35 @@ def run_map_elites(
             lo, hi = float(np.percentile(x, 5)), float(np.percentile(x, 95))
             m = 0.25 * (hi - lo) + 1e-4
             return max(0.0, lo - m), hi + m
+
+        innov.flush_gen_cache()
+        if seed_from:
+            print(f"\nWarm-starting archive from {seed_from} ...")
+            with open(seed_from, 'rb') as f:
+                saved = pickle.load(f)
+            cppns = saved['cppns']
+            grids = saved['genomes']
+            innov._count = max(innov._count, int(saved.get('innov_next', 0)))
+            if evolve_gait:
+                for c in cppns:
+                    if c.to_gait_params() is None:
+                        c.init_gait(rng)
+            # re-evaluate the elites HERE to get their gait descriptors (the seed file
+            # stores fitness but not descriptors) under THIS run's sim settings
+            fits, descs = evaluator.evaluate_batch(grids, with_descriptors=True,
+                                                   gait_params=_gp(cppns))
+            print(f"  Loaded {len(grids)} elites  (re-eval best {max(fits):.4f}BL)")
+        else:
+            print(f"\nSeeding archive with {population_size} random robots...")
+            cppns, grids = [], []
+            for _ in range(population_size):
+                c, g = _make_valid_cppn(innov, rng)
+                if evolve_gait:
+                    c.init_gait(rng)
+                cppns.append(c); grids.append(g)
+            fits, descs = evaluator.evaluate_batch(grids, with_descriptors=True,
+                                                   gait_params=_gp(cppns))
+
         H_LO, H_HI = _calib(np.array([d[0] for d in descs]))
         B_LO, B_HI = _calib(np.array([d[1] for d in descs]))
         print(f"  Auto-calibrated bounds: COM-height [{H_LO:.3f}, {H_HI:.3f}]  "
@@ -924,13 +961,35 @@ def run_map_elites(
         if gen == generations - 1:
             break
 
-        # ── Produce a batch of offspring from random archive elites ──────
+        # ── Produce a batch of offspring from archive elites ─────────────
+        # Parent selection mode:
+        #   uniform   — pick any filled cell with equal probability (classic MAP-Elites)
+        #   biased    — probability ∝ (fitness - min) : concentrate on strong elites
+        #   curiosity — probability ∝ 1/(1+times_selected) : favour under-explored cells
         innov.flush_gen_cache()
-        elites = list(archive.values())
+        items  = list(archive.items())
+        keys   = [k for k, _ in items]
+        elites = [e for _, e in items]
+        if parent_select == "biased":
+            f = np.array([e['fitness'] for e in elites], dtype=float)
+            w = np.clip(f - f.min(), 0.0, None) + 1e-6
+            probs = w / w.sum()
+        elif parent_select == "curiosity":
+            c = np.array([select_count.get(k, 0) for k in keys], dtype=float)
+            w = 1.0 / (1.0 + c)
+            probs = w / w.sum()
+        else:
+            probs = None
+
+        def _pick():
+            i = (int(rng.integers(len(elites))) if probs is None
+                 else int(rng.choice(len(elites), p=probs)))
+            select_count[keys[i]] = select_count.get(keys[i], 0) + 1
+            return elites[i]
+
         new_cppns, new_grids = [], []
         for _ in range(population_size):
-            e1 = elites[int(rng.integers(len(elites)))]
-            e2 = elites[int(rng.integers(len(elites)))]
+            e1 = _pick(); e2 = _pick()
             child_cppn, child_g = _breed_child(
                 e1['cppn'], e2['cppn'], e1['fitness'], e2['fitness'],
                 innov, rng, crossover_rate, mutation_rate,
@@ -938,7 +997,8 @@ def run_map_elites(
             new_cppns.append(child_cppn); new_grids.append(child_g)
 
         t0   = time.perf_counter()
-        fits, descs = evaluator.evaluate_batch(new_grids, with_descriptors=True)
+        fits, descs = evaluator.evaluate_batch(new_grids, with_descriptors=True,
+                                               gait_params=_gp(new_cppns))
         for c, g, fi, d in zip(new_cppns, new_grids, fits, descs):
             place(c, g, fi, d)
 
@@ -1013,9 +1073,24 @@ if __name__ == "__main__":
     parser.add_argument("--flex", dest="flex", action="store_true", default=False,
                         help="B5: use native deformable (flex) physics instead of the "
                              "tendon model (~140x faster; FRESH baseline, open-loop only)")
+    parser.add_argument("--fitness", dest="fitness", type=str, default="directed",
+                        choices=["directed", "forward", "efficiency", "stable"],
+                        help="fitness-shaping mode (default: directed = forward_BL x ground_fraction)")
+    parser.add_argument("--gait", dest="gait", type=str, default="material",
+                        choices=["material", "wave"],
+                        help="flex actuation gait: material 2-phase (default) or traveling wave")
+    parser.add_argument("--gait-wavenum", dest="gait_wavenum", type=int, default=2,
+                        help="traveling-wave wavenumber along +X when --gait wave (default 2)")
+    parser.add_argument("--parent", dest="parent", type=str, default="uniform",
+                        choices=["uniform", "biased", "curiosity"],
+                        help="MAP-Elites parent selection (default: uniform)")
+    parser.add_argument("--evolve-gait", dest="evolve_gait", action="store_true", default=False,
+                        help="C6: co-evolve a per-robot traveling-wave gait (flex + MAP-Elites); "
+                             "gait genes mutate/cross with the body. Backward-compatible.")
     parser.add_argument("--archive-bins", type=int, default=16,
                         help="MAP-Elites archive resolution per axis (default 16 -> 16x16 cells)")
     args = parser.parse_args()
+    wave_phase_n = args.gait_wavenum if args.gait == "wave" else None
 
     if args.map_elites:
         run_map_elites(
@@ -1033,6 +1108,11 @@ if __name__ == "__main__":
             archive_bins    = args.archive_bins,
             resume          = args.resume,
             use_flex        = args.flex,
+            seed_from       = args.seed_from,
+            fitness_mode    = args.fitness,
+            wave_phase_n    = wave_phase_n,
+            parent_select   = args.parent,
+            evolve_gait     = args.evolve_gait,
         )
     else:
         run_evolution(
@@ -1048,6 +1128,8 @@ if __name__ == "__main__":
             n_workers       = args.workers,
             use_age_pareto  = args.age_pareto,
             use_flex        = args.flex,
+            fitness_mode    = args.fitness,
+            wave_phase_n    = wave_phase_n,
             n_inject        = args.inject,
             name            = args.name,
             seed            = args.seed,

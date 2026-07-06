@@ -61,7 +61,20 @@
       "Bash(awk '{print $5, $NF}')",
       "Bash(powershell -NoProfile -Command '\\(Get-Process python -ErrorAction SilentlyContinue | Measure-Object\\).Count | ForEach-Object { '\\\\''python procs running: '\\\\'' + $_ }')",
       "Bash(powershell -NoProfile -Command '\\(Get-Process python -ErrorAction SilentlyContinue | Measure-Object\\).Count | ForEach-Object { '\\\\''python procs now: '\\\\'' + $_ }')",
-      "Bash(break)"
+      "Bash(break)",
+      "Bash(python b6_spring_spike.py)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('run_tendon_evolution.py'\\).read\\(\\)\\); ast.parse\\(open\\('src/physics/mujoco_flex_physics.py'\\).read\\(\\)\\); ast.parse\\(open\\('src/physics/mujoco_tendon_physics.py'\\).read\\(\\)\\); ast.parse\\(open\\('src/evolution/mujoco_tendon_evaluator.py'\\).read\\(\\)\\); print\\('syntax OK'\\)\")",
+      "Bash(python run_tendon_evolution.py --help)",
+      "Bash(python -m py_compile run_tendon_evolution.py src/physics/mujoco_flex_physics.py src/physics/mujoco_tendon_physics.py src/evolution/mujoco_tendon_evaluator.py)",
+      "Bash(python poc_audit.py)",
+      "Bash(python -c ' *)",
+      "Bash(python -m py_compile run_tendon_evolution.py src/physics/mujoco_flex_physics.py src/physics/mujoco_flex_converter.py src/physics/mujoco_tendon_physics.py src/evolution/mujoco_tendon_evaluator.py src/evolution/cppn_genome.py)",
+      "Bash(python run_tendon_evolution.py --flex --map-elites --evolve-gait --pop 12 --gen 3 --sim-time 1.5 --settle 0.3 --amp 0.6 --freq 7 --workers 12 --seed 1 --name eg_smoke --no-resume)",
+      "Bash(python run_tendon_evolution.py --flex --map-elites --evolve-gait --pop 30 --gen 20 --sim-time 2.0 --settle 0.3 --amp 0.6 --freq 7 --workers 28 --seed 11 --name eg_run --no-resume)",
+      "Bash(python run_tendon_evolution.py --flex --map-elites --evolve-gait --parent biased --pop 30 --gen 20 --sim-time 2.0 --settle 0.3 --amp 0.6 --freq 7 --workers 28 --seed 11 --name eg_biased_run --no-resume)",
+      "Bash(python run_tendon_evolution.py --flex --map-elites --parent biased --pop 40 --gen 300 --sim-time 2.0 --settle 0.3 --amp 0.6 --freq 7 --workers 14 --seed 1 --name flex_gaitAB_ctrl --no-resume)",
+      "Bash(python run_tendon_evolution.py --flex --map-elites --evolve-gait --parent biased --pop 40 --gen 300 --sim-time 2.0 --settle 0.3 --amp 0.6 --freq 7 --workers 14 --seed 1 --name flex_gaitAB_evolve --no-resume)",
+      "Bash(python run_tendon_evolution.py --map-elites --evolve-gait --pop 8 --gen 2 --sim-time 0.5 --settle 0.3 --workers 8 --seed 1 --name tendon_eg_smoke --no-resume)"
     ],
     "deny": [],
     "ask": []

@@ -172,6 +172,30 @@ class CPPNGenome:
 
         self._topo_cache: Optional[List[int]] = None
 
+        # Evolvable gait genes (C6): None => legacy material-phase gait (backward compat;
+        # old pickled genomes have no attribute -> getattr(...) is None). When enabled via
+        # init_gait(), a 4-vector [kx, ky, kz, offset] defines a spatial traveling wave
+        # phase(x,y,z) = 2*pi*(kx*xn + ky*yn + kz*zn) + offset that co-evolves with the body.
+        self.gait_genes: Optional[np.ndarray] = None
+
+    # ── Evolvable gait (C6) ────────────────────────────────────────────────
+    def init_gait(self, rng: np.random.Generator) -> None:
+        """Seed a random traveling-wave gait (call on the initial population when
+        --evolve-gait is on). Forward (x) wavenumber gets the widest range."""
+        self.gait_genes = np.array([rng.uniform(-2.0, 2.0), rng.uniform(-1.0, 1.0),
+                                    rng.uniform(-1.0, 1.0), rng.uniform(0.0, 2*np.pi)],
+                                   dtype=float)
+
+    def to_gait_params(self) -> Optional[tuple]:
+        g = getattr(self, 'gait_genes', None)
+        return None if g is None else tuple(float(v) for v in g)
+
+    def mutate_gait(self, rng: np.random.Generator, sigma: float = 0.4) -> None:
+        if getattr(self, 'gait_genes', None) is None:
+            return
+        self.gait_genes = self.gait_genes + rng.normal(0.0, sigma, size=4)
+        self.gait_genes[3] = float(self.gait_genes[3] % (2*np.pi))
+
     # ── Cache ──────────────────────────────────────────────────────────────
 
     def _invalidate_cache(self) -> None:
@@ -344,6 +368,9 @@ class CPPNGenome:
             nid = hidden[int(rng.integers(len(hidden)))]
             child.nodes[nid].activation = ACTIVATIONS[int(rng.integers(len(ACTIVATIONS)))]
 
+        # Evolvable gait: perturb the traveling-wave genes (no-op if gait not enabled)
+        child.mutate_gait(rng)
+
         return child
 
     def _add_node(self, innov: InnovationCounter) -> None:
@@ -477,6 +504,9 @@ class CPPNGenome:
             if gene.from_id in child.nodes and gene.to_id in child.nodes:
                 child.connections[inn] = gene
 
+        # Evolvable gait: inherit the fitter parent's gait genes (like activations)
+        _gg = getattr(fitter, 'gait_genes', None)
+        child.gait_genes = None if _gg is None else np.array(_gg, copy=True)
         return child
 
     # ── Utility ───────────────────────────────────────────────────────────
@@ -487,6 +517,8 @@ class CPPNGenome:
         child.nodes       = {k: v.copy() for k, v in self.nodes.items()}
         child.connections = {k: v.copy() for k, v in self.connections.items()}
         child._topo_cache = None
+        _gg = getattr(self, 'gait_genes', None)
+        child.gait_genes  = None if _gg is None else np.array(_gg, copy=True)
         return child
 
     def copy(self) -> 'CPPNGenome':

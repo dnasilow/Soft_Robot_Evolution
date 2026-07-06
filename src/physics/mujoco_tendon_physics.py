@@ -29,10 +29,12 @@ class MuJoCoTendonPhysics:
         default_timestep: float = 0.0005,
         actuation_frequency: float = 10.0,
         actuation_amplitude: float = 0.20,
+        fitness_mode: str = "directed",
     ):
         self.default_timestep    = default_timestep
         self.actuation_frequency = actuation_frequency
         self.actuation_amplitude = actuation_amplitude
+        self.fitness_mode        = fitness_mode   # directed | forward | efficiency | stable
         self.voxel_size          = 0.01   # set per-robot in load_robot; used for body-length norm
 
         self.model: Optional[mujoco.MjModel] = None
@@ -59,6 +61,7 @@ class MuJoCoTendonPhysics:
         voxel_grid: np.ndarray,
         voxel_size: float = 0.01,
         initial_height: float = 0.0,
+        gait_params=None,   # C6 evolvable gait: (kx,ky,kz,offset) traveling wave, or None
     ) -> None:
         """Load robot from voxel grid, record rest lengths, precompute arrays."""
         self.voxel_size = voxel_size
@@ -71,6 +74,26 @@ class MuJoCoTendonPhysics:
         self.current_time = 0.0
         self._controller  = None
         self._precompute_actuation_arrays()
+        if gait_params is not None:
+            self._apply_gait_params(gait_params)
+
+    def _apply_gait_params(self, gait_params) -> None:
+        """C6: override the material-derived base phases with an evolved spatial
+        traveling wave  phase(x,y,z) = 2π(kx·xn + ky·yn + kz·zn) + offset, evaluated at
+        each active tendon's midpoint (normalised over the body's bounding box). Lets the
+        gait co-evolve with the body in the tendon engine (ceiling ~1.08 BL)."""
+        active = [info for info in self.tendon_info if info['is_active']]
+        if not active or self._base_phases is None:
+            return
+        xp  = self.data.xpos                       # voxel i -> body i+1 (world is body 0)
+        pos = np.array([0.5 * (xp[1 + info['body1_idx']] + xp[1 + info['body2_idx']])
+                        for info in active])
+        span = pos.max(0) - pos.min(0)
+        span = np.where(span < 1e-6, 1.0, span)
+        n    = (pos - pos.min(0)) / span
+        kx, ky, kz, offset = gait_params
+        self._base_phases = (2.0 * np.pi * (kx * n[:, 0] + ky * n[:, 1] + kz * n[:, 2])
+                             + offset).astype(float)
 
     def _precompute_actuation_arrays(self) -> None:
         """Build base-phase array for the open-loop sinusoidal fallback.
@@ -220,8 +243,26 @@ class MuJoCoTendonPhysics:
                 d1 = d2 = 0.0
             return fit, (d1, d2)
 
+        energy = 0.0   # accumulated actuation effort (cost-of-transport proxy)
+
+        def _shape(fbl, gf, steps):
+            """Apply the selected fitness-shaping mode. All modes still reward forward
+            (+X) body-lengths; they differ in what else they reward/penalise."""
+            base = max(0.0, fbl)
+            mode = self.fitness_mode
+            if mode == "forward":            # raw forward distance, no ground penalty
+                return base
+            if mode == "efficiency":         # distance per unit actuation effort
+                mean_force = (energy / max(steps, 1)) / max(int(self.model.nu), 1)
+                return base * gf / (1.0 + 0.001 * mean_force)
+            if mode == "stable":             # penalise vertical bounce (smooth gait)
+                bounce = (float(np.std(heights)) / body_length) if heights else 0.0
+                return base * gf / (1.0 + 5.0 * bounce)
+            return base * gf                 # "directed" (default, unchanged)
+
         for step_idx in range(measure_steps):
             self.step()
+            energy += float(np.sum(np.abs(self.data.actuator_force)))
             com_z = float(np.mean(self.data.xpos[1:nbody, 2]))
             heights.append(com_z)
             if com_z < ground_threshold:
@@ -231,8 +272,8 @@ class MuJoCoTendonPhysics:
                 forward_bl = (float(self.get_position()[0]) - initial_x) / body_length
                 if forward_bl < early_term_threshold:
                     ground_fraction = grounded_steps / (step_idx + 1)
-                    return _result(max(0.0, forward_bl) * ground_fraction)
+                    return _result(_shape(forward_bl, ground_fraction, step_idx + 1))
 
         ground_fraction = grounded_steps / measure_steps
         forward_bl      = (float(self.get_position()[0]) - initial_x) / body_length
-        return _result(max(0.0, forward_bl) * ground_fraction)
+        return _result(_shape(forward_bl, ground_fraction, measure_steps))

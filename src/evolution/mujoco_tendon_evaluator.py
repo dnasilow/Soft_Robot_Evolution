@@ -30,17 +30,17 @@ from src.physics.mujoco_tendon_converter import count_active_tendons
 
 
 def _make_engine(params):
-    """Construct the physics engine (flex or tendon) with the shared 3-arg signature."""
-    if params.get('use_flex', False):
-        from src.physics.mujoco_flex_physics import MuJoCoFlexPhysics
-        cls = MuJoCoFlexPhysics
-    else:
-        cls = MuJoCoTendonPhysics
-    return cls(
+    """Construct the physics engine (flex or tendon)."""
+    kw = dict(
         default_timestep    = params['timestep'],
         actuation_frequency = params['actuation_frequency'],
         actuation_amplitude = params['actuation_amplitude'],
+        fitness_mode        = params.get('fitness_mode', 'directed'),
     )
+    if params.get('use_flex', False):
+        from src.physics.mujoco_flex_physics import MuJoCoFlexPhysics
+        return MuJoCoFlexPhysics(wave_phase_n=params.get('wave_phase_n'), **kw)
+    return MuJoCoTendonPhysics(**kw)
 
 
 # ------------------------------------------------------------------
@@ -48,7 +48,7 @@ def _make_engine(params):
 # ------------------------------------------------------------------
 def _eval_worker(args):
     """Evaluate one robot in a worker process."""
-    genome, controller, params = args
+    genome, controller, gait_param, params = args
     want_desc = params.get('return_descriptors', False)
     try:
         engine = _make_engine(params)
@@ -56,6 +56,7 @@ def _eval_worker(args):
             genome,
             voxel_size     = params['voxel_size'],
             initial_height = params['initial_height'],
+            gait_params    = gait_param,
         )
         # Flex v1 is open-loop only; skip controller attach entirely for flex.
         # When attach_controller is False (A1: Cheney-faithful open-loop), leave the
@@ -95,6 +96,8 @@ class MuJoCoTendonEvaluator:
         n_workers:           int   = 1,
         attach_controller:   bool  = True,
         use_flex:            bool  = False,
+        fitness_mode:        str   = "directed",
+        wave_phase_n              = None,
     ):
         self.simulation_time   = simulation_time
         self.settle_time       = settle_time
@@ -116,6 +119,8 @@ class MuJoCoTendonEvaluator:
             'settle_time':         settle_time,
             'attach_controller':   attach_controller,
             'use_flex':            use_flex,
+            'fitness_mode':        fitness_mode,
+            'wave_phase_n':        wave_phase_n,
         }
 
         # Sequential engine — used when n_workers==1 and by evaluate_single
@@ -127,6 +132,7 @@ class MuJoCoTendonEvaluator:
         genomes:     List[np.ndarray],
         controllers: Optional[List] = None,
         with_descriptors: bool = False,
+        gait_params: Optional[List] = None,
     ):
         """
         Evaluate a list of voxel-grid genomes.
@@ -144,13 +150,15 @@ class MuJoCoTendonEvaluator:
         """
         if controllers is None:
             controllers = [None] * len(genomes)
+        if gait_params is None:
+            gait_params = [None] * len(genomes)
 
         params = dict(self._params)
         params['return_descriptors'] = with_descriptors
 
         # ── Parallel path (one persistent pool — see _get_pool) ────────────
         if self.n_workers > 1:
-            args = [(g, c, params) for g, c in zip(genomes, controllers)]
+            args = [(g, c, gp, params) for g, c, gp in zip(genomes, controllers, gait_params)]
             pool = self._get_pool()
             results = pool.map(_eval_worker, args, chunksize=1)
             if with_descriptors:
@@ -161,12 +169,13 @@ class MuJoCoTendonEvaluator:
 
         # ── Sequential path ────────────────────────────────────────────
         fitnesses, descs = [], []
-        for i, (genome, controller) in enumerate(zip(genomes, controllers)):
+        for i, (genome, controller, gp) in enumerate(zip(genomes, controllers, gait_params)):
             try:
                 self.engine.load_robot(
                     genome,
                     voxel_size     = self.voxel_size,
                     initial_height = self.initial_height,
+                    gait_params    = gp,
                 )
                 if self.attach_controller and not self.use_flex:
                     controller = _reconcile_controller(
