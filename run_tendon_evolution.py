@@ -392,6 +392,7 @@ def run_evolution(
     use_flex:        bool  = False,  # B5: native deformable (flex) physics instead of tendon
     fitness_mode:    str   = "directed",   # directed | forward | efficiency | stable
     wave_phase_n           = None,   # flex only: traveling-wave gait wavenumber
+    evolve_gait:     bool  = False,  # C6: co-evolve per-robot traveling-wave gait genes
     n_inject:        int   = None,   # None → pop // 10
     results_dir:     str   = "results",
     name:            str   = "tendon_run",
@@ -460,6 +461,10 @@ def run_evolution(
         wave_phase_n        = wave_phase_n,
     )
 
+    def _gp(cppn_list):
+        """Decode evolved gait params per robot (None list => legacy material gait)."""
+        return [c.to_gait_params() for c in cppn_list] if evolve_gait else None
+
     # ── Sanity check ────────────────────────────────────────────────
     print("\nRunning sanity check (1 CPPN robot)...")
     temp_innov   = InnovationCounter()
@@ -521,6 +526,10 @@ def run_evolution(
         genomes     = [all_genomes[i] for i in top_idx]
         controllers = [all_ctrls[i]   for i in top_idx]
         fitnesses   = all_fits[top_idx]
+        if evolve_gait:
+            for c in cppns:
+                if c.to_gait_params() is None:
+                    c.init_gait(rng)
         print(f"  Kept top {n_seed} seeded robots  |  best: {fitnesses.max():.4f}m  worst: {fitnesses.min():.4f}m")
 
         # Fill remaining slots with fresh random robots and evaluate them
@@ -529,13 +538,16 @@ def run_evolution(
         fresh_cppns, fresh_genomes, fresh_ctrls = [], [], []
         for _ in range(n_fresh):
             c, g = _make_valid_cppn(innov, rng)
+            if evolve_gait:
+                c.init_gait(rng)
             fresh_cppns.append(c)
             fresh_genomes.append(g)
             fresh_ctrls.append(_new_ctrl(g))
 
         print(f"  Evaluating {n_fresh} fresh robots ...")
         t_gen_start   = time.perf_counter()
-        fresh_fits    = np.array(evaluator.evaluate_batch(fresh_genomes, fresh_ctrls), dtype=float)
+        fresh_fits    = np.array(evaluator.evaluate_batch(
+            fresh_genomes, fresh_ctrls, gait_params=_gp(fresh_cppns)), dtype=float)
 
         cppns       = cppns       + fresh_cppns
         genomes     = genomes     + fresh_genomes
@@ -548,6 +560,8 @@ def run_evolution(
         genomes     = []
         for _ in range(population_size):
             c, g = _make_valid_cppn(innov, rng)
+            if evolve_gait:
+                c.init_gait(rng)
             cppns.append(c)
             genomes.append(g)
         controllers = [_new_ctrl(g) for g in genomes]
@@ -555,7 +569,8 @@ def run_evolution(
 
         print(f"Evaluating initial population...")
         t_gen_start = time.perf_counter()
-        fitnesses = np.array(evaluator.evaluate_batch(genomes, controllers), dtype=float)
+        fitnesses = np.array(evaluator.evaluate_batch(
+            genomes, controllers, gait_params=_gp(cppns)), dtype=float)
 
     # ── Evolution loop ──────────────────────────────────────────────
     for gen in range(start_gen, generations):
@@ -661,6 +676,8 @@ def run_evolution(
             # Inject fresh random robots (age will become 1 after +1 below)
             for _ in range(n_inject):
                 c, g = _make_valid_cppn(innov, rng)
+                if evolve_gait:
+                    c.init_gait(rng)
                 new_cppns.append(c)
                 new_genomes.append(g)
                 new_controllers.append(_new_ctrl(g))
@@ -669,7 +686,8 @@ def run_evolution(
             # Evaluate only the new individuals (survivors keep cached fitness)
             t_gen_start = time.perf_counter()
             new_fitnesses = np.array(
-                evaluator.evaluate_batch(new_genomes, new_controllers), dtype=float
+                evaluator.evaluate_batch(new_genomes, new_controllers,
+                                         gait_params=_gp(new_cppns)), dtype=float
             )
 
             # Pool = current survivors + new individuals (2 × pop_size)
@@ -723,7 +741,8 @@ def run_evolution(
             # Re-evaluate new population (no fitness caching in standard mode)
             t_gen_start = time.perf_counter()
             fitnesses = np.array(
-                evaluator.evaluate_batch(genomes, controllers), dtype=float
+                evaluator.evaluate_batch(genomes, controllers,
+                                         gait_params=_gp(cppns)), dtype=float
             )
 
     # ── Save final results ──────────────────────────────────────────
@@ -1087,10 +1106,23 @@ if __name__ == "__main__":
     parser.add_argument("--evolve-gait", dest="evolve_gait", action="store_true", default=False,
                         help="C6: co-evolve a per-robot traveling-wave gait (flex + MAP-Elites); "
                              "gait genes mutate/cross with the body. Backward-compatible.")
+    parser.add_argument("--stiff-bias", dest="stiff_bias", type=float, default=0.0,
+                        help="Decode-time bias toward stiff material 4 ('bone') to encourage "
+                             "skeletal/leg-like structure (default 0 = off; try 1.0-3.0).")
+    parser.add_argument("--max-voxels", dest="max_voxels", type=int, default=300,
+                        help="Max voxels per robot (default 300). Higher = bigger bodies but "
+                             "slower tendon sims (contacts scale super-linearly).")
     parser.add_argument("--archive-bins", type=int, default=16,
                         help="MAP-Elites archive resolution per axis (default 16 -> 16x16 cells)")
     args = parser.parse_args()
     wave_phase_n = args.gait_wavenum if args.gait == "wave" else None
+    # Apply stiff-material decode bias + voxel cap globally (read by CPPNGenome.to_voxel_grid
+    # in the parent, where all decoding happens; workers consume already-decoded grids).
+    import src.evolution.cppn_genome as _cg
+    import src.evolution.genome_config as _gc
+    _cg.STIFF_BIAS = float(args.stiff_bias)
+    _cg.MAX_VOXELS_PER_ROBOT = int(args.max_voxels)
+    _gc.MAX_VOXELS_PER_ROBOT = int(args.max_voxels)
 
     if args.map_elites:
         run_map_elites(
@@ -1130,6 +1162,7 @@ if __name__ == "__main__":
             use_flex        = args.flex,
             fitness_mode    = args.fitness,
             wave_phase_n    = wave_phase_n,
+            evolve_gait     = args.evolve_gait,
             n_inject        = args.inject,
             name            = args.name,
             seed            = args.seed,

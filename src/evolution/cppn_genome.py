@@ -40,6 +40,11 @@ N_INPUTS    = 4   # (x_norm, y_norm, z_norm, dist_norm)
 N_OUTPUTS   = 6   # A2: [presence, mat1, mat2, mat3, mat4] — presence decoupled from material
 ACTIVATIONS = ('tanh', 'sin', 'gaussian', 'abs', 'linear', 'relu')
 
+# Decode-time additive bias toward stiff material 4 ("bone"), set by --stiff-bias.
+# 0 = unchanged (default). Larger => more voxels decode as rigid material, encouraging
+# skeletal/leg-like structure (bone is otherwise adopted ~0-1% because nothing rewards it).
+STIFF_BIAS  = 0.0
+
 _FIRST_HIDDEN_ID = N_INPUTS + N_OUTPUTS   # 9; IDs below are reserved for I/O
 
 # Precomputed coordinate grid — built once, reused for every to_voxel_grid() call
@@ -308,6 +313,9 @@ class CPPNGenome:
         # material. This decouples "is a voxel here" from "which material", which the
         # old argmax-over-5 coupled — and which collapsed bodies to a single material.
         present   = logits[:, 0] > 0.0
+        if STIFF_BIAS:
+            logits = logits.copy()
+            logits[:, 4] += STIFF_BIAS   # column 4 -> material 4 (stiff); bias its selection
         material  = (np.argmax(logits[:, 1:N_OUTPUTS], axis=1) + 1).astype(np.int8)  # 1..4
         materials = np.where(present, material, 0).astype(np.int8)
 
