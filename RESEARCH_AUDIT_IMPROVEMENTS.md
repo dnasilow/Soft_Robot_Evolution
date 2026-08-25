@@ -91,7 +91,7 @@
 |---|---|---|---|---|
 | 1 | **MAP-Elites parent selection** (`--parent biased`) | search | ★★★ | shipped — **POC WIN: 1.69× max, 2.2× QD** |
 | 2 | **Fitness-shaping modes** (`--fitness`) | objective | ★★ | shipped — `efficiency` held distance at lower effort |
-| 3 | **Evolvable gait / C6** (`--evolve-gait`) | control+encoding | ★★★ | **shipped + VALIDATED BOTH ENGINES** — flex 1.27×; **tendon +8.7% → NEW RECORD 1.1195 BL** |
+| 3 | **Evolvable gait / C6** (`--evolve-gait`) | control+encoding | ★★★ | shipped — flex 1.27× (validated); best reproducible tendon result (1.12 best-seed) but tendon margin unconfirmed under seed noise (§4d) |
 | 4 | **Traveling-wave gait** (`--gait wave`) | control | ★★ | shipped — fixed-wave POC underperforms |
 | 5 | **Mass-spring engine** (`b6_spring_spike.py`) | physics | ★ | prototyped → **negative result** (unstable at usable dt) |
 | 6 | Warm-start MAP-Elites (`--seed-from`) | pipeline | ★★ | shipped earlier this session |
@@ -266,22 +266,46 @@ tendon record (1.12). No universal winner; it's an interaction.
   structures); (b) **relax the ground penalty on tendon** so hoppers/gallopers can emerge; (c)
   **co-evolve frequency** (currently a fixed 10 Hz global).
 
-## 4d. Record arc + the two record-attempt runs (tendon, seed 1, pop50/gen300)
-**Record progression this audit: 1.0779 → 1.0303 (biased) → 1.1195 (evolve-gait) → 1.3057 (stiff-bias).**
+## 4d. Record arc, and the multi-seed replication that corrected it (tendon, pop50/gen300)
+**Single-seed discovery arc (seed 1): 1.0779 → 1.0303 (biased) → 1.1195 (evolve-gait) → 1.3057 (stiff-bias).**
+This looked like a clean +21% climb. Multi-seed replication (2026-07-23) dissolved the top of it.
+
 - `tendon_forward` (`--fitness forward`): **NULL** — bit-identical to `tendon_eg` (1.1195). Crawlers
   stay grounded (`ground_fraction`≈1) so `forward`≈`directed`. The penalty never bound; removing it
-  can't create hoppers. **To get air-time you must *reward* it, not just stop penalizing** — a
-  `--fitness airtime` mode is the follow-up (deferred; guard against ballistic cheats).
-- `tendon_stiff` (`--stiff-bias 0.3`): **🏆 NEW RECORD 1.3057 BL (+16.6% over 1.12).** **Honest
-  correction:** the champion is **100% muscle, ZERO stiff material** — so the record was NOT won by
-  rigidity. The bias perturbed the *search trajectory* into a better basin while the winning lineage
-  evolved *away* from bone. Single-seed → **verify multi-seed** before trusting it; my earlier
-  "stiff transmits force" reasoning was wrong.
+  can't create hoppers. Note the bounce descriptor *correlates positively* with fitness across all
+  archives — bouncier already scores higher, the penalty simply never bites. **To get air-time you
+  must *reward* it, not just stop penalizing** — a `--fitness airtime` mode is the follow-up
+  (deferred; guard against ballistic cheats).
+- `tendon_stiff` (`--stiff-bias 0.3`): **NO RELIABLE EFFECT — DROPPED.** The single-seed 1.3057
+  (once billed a +16.6% record) did **not** survive replication:
 
-**Champions rendered:** `results/{tendon_ctrl,tendon_eg,tendon_stiff}/champion.gif`
-(1.03 two-phase body; 1.12 & 1.31 single-material blobs driven by evolved waves).
-**Research archive:** `soft_robot_research.ipynb` (record arc, fitness curves, champion gallery,
-findings) — build/refresh with `python build_notebook.py`.
+  | config | seeds | best per seed | mean | std |
+  |---|---|---|---|---|
+  | evolve-gait + biased (control) | 1,2 | 1.1195 / 0.9837 | **1.052** | 0.096 |
+  | + stiff-bias 0.3 | 1,2,3 | 1.3057 / 0.7786 / 1.0880 | **1.057** | 0.265 |
+
+  Same mean (paired diff −0.01, a wash) but **2.6× the variance**. The 1.3057 was the lucky top of a
+  wide distribution, not a gain. **All five champions carry ZERO stiff voxels** — the flag has no
+  locomotion mechanism (stiff material can't actuate, so selection deletes it). Removed from the
+  recommended config. My earlier "stiff transmits force" reasoning was doubly wrong: not the
+  mechanism, and not even a real effect.
+
+**Two structural findings from the replication (these now steer the project):**
+1. **Seed variance (~1.7× on a fixed config) > every lever effect measured.** So all single-seed
+   gen-300 comparisons above are underpowered — including `--evolve-gait` (+8.7%): its seed-2 value
+   (0.98) fell below material `tendon_ctrl` seed-1 (1.03). Evolve-gait keeps a mechanism + a flex win,
+   so it's not discarded, but its tendon margin is **unconfirmed**. Screen future levers at 3+ seeds;
+   treat <~1.5× as noise.
+2. **Plateau is architectural, not compute.** Max fitness asymptotes by gen ~150–200 every run
+   (`tendon_stiff_s3`: 1.067 @ iter87 → 1.088 @ iter300). A 2000-gen run at this config will very
+   likely not break ~1.1–1.3. The body has collapsed to an interchangeable 300-voxel blob and the
+   **evolved gait genes do all the work** → the ceiling moves only via richer control/structure
+   (per-voxel evolvable phase, rigid limbs selection can keep, higher actuation authority).
+
+**Champions rendered:** `results/{tendon_ctrl,tendon_eg,tendon_stiff,tendon_stiff_s2,afpo_stiff}/champion.gif`
+(1.03 two-phase body; the rest single-material blobs driven by evolved waves — all zero stiff).
+**Research archive:** `soft_robot_research.ipynb` (discovery arc + replication, seed-resolved curves,
+champion gallery, findings) — build/refresh with `python build_notebook.py`.
 
 ## 5. Recommended next steps (longer validation to confirm)
 

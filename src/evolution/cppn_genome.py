@@ -106,6 +106,19 @@ class InnovationCounter:
         self._gen_edge.clear()
 
 
+# Separate innovation counter for the per-voxel-phase control CPPNs, so their
+# structural gene IDs never collide with the body CPPNs' (the two networks evolve
+# independently). Lazily created; only ever touched in the main breeding process.
+_PHASE_INNOV: Optional['InnovationCounter'] = None
+
+
+def _phase_innov() -> 'InnovationCounter':
+    global _PHASE_INNOV
+    if _PHASE_INNOV is None:
+        _PHASE_INNOV = InnovationCounter()
+    return _PHASE_INNOV
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Gene classes
 # ─────────────────────────────────────────────────────────────────────────────
@@ -182,6 +195,57 @@ class CPPNGenome:
         # init_gait(), a 4-vector [kx, ky, kz, offset] defines a spatial traveling wave
         # phase(x,y,z) = 2*pi*(kx*xn + ky*yn + kz*zn) + offset that co-evolves with the body.
         self.gait_genes: Optional[np.ndarray] = None
+
+        # Per-voxel evolvable phase (architecture spike): None => fall back to the
+        # 4-gene wave (gait_genes) or material gait. When enabled via init_phase_cppn(),
+        # a *second* co-evolving CPPN maps voxel position (x,y,z,dist) -> an actuation
+        # phase per voxel, replacing the global plane-wave with an arbitrary spatial
+        # phase field. Output column 0 (tanh, in [-1,1]) is read as the phase signal.
+        self.phase_cppn: Optional['CPPNGenome'] = None
+
+        # Evolvable body size: None => legacy (always fill MAX_VOXELS_PER_ROBOT). When set by
+        # init_size_gene(), this is the TARGET SIZE as a fraction of the cap, so the decoder
+        # keeps `size_gene * MAX_VOXELS` of the highest-confidence voxels instead of always
+        # filling the cap.
+        #
+        # Why a fraction and not a presence threshold: the presence logit is a tanh, so it
+        # saturates near +/-1 and ~43% of the grid passes `logit > 0` regardless. Sweeping the
+        # threshold is hopelessly non-linear (0.0 -> ~2500 voxels, 0.9 -> ~530, and everything
+        # useful crushed into 0.9-1.0, with bodies collapsing to empty just past that). A
+        # fraction-of-cap gene gives evolution smooth, bounded, single-mutation control of
+        # size — which is the precondition for legs / thin structures / small efficient bodies.
+        self.size_gene: Optional[float] = None
+
+    # ── Evolvable body size (target size as a fraction of the cap) ─────────
+    def init_size_gene(self, rng: np.random.Generator) -> None:
+        """Seed a random target body size (call on the initial population when
+        --evolve-size is on). Spans ~15%-100% of the cap so the population starts with
+        genuine size diversity instead of every body pinned at the ceiling."""
+        self.size_gene = float(rng.uniform(0.15, 1.0))
+
+    def mutate_size_gene(self, rng: np.random.Generator, sigma: float = 0.10) -> None:
+        if getattr(self, 'size_gene', None) is None:
+            return
+        self.size_gene = float(np.clip(self.size_gene + rng.normal(0.0, sigma), 0.05, 1.0))
+
+    def target_voxels(self) -> int:
+        """Effective voxel budget for this genome (legacy = the global cap)."""
+        sg = getattr(self, 'size_gene', None)
+        if sg is None:
+            return MAX_VOXELS_PER_ROBOT
+        return int(np.clip(round(sg * MAX_VOXELS_PER_ROBOT),
+                           MIN_VOXELS_PER_ROBOT, MAX_VOXELS_PER_ROBOT))
+
+    # ── Per-voxel evolvable phase (control CPPN) ───────────────────────────
+    def init_phase_cppn(self, rng: np.random.Generator) -> None:
+        """Seed a random co-evolving control CPPN (call on the initial population when
+        --per-voxel-phase is on). Uses a separate innovation counter so its gene IDs
+        never collide with the body CPPN's."""
+        seed = int(rng.integers(2**31))
+        self.phase_cppn = CPPNGenome(_phase_innov(), np.random.default_rng(seed))
+
+    def has_phase_cppn(self) -> bool:
+        return getattr(self, 'phase_cppn', None) is not None
 
     # ── Evolvable gait (C6) ────────────────────────────────────────────────
     def init_gait(self, rng: np.random.Generator) -> None:
@@ -308,21 +372,29 @@ class CPPNGenome:
         after keeping only the largest face-connected component.
         """
         coords, interior_dims = _build_coord_grid()
-        logits   = self.evaluate_batch(coords)                    # (N, 6): [presence, m1..m4]
-        # A2 (Cheney-faithful): one output gates presence, the other four pick the
-        # material. This decouples "is a voxel here" from "which material", which the
+        logits   = self.evaluate_batch(coords)                    # (N, 6): [presence, m1..m4, spare]
+        # A2 (Cheney-faithful): one output gates presence, the next FOUR pick the material
+        # (columns 1..4). This decouples "is a voxel here" from "which material", which the
         # old argmax-over-5 coupled — and which collapsed bodies to a single material.
+        # NOTE: material argmax is over columns 1..4 ONLY (materials 1-4). N_OUTPUTS==6 leaves
+        # column 5 as an unused spare; slicing 1:N_OUTPUTS would include it as a phantom
+        # "material 5" that the tendon converter cannot build (KeyError -> silent fitness 0 for
+        # ~47% of bodies). Keep this 1:5 — do NOT change N_OUTPUTS (breaks saved genomes).
         present   = logits[:, 0] > 0.0
         if STIFF_BIAS:
             logits = logits.copy()
             logits[:, 4] += STIFF_BIAS   # column 4 -> material 4 (stiff); bias its selection
-        material  = (np.argmax(logits[:, 1:N_OUTPUTS], axis=1) + 1).astype(np.int8)  # 1..4
+        material  = (np.argmax(logits[:, 1:5], axis=1) + 1).astype(np.int8)  # materials 1..4
         materials = np.where(present, material, 0).astype(np.int8)
 
+        # Voxel budget: the global cap by default; with --evolve-size, this genome's own
+        # evolved target (see target_voxels). The presence gate passes ~2500 voxels, so this
+        # trim is what actually determines body size for essentially every genome.
+        budget = self.target_voxels()
         non_empty_idx = np.where(materials != 0)[0]
-        if len(non_empty_idx) > MAX_VOXELS_PER_ROBOT:
+        if len(non_empty_idx) > budget:
             conf    = logits[non_empty_idx, 0]   # keep the highest-presence voxels
-            top_k   = np.argpartition(conf, -MAX_VOXELS_PER_ROBOT)[-MAX_VOXELS_PER_ROBOT:]
+            top_k   = np.argpartition(conf, -budget)[-budget:]
             kept    = non_empty_idx[top_k]
             trimmed = np.zeros(len(materials), dtype=np.int8)
             trimmed[kept] = materials[kept]
@@ -378,6 +450,14 @@ class CPPNGenome:
 
         # Evolvable gait: perturb the traveling-wave genes (no-op if gait not enabled)
         child.mutate_gait(rng)
+
+        # Evolvable body size: perturb the target-size gene (no-op if not enabled)
+        child.mutate_size_gene(rng)
+
+        # Per-voxel phase: co-evolve the control CPPN too (no-op if not enabled). Its own
+        # phase_cppn is None, so mutate() does not recurse. Uses the phase innovation counter.
+        if getattr(child, 'phase_cppn', None) is not None:
+            child.phase_cppn = child.phase_cppn.mutate(_phase_innov(), rate=rate)
 
         return child
 
@@ -515,6 +595,17 @@ class CPPNGenome:
         # Evolvable gait: inherit the fitter parent's gait genes (like activations)
         _gg = getattr(fitter, 'gait_genes', None)
         child.gait_genes = None if _gg is None else np.array(_gg, copy=True)
+        # Per-voxel phase: inherit the fitter parent's control CPPN (mutation drives its
+        # search; NEAT-crossover of the phase net is a later refinement).
+        _pc = getattr(fitter, 'phase_cppn', None)
+        child.phase_cppn = None if _pc is None else _pc._clone()
+        # Evolvable body size: average the parents' target sizes when both carry one
+        # (size is a smooth scalar trait, so blending is meaningful), else take whichever exists.
+        _sa, _sb = getattr(parent_a, 'size_gene', None), getattr(parent_b, 'size_gene', None)
+        if _sa is not None and _sb is not None:
+            child.size_gene = float((_sa + _sb) / 2.0)
+        else:
+            child.size_gene = _sa if _sa is not None else _sb
         return child
 
     # ── Utility ───────────────────────────────────────────────────────────
@@ -527,6 +618,9 @@ class CPPNGenome:
         child._topo_cache = None
         _gg = getattr(self, 'gait_genes', None)
         child.gait_genes  = None if _gg is None else np.array(_gg, copy=True)
+        _pc = getattr(self, 'phase_cppn', None)
+        child.phase_cppn  = None if _pc is None else _pc._clone()
+        child.size_gene   = getattr(self, 'size_gene', None)
         return child
 
     def copy(self) -> 'CPPNGenome':

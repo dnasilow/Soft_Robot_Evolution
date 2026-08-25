@@ -40,7 +40,9 @@ def _make_engine(params):
     if params.get('use_flex', False):
         from src.physics.mujoco_flex_physics import MuJoCoFlexPhysics
         return MuJoCoFlexPhysics(wave_phase_n=params.get('wave_phase_n'), **kw)
-    return MuJoCoTendonPhysics(**kw)
+    # max_voxels is tendon-only (normalises the musclecost penalty); workers re-import
+    # genome_config defaults, so the parent's --max-voxels must be threaded explicitly.
+    return MuJoCoTendonPhysics(max_voxels=params.get('max_voxels'), **kw)
 
 
 # ------------------------------------------------------------------
@@ -98,6 +100,7 @@ class MuJoCoTendonEvaluator:
         use_flex:            bool  = False,
         fitness_mode:        str   = "directed",
         wave_phase_n              = None,
+        max_voxels:          int   = None,
     ):
         self.simulation_time   = simulation_time
         self.settle_time       = settle_time
@@ -121,6 +124,7 @@ class MuJoCoTendonEvaluator:
             'use_flex':            use_flex,
             'fitness_mode':        fitness_mode,
             'wave_phase_n':        wave_phase_n,
+            'max_voxels':          max_voxels,
         }
 
         # Sequential engine — used when n_workers==1 and by evaluate_single

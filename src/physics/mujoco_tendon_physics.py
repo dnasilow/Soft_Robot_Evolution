@@ -30,12 +30,19 @@ class MuJoCoTendonPhysics:
         actuation_frequency: float = 10.0,
         actuation_amplitude: float = 0.20,
         fitness_mode: str = "directed",
+        max_voxels: Optional[int] = None,
     ):
         self.default_timestep    = default_timestep
         self.actuation_frequency = actuation_frequency
         self.actuation_amplitude = actuation_amplitude
-        self.fitness_mode        = fitness_mode   # directed | forward | efficiency | stable
+        self.fitness_mode        = fitness_mode   # directed|forward|efficiency|stable|skip|skipbl|musclecost
         self.voxel_size          = 0.01   # set per-robot in load_robot; used for body-length norm
+        # Voxel budget, needed to normalise the muscle-cost penalty the way Cheney 2013 does
+        # (penalty = metric / maximum possible metric). Threaded from the CLI --max-voxels,
+        # because worker processes re-import genome_config defaults and can't see the parent's.
+        self.max_voxels          = max_voxels
+        self._n_actuated_voxels  = 0      # muscle voxels (materials 1,2) in the loaded body
+        self._n_voxels           = 0
 
         self.model: Optional[mujoco.MjModel] = None
         self.data:  Optional[mujoco.MjData]  = None
@@ -61,10 +68,14 @@ class MuJoCoTendonPhysics:
         voxel_grid: np.ndarray,
         voxel_size: float = 0.01,
         initial_height: float = 0.0,
-        gait_params=None,   # C6 evolvable gait: (kx,ky,kz,offset) traveling wave, or None
+        gait_params=None,   # gait provider: (kx,ky,kz,offset) wave tuple, a control CPPN
+                            # (per-voxel phase, detected by .evaluate_batch), or None
     ) -> None:
         """Load robot from voxel grid, record rest lengths, precompute arrays."""
         self.voxel_size = voxel_size
+        # Material census for the muscle-cost fitness mode (1,2 = muscle; 3 soft, 4 stiff).
+        self._n_voxels          = int((voxel_grid != 0).sum())
+        self._n_actuated_voxels = int(((voxel_grid == 1) | (voxel_grid == 2)).sum())
         xml, self.tendon_info = voxel_to_tendon_xml(voxel_grid, voxel_size, initial_height)
         self.model = mujoco.MjModel.from_xml_string(xml)
         self.data  = mujoco.MjData(self.model)
@@ -75,7 +86,32 @@ class MuJoCoTendonPhysics:
         self._controller  = None
         self._precompute_actuation_arrays()
         if gait_params is not None:
-            self._apply_gait_params(gait_params)
+            # A control CPPN (per-voxel evolvable phase) exposes evaluate_batch; a
+            # 4-tuple is the legacy global traveling wave. Dispatch on that.
+            if hasattr(gait_params, 'evaluate_batch'):
+                self._apply_phase_cppn(gait_params)
+            else:
+                self._apply_gait_params(gait_params)
+
+    def _apply_phase_cppn(self, phase_cppn) -> None:
+        """Per-voxel evolvable phase: a co-evolving control CPPN maps each active tendon's
+        normalised midpoint (x,y,z,dist) -> an actuation phase, replacing the 4-gene global
+        wave with an arbitrary spatial phase field. The CPPN's first output (tanh, in
+        [-1,1]) is scaled to a phase in [-pi, pi]. This is a strict generalisation of the
+        plane wave, giving evolution spatially-rich control the single-blob body lacked."""
+        active = [info for info in self.tendon_info if info['is_active']]
+        if not active or self._base_phases is None:
+            return
+        xp  = self.data.xpos                       # voxel i -> body i+1 (world is body 0)
+        pos = np.array([0.5 * (xp[1 + info['body1_idx']] + xp[1 + info['body2_idx']])
+                        for info in active])
+        span = pos.max(0) - pos.min(0)
+        span = np.where(span < 1e-6, 1.0, span)
+        n    = 2.0 * (pos - pos.min(0)) / span - 1.0            # per-axis -> [-1, 1]
+        dn   = np.sqrt((n ** 2).sum(1)) / np.sqrt(3.0)
+        coords = np.column_stack([n, dn]).astype(np.float32)    # (n_active, 4)
+        raw  = phase_cppn.evaluate_batch(coords)[:, 0]          # first output, tanh [-1,1]
+        self._base_phases = (np.pi * raw).astype(float)
 
     def _apply_gait_params(self, gait_params) -> None:
         """C6: override the material-derived base phases with an evolved spatial
@@ -198,6 +234,9 @@ class MuJoCoTendonPhysics:
           *robust resting height* — the median COM-z over the final quarter of settling,
           so a mid-settle bounce no longer inflates the threshold (the old
           `initial_pos[2]*3.0` bug that quietly rewarded jumping).
+        - **skip** mode softens this cliff into a ramp: full credit ≤2× resting, linearly
+          decaying to 0 at 3.5× resting, so moderate skipping keeps most of its credit while
+          sustained ballistic flight (jumping) still earns nothing.
 
         Early termination: at `early_term_fraction` of the window, if forward progress
         is below `early_term_threshold` body-lengths the robot is judged non-locomoting
@@ -225,6 +264,24 @@ class MuJoCoTendonPhysics:
         settled_height   = float(np.median(heights)) if heights \
             else float(np.mean(self.data.xpos[1:nbody, 2]))
         ground_threshold = max(settled_height * 2.0, 0.05)
+
+        # --fitness skip: graded ground credit. Full credit while the COM stays below the
+        # 2x-resting threshold; a "skip" that briefly rises higher keeps PARTIAL credit,
+        # ramping linearly to 0 at 3.5x resting height. So moderate skipping is permitted
+        # but sustained ballistic flight (jumping) is still zeroed. All other modes keep the
+        # original binary grounded/not-grounded rule.
+        _skip_graded = (self.fitness_mode == "skip")
+        _skip_hi     = ground_threshold * 1.75   # 2x -> 3.5x resting (ratio preserved if the 0.05 floor binds)
+
+        # "skipbl": the same graded idea, but the allowance is measured in BODY LENGTHS rather
+        # than as a multiple of resting height. A multiple-of-resting threshold is
+        # morphology-dependent (tiny absolute clearance for a flat robot, generous for a tall
+        # one); a body-length allowance judges every shape by the same physical standard.
+        #   full credit  while COM <= resting + 0.5 * body_length
+        #   linear ramp  to 0 between +0.5 and +1.0 body_length
+        _bl_graded = (self.fitness_mode == "skipbl")
+        _bl_lo     = settled_height + 0.5 * body_length
+        _bl_hi     = settled_height + 1.0 * body_length
 
         initial_x      = float(self.get_position()[0])
         measure_steps  = int(simulation_time / self.default_timestep)
@@ -258,6 +315,20 @@ class MuJoCoTendonPhysics:
             if mode == "stable":             # penalise vertical bounce (smooth gait)
                 bounce = (float(np.std(heights)) / body_length) if heights else 0.0
                 return base * gf / (1.0 + 5.0 * bounce)
+            if mode == "skip":               # graded ground credit (gf computed with the
+                return base * gf             # 2x->3.5x ramp above): skips OK, jumps zeroed
+            if mode == "skipbl":             # as skip, but the allowance is body-length-relative
+                return base * gf
+            if mode == "musclecost":
+                # Cheney 2013's "cost for actuated voxels" regime: multiply fitness by
+                #   1 - (penalty metric / maximum possible penalty metric)
+                # with the metric = number of MUSCLE voxels. In their Fig. 10 this is the
+                # treatment that pushed evolution to adopt more inert support tissue instead
+                # of all-muscle bodies — i.e. it selects for DIFFERENTIATED morphology
+                # (skeleton + muscle) rather than a uniform actuated blob.
+                denom   = float(self.max_voxels or max(self._n_voxels, 1))
+                penalty = min(1.0, self._n_actuated_voxels / max(denom, 1.0))
+                return base * gf * (1.0 - penalty)
             return base * gf                 # "directed" (default, unchanged)
 
         for step_idx in range(measure_steps):
@@ -265,7 +336,19 @@ class MuJoCoTendonPhysics:
             energy += float(np.sum(np.abs(self.data.actuator_force)))
             com_z = float(np.mean(self.data.xpos[1:nbody, 2]))
             heights.append(com_z)
-            if com_z < ground_threshold:
+            if _skip_graded:
+                if com_z <= ground_threshold:
+                    grounded_steps += 1.0
+                elif com_z < _skip_hi:
+                    grounded_steps += float((_skip_hi - com_z) / (_skip_hi - ground_threshold))
+                # com_z >= _skip_hi -> +0 (ballistic flight earns no credit)
+            elif _bl_graded:
+                if com_z <= _bl_lo:
+                    grounded_steps += 1.0
+                elif com_z < _bl_hi:
+                    grounded_steps += float((_bl_hi - com_z) / (_bl_hi - _bl_lo))
+                # above a full body-length of clearance -> no credit
+            elif com_z < ground_threshold:
                 grounded_steps += 1
 
             if step_idx + 1 == check_step:

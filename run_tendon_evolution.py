@@ -159,10 +159,18 @@ DEFAULT_INJECT_FRAC = 0.10   # fraction of pop injected as fresh random each gen
 # ──────────────────────────────────────────────────────────────────
 def _make_valid_cppn(innov: InnovationCounter,
                      rng: np.random.Generator,
-                     max_tries: int = 50) -> tuple[CPPNGenome, np.ndarray]:
-    """Create a random CPPN whose decoded grid meets minimum voxel count."""
+                     max_tries: int = 50,
+                     init=None) -> tuple[CPPNGenome, np.ndarray]:
+    """Create a random CPPN whose decoded grid meets minimum voxel count.
+
+    `init` (optional) seeds evolvable genes BEFORE decoding — essential for
+    --evolve-size, whose presence-bias gene changes what the body decodes to, so the
+    returned grid must be produced with the gene already applied.
+    """
     for _ in range(max_tries):
         cppn = CPPNGenome(innov, rng)
+        if init is not None:
+            init(cppn)
         grid = cppn.to_voxel_grid()
         if grid is not None:
             return cppn, grid
@@ -176,11 +184,32 @@ def _breed_child(parent_cppn1: CPPNGenome,
                  innov: InnovationCounter,
                  rng: np.random.Generator,
                  crossover_rate: float,
-                 mutation_rate: float) -> tuple[CPPNGenome, np.ndarray]:
+                 mutation_rate: float,
+                 freeze_body: bool = False) -> tuple[CPPNGenome, np.ndarray]:
     """
     Produce a child CPPN + decoded grid.
     Falls back to parent 1 (unchanged) if child grid is invalid after 5 tries.
+
+    freeze_body=True is stage 2 of the two-stage protocol (Mertan & Cheney 2024): the
+    MORPHOLOGY is held fixed and only the control CPPN mutates. Body mutations normally
+    cause a severe fitness drop, so during co-optimisation a promising new body dies before
+    its controller can adapt ("first-mover advantage") and morphology converges prematurely.
+    Freezing the body removes that coupling so control can be optimised on its merits.
     """
+    if freeze_body:
+        from src.evolution.cppn_genome import _phase_innov
+        child_cppn = parent_cppn1.copy()          # body genes + size gene untouched
+        if getattr(child_cppn, 'phase_cppn', None) is None:
+            child_cppn.init_phase_cppn(rng)
+        else:
+            child_cppn.phase_cppn = child_cppn.phase_cppn.mutate(_phase_innov(), rate=mutation_rate)
+        grid = child_cppn.to_voxel_grid()         # identical body: same CPPN, same size gene
+        if grid is None:
+            grid = parent_cppn1.to_voxel_grid()
+            if grid is None:
+                grid = create_connected_genome()
+        return child_cppn, grid
+
     for _ in range(5):
         if rng.random() < crossover_rate:
             child_cppn = CPPNGenome.crossover(
@@ -201,6 +230,50 @@ def _breed_child(parent_cppn1: CPPNGenome,
         child_grid = _fb if _fb is not None else create_connected_genome()
         child_cppn = parent_cppn1.copy()
     return child_cppn, child_grid
+
+
+def _cg_max_voxels() -> int:
+    """Current voxel cap (set from --max-voxels at startup). Read live from the module so
+    the CLI override is picked up; passed to workers explicitly since they re-import defaults."""
+    import src.evolution.cppn_genome as _cg
+    return int(_cg.MAX_VOXELS_PER_ROBOT)
+
+
+def _shape_descriptor(grid) -> tuple:
+    """Morphology descriptors for the MAP-Elites archive: (elongation, fill-density).
+
+    Following the papers' emphasis on morphological diversity (Cheney 2013 penalty regimes,
+    Corucci 2018 shape descriptors), these characterise the BODY rather than the gait:
+      elongation   = longest / shortest bounding-box extent  (1 = cubic, high = worm/slab)
+      fill-density = voxels / bounding-box volume            (1 = solid brick, low = limby)
+    Low fill-density is the direct measure of "not a blob" — a body with gaps and
+    protrusions — which the old (COM-height x bounce) gait axes could not express.
+    Computed from the decoded grid, so it costs no simulation time.
+    """
+    idx = np.argwhere(grid != 0)
+    if len(idx) == 0:
+        return (1.0, 0.0)
+    ext = idx.max(0) - idx.min(0) + 1
+    elong = float(ext.max()) / float(max(ext.min(), 1))
+    fill  = float(len(idx)) / float(np.prod(ext))
+    return (elong, fill)
+
+
+def _guard_overwrite(out, will_resume: bool, force: bool) -> None:
+    """Refuse to silently clobber a COMPLETED run. A finished run leaves archive.pkl /
+    best_robot.pkl but deletes its checkpoint — so re-running the same --name can't resume
+    and would start FRESH, overwriting gen_*.json/best_robot.pkl and eventually archive.pkl.
+    This footgun has bitten twice. Abort unless the caller passes --force."""
+    from pathlib import Path
+    out = Path(out)
+    completed = (out / 'archive.pkl').exists() or (out / 'best_robot.pkl').exists()
+    if completed and not will_resume and not force:
+        raise SystemExit(
+            f"\nERROR: '{out}' already holds a COMPLETED run (archive.pkl/best_robot.pkl "
+            f"present, no checkpoint to resume from).\n"
+            f"Re-running --name '{out.name}' would start fresh and OVERWRITE it.\n"
+            f"  -> use a NEW --name to keep both runs, or\n"
+            f"  -> pass --force to intentionally overwrite this run.\n")
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -393,6 +466,8 @@ def run_evolution(
     fitness_mode:    str   = "directed",   # directed | forward | efficiency | stable
     wave_phase_n           = None,   # flex only: traveling-wave gait wavenumber
     evolve_gait:     bool  = False,  # C6: co-evolve per-robot traveling-wave gait genes
+    per_voxel_phase: bool  = False,  # architecture spike: co-evolve a per-voxel phase CPPN
+    evolve_size:     bool  = False,  # co-evolve body size via an evolvable presence threshold
     n_inject:        int   = None,   # None → pop // 10
     results_dir:     str   = "results",
     name:            str   = "tendon_run",
@@ -401,6 +476,7 @@ def run_evolution(
     seed_fraction:   float = 0.30,   # fraction of pop seeded from prior run (rest fresh)
     use_controller:  bool  = False,  # default: A1 open-loop material-phase (Cheney-faithful). True → legacy CPG.
     resume:          bool  = True,   # auto-resume from results/<name>/checkpoint.pkl if present
+    force:           bool  = False,  # allow overwriting a COMPLETED run of the same --name
     species_threshold: float = SPECIES_THRESHOLD,  # NEAT compat distance; higher → fewer, larger species
 ):
     # Keep the machine awake for the whole run; release on any exit (normal or error).
@@ -459,11 +535,24 @@ def run_evolution(
         voxel_size          = 0.05 if use_flex else 0.01,
         fitness_mode        = fitness_mode,
         wave_phase_n        = wave_phase_n,
+        max_voxels          = _cg_max_voxels(),
     )
 
     def _gp(cppn_list):
-        """Decode evolved gait params per robot (None list => legacy material gait)."""
+        """Per-robot gait provider (None list => legacy material gait). Per-voxel-phase
+        hands each robot its control CPPN; else the 4-gene wave tuple; else None."""
+        if per_voxel_phase:
+            return [getattr(c, 'phase_cppn', None) for c in cppn_list]
         return [c.to_gait_params() for c in cppn_list] if evolve_gait else None
+
+    def _init_ctrl(c):
+        """Seed evolvable control/morphology genes on a fresh CPPN (idempotent)."""
+        if evolve_gait and c.to_gait_params() is None:
+            c.init_gait(rng)
+        if per_voxel_phase and getattr(c, 'phase_cppn', None) is None:
+            c.init_phase_cppn(rng)
+        if evolve_size and getattr(c, 'size_gene', None) is None:
+            c.init_size_gene(rng)
 
     # ── Sanity check ────────────────────────────────────────────────
     print("\nRunning sanity check (1 CPPN robot)...")
@@ -484,6 +573,7 @@ def run_evolution(
 
     ckpt_path = out / 'checkpoint.pkl'
     resuming  = bool(resume) and ckpt_path.exists()
+    _guard_overwrite(out, resuming, force)
     start_gen = 0
     history = {'best_fitness': [], 'mean_fitness': [], 'worst_fitness': []}
     best_genome = best_controller = best_cppn = None
@@ -526,10 +616,8 @@ def run_evolution(
         genomes     = [all_genomes[i] for i in top_idx]
         controllers = [all_ctrls[i]   for i in top_idx]
         fitnesses   = all_fits[top_idx]
-        if evolve_gait:
-            for c in cppns:
-                if c.to_gait_params() is None:
-                    c.init_gait(rng)
+        for c in cppns:
+            _init_ctrl(c)
         print(f"  Kept top {n_seed} seeded robots  |  best: {fitnesses.max():.4f}m  worst: {fitnesses.min():.4f}m")
 
         # Fill remaining slots with fresh random robots and evaluate them
@@ -537,9 +625,7 @@ def run_evolution(
         print(f"  Generating {n_fresh} fresh robots to fill the rest ...")
         fresh_cppns, fresh_genomes, fresh_ctrls = [], [], []
         for _ in range(n_fresh):
-            c, g = _make_valid_cppn(innov, rng)
-            if evolve_gait:
-                c.init_gait(rng)
+            c, g = _make_valid_cppn(innov, rng, init=_init_ctrl)
             fresh_cppns.append(c)
             fresh_genomes.append(g)
             fresh_ctrls.append(_new_ctrl(g))
@@ -559,9 +645,7 @@ def run_evolution(
         cppns       = []
         genomes     = []
         for _ in range(population_size):
-            c, g = _make_valid_cppn(innov, rng)
-            if evolve_gait:
-                c.init_gait(rng)
+            c, g = _make_valid_cppn(innov, rng, init=_init_ctrl)
             cppns.append(c)
             genomes.append(g)
         controllers = [_new_ctrl(g) for g in genomes]
@@ -675,9 +759,7 @@ def run_evolution(
 
             # Inject fresh random robots (age will become 1 after +1 below)
             for _ in range(n_inject):
-                c, g = _make_valid_cppn(innov, rng)
-                if evolve_gait:
-                    c.init_gait(rng)
+                c, g = _make_valid_cppn(innov, rng, init=_init_ctrl)
                 new_cppns.append(c)
                 new_genomes.append(g)
                 new_controllers.append(_new_ctrl(g))
@@ -811,10 +893,33 @@ def run_map_elites(
     wave_phase_n           = None,    # flex only: traveling-wave gait wavenumber
     parent_select:   str   = "uniform",    # uniform | biased | curiosity
     evolve_gait:     bool  = False,   # C6: co-evolve per-robot traveling-wave gait genes (flex)
+    per_voxel_phase: bool  = False,   # architecture spike: co-evolve a per-voxel phase CPPN
+    evolve_size:     bool  = False,   # co-evolve body size via an evolvable presence threshold
+    descriptors:     str   = "gait",  # gait (COM-height x bounce) | shape (elongation x fill)
+    freeze_body:     bool  = False,   # stage 2: hold morphology fixed, evolve only control
+    force:           bool  = False,   # allow overwriting a COMPLETED run of the same --name
 ):
+    def _descs(grids, sim_descs):
+        """Archive descriptors: simulated gait traits, or morphology traits from the grid."""
+        if descriptors == "shape":
+            return [_shape_descriptor(g) for g in grids]
+        return sim_descs
     def _gp(cppn_list):
-        """Decode evolved gait params per robot (None list => legacy material gait)."""
+        """Per-robot gait provider (None list => legacy material gait). When
+        --per-voxel-phase is on, hand each robot its control CPPN (the engine detects it
+        via evaluate_batch); else the 4-gene wave tuple if --evolve-gait; else None."""
+        if per_voxel_phase:
+            return [getattr(c, 'phase_cppn', None) for c in cppn_list]
         return [c.to_gait_params() for c in cppn_list] if evolve_gait else None
+
+    def _init_ctrl(c):
+        """Seed evolvable control/morphology genes on a fresh CPPN (idempotent)."""
+        if evolve_gait and c.to_gait_params() is None:
+            c.init_gait(rng)
+        if per_voxel_phase and getattr(c, 'phase_cppn', None) is None:
+            c.init_phase_cppn(rng)
+        if evolve_size and getattr(c, 'size_gene', None) is None:
+            c.init_size_gene(rng)
     """
     Quality-Diversity search. Keeps the best robot of each *gait* cell in a 2-D
     archive indexed by behaviour descriptors:
@@ -852,7 +957,9 @@ def run_map_elites(
     print(f"  Iterations : {generations}")
     print(f"  Sim time   : {sim_time}s  +  {settle_time}s settle")
     print(f"  Fitness    : forward (+X) body-lengths × ground-fraction")
-    print(f"  Descriptors: COM height x bounce  ->  {archive_bins}x{archive_bins} = {n_cells} cells")
+    _desc_label = ("elongation x fill-density (SHAPE)" if descriptors == "shape"
+                   else "COM height x bounce")
+    print(f"  Descriptors: {_desc_label}  ->  {archive_bins}x{archive_bins} = {n_cells} cells")
     print(f"  Workers    : {n_workers}   Output: {out}")
     print("=" * 70)
 
@@ -867,6 +974,7 @@ def run_map_elites(
         voxel_size          = 0.05 if use_flex else 0.01,
         fitness_mode        = fitness_mode,
         wave_phase_n        = wave_phase_n,
+        max_voxels          = _cg_max_voxels(),
     )
 
     archive = {}   # (i,j) -> {'cppn','genome','fitness','desc'}
@@ -883,6 +991,7 @@ def run_map_elites(
     select_count = {}   # cell key -> times chosen as parent (for parent_select='curiosity')
     start_gen = 0
     ckpt_path = out / 'checkpoint.pkl'
+    _guard_overwrite(out, bool(resume) and ckpt_path.exists(), force)
 
     if resume and ckpt_path.exists():
         with open(ckpt_path, 'rb') as f:
@@ -916,30 +1025,29 @@ def run_map_elites(
             cppns = saved['cppns']
             grids = saved['genomes']
             innov._count = max(innov._count, int(saved.get('innov_next', 0)))
-            if evolve_gait:
-                for c in cppns:
-                    if c.to_gait_params() is None:
-                        c.init_gait(rng)
+            for c in cppns:
+                _init_ctrl(c)
             # re-evaluate the elites HERE to get their gait descriptors (the seed file
             # stores fitness but not descriptors) under THIS run's sim settings
             fits, descs = evaluator.evaluate_batch(grids, with_descriptors=True,
                                                    gait_params=_gp(cppns))
+            descs = _descs(grids, descs)
             print(f"  Loaded {len(grids)} elites  (re-eval best {max(fits):.4f}BL)")
         else:
             print(f"\nSeeding archive with {population_size} random robots...")
             cppns, grids = [], []
             for _ in range(population_size):
-                c, g = _make_valid_cppn(innov, rng)
-                if evolve_gait:
-                    c.init_gait(rng)
+                c, g = _make_valid_cppn(innov, rng, init=_init_ctrl)
                 cppns.append(c); grids.append(g)
             fits, descs = evaluator.evaluate_batch(grids, with_descriptors=True,
                                                    gait_params=_gp(cppns))
+            descs = _descs(grids, descs)
 
         H_LO, H_HI = _calib(np.array([d[0] for d in descs]))
         B_LO, B_HI = _calib(np.array([d[1] for d in descs]))
-        print(f"  Auto-calibrated bounds: COM-height [{H_LO:.3f}, {H_HI:.3f}]  "
-              f"bounce [{B_LO:.3f}, {B_HI:.3f}]")
+        _ax = ("elongation", "fill-density") if descriptors == "shape" else ("COM-height", "bounce")
+        print(f"  Auto-calibrated bounds: {_ax[0]} [{H_LO:.3f}, {H_HI:.3f}]  "
+              f"{_ax[1]} [{B_LO:.3f}, {B_HI:.3f}]")
         for c, g, fi, d in zip(cppns, grids, fits, descs):
             place(c, g, fi, d)
 
@@ -949,9 +1057,14 @@ def run_map_elites(
         coverage = len(archive)
         max_fit  = max((e['fitness'] for e in archive.values()), default=0.0)
         qd_score = sum(e['fitness'] for e in archive.values())
+        # top-10 mean: a far steadier quality signal than the single noisy max (the max is
+        # an extreme order statistic; seed variance dominates it — see the stiff-bias saga).
+        _top10   = sorted((e['fitness'] for e in archive.values()), reverse=True)[:10]
+        top10    = float(np.mean(_top10)) if _top10 else 0.0
         history['coverage'].append(coverage)
         history['max_fitness'].append(max_fit)
         history['qd_score'].append(qd_score)
+        history.setdefault('top10_mean', []).append(top10)
 
         if max_fit > best['fitness']:
             be = max(archive.values(), key=lambda e: e['fitness'])
@@ -960,14 +1073,15 @@ def run_map_elites(
 
         print(f"Iter {gen+1:3d}/{generations}  "
               f"filled={coverage:3d}/{n_cells}  max={max_fit:.4f}BL  "
-              f"QD={qd_score:7.2f}  [{elapsed:.1f}s]")
+              f"top10={top10:.4f}BL  QD={qd_score:7.2f}  [{elapsed:.1f}s]")
 
         with open(out / 'best_robot.pkl', 'wb') as f:
             pickle.dump({'genome': best['genome'], 'controller': None,
                          'fitness': best['fitness'], 'cppn': best['cppn']}, f)
         with open(out / f"gen_{gen+1:03d}.json", 'w') as f:
             json.dump({'iteration': gen + 1, 'coverage': coverage,
-                       'max_fitness': max_fit, 'qd_score': qd_score}, f)
+                       'max_fitness': max_fit, 'top10_mean': top10,
+                       'qd_score': qd_score}, f)
         _ck = {'archive': archive, 'innov_count': innov._count, 'history': history,
                'best': best, 'next_gen': gen,
                'bounds_h': (H_LO, H_HI), 'bounds_b': (B_LO, B_HI),
@@ -1012,18 +1126,22 @@ def run_map_elites(
             child_cppn, child_g = _breed_child(
                 e1['cppn'], e2['cppn'], e1['fitness'], e2['fitness'],
                 innov, rng, crossover_rate, mutation_rate,
+                freeze_body=freeze_body,
             )
             new_cppns.append(child_cppn); new_grids.append(child_g)
 
         t0   = time.perf_counter()
         fits, descs = evaluator.evaluate_batch(new_grids, with_descriptors=True,
                                                gait_params=_gp(new_cppns))
+        descs = _descs(new_grids, descs)
         for c, g, fi, d in zip(new_cppns, new_grids, fits, descs):
             place(c, g, fi, d)
 
     # ── Save final archive ──────────────────────────────────────────────
     print("\n" + "=" * 70)
+    _final10 = sorted((e['fitness'] for e in archive.values()), reverse=True)[:10]
     print(f"MAP-ELITES COMPLETE — best {best['fitness']:.4f}BL  |  "
+          f"top10-mean {float(np.mean(_final10)) if _final10 else 0.0:.4f}BL  |  "
           f"filled {len(archive)}/{n_cells} cells  |  QD-score {history['qd_score'][-1]:.2f}")
     print("=" * 70)
     with open(out / 'archive.pkl', 'wb') as f:
@@ -1093,8 +1211,19 @@ if __name__ == "__main__":
                         help="B5: use native deformable (flex) physics instead of the "
                              "tendon model (~140x faster; FRESH baseline, open-loop only)")
     parser.add_argument("--fitness", dest="fitness", type=str, default="directed",
-                        choices=["directed", "forward", "efficiency", "stable"],
-                        help="fitness-shaping mode (default: directed = forward_BL x ground_fraction)")
+                        choices=["directed", "forward", "efficiency", "stable", "skip",
+                                 "skipbl", "musclecost"],
+                        help="fitness-shaping mode (default: directed = forward_BL x ground_fraction). "
+                             "skip = graded ground credit (full <=2x resting, ramps to 0 at 3.5x). "
+                             "skipbl = same but the allowance is BODY-LENGTH relative (full <=+0.5BL, "
+                             "0 at +1.0BL) so tall and flat robots are judged alike. "
+                             "musclecost = Cheney 2013's 'cost for actuated voxels': fitness x "
+                             "(1 - muscle_voxels/max_voxels), which selects for differentiated "
+                             "bodies (support tissue + muscle) instead of all-muscle blobs.")
+    parser.add_argument("--descriptors", dest="descriptors", type=str, default="gait",
+                        choices=["gait", "shape"],
+                        help="MAP-Elites archive axes: gait (COM-height x bounce, default) or "
+                             "shape (elongation x fill-density) to collect diverse MORPHOLOGIES.")
     parser.add_argument("--gait", dest="gait", type=str, default="material",
                         choices=["material", "wave"],
                         help="flex actuation gait: material 2-phase (default) or traveling wave")
@@ -1109,11 +1238,27 @@ if __name__ == "__main__":
     parser.add_argument("--stiff-bias", dest="stiff_bias", type=float, default=0.0,
                         help="Decode-time bias toward stiff material 4 ('bone') to encourage "
                              "skeletal/leg-like structure (default 0 = off; try 1.0-3.0).")
+    parser.add_argument("--per-voxel-phase", dest="per_voxel_phase", action="store_true", default=False,
+                        help="Architecture spike: co-evolve a SECOND CPPN that outputs a "
+                             "per-voxel actuation phase (arbitrary spatial phase field), "
+                             "replacing the 4-gene global wave. Tendon engine. Backward-compatible.")
+    parser.add_argument("--freeze-body", dest="freeze_body", action="store_true", default=False,
+                        help="Stage 2 of the two-stage protocol: hold each parent's MORPHOLOGY "
+                             "fixed and mutate only the control CPPN. Use with --seed-from and "
+                             "--per-voxel-phase to optimise control on bodies evolved in stage 1.")
+    parser.add_argument("--evolve-size", dest="evolve_size", action="store_true", default=False,
+                        help="Co-evolve BODY SIZE via an evolvable presence threshold. Without "
+                             "this the presence gate passes ~2500 voxels so --max-voxels binds "
+                             "~96%% of the time and every body sits exactly at the cap; with it, "
+                             "size is under selection and --max-voxels becomes a true limit.")
     parser.add_argument("--max-voxels", dest="max_voxels", type=int, default=300,
                         help="Max voxels per robot (default 300). Higher = bigger bodies but "
                              "slower tendon sims (contacts scale super-linearly).")
     parser.add_argument("--archive-bins", type=int, default=16,
                         help="MAP-Elites archive resolution per axis (default 16 -> 16x16 cells)")
+    parser.add_argument("--force", dest="force", action="store_true", default=False,
+                        help="Allow overwriting a COMPLETED run with the same --name "
+                             "(default: refuse, to prevent accidental clobbering).")
     args = parser.parse_args()
     wave_phase_n = args.gait_wavenum if args.gait == "wave" else None
     # Apply stiff-material decode bias + voxel cap globally (read by CPPNGenome.to_voxel_grid
@@ -1145,6 +1290,11 @@ if __name__ == "__main__":
             wave_phase_n    = wave_phase_n,
             parent_select   = args.parent,
             evolve_gait     = args.evolve_gait,
+            per_voxel_phase = args.per_voxel_phase,
+            evolve_size     = args.evolve_size,
+            descriptors     = args.descriptors,
+            freeze_body     = args.freeze_body,
+            force           = args.force,
         )
     else:
         run_evolution(
@@ -1163,6 +1313,8 @@ if __name__ == "__main__":
             fitness_mode    = args.fitness,
             wave_phase_n    = wave_phase_n,
             evolve_gait     = args.evolve_gait,
+            per_voxel_phase = args.per_voxel_phase,
+            evolve_size     = args.evolve_size,
             n_inject        = args.inject,
             name            = args.name,
             seed            = args.seed,
@@ -1170,5 +1322,6 @@ if __name__ == "__main__":
             seed_fraction   = args.seed_frac,
             use_controller    = args.use_cpg and not args.open_loop,
             resume            = args.resume,
+            force             = args.force,
             species_threshold = args.species_threshold,
         )
