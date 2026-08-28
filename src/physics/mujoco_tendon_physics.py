@@ -300,6 +300,14 @@ class MuJoCoTendonPhysics:
                 d1 = d2 = 0.0
             return fit, (d1, d2)
 
+        # A body with no active tendons has NO actuators — nothing drives it, so any
+        # displacement is passive: it topples once and stops. Under the muscle-cost regime
+        # that was the global optimum (zero muscle = zero penalty = full credit for the
+        # fall), producing rigid statues that scored 0.54 BL while never locomoting.
+        # A robot that cannot actuate is not locomoting, so it scores nothing.
+        if int(self.model.nu) == 0:
+            return _result(0.0)
+
         energy = 0.0   # accumulated actuation effort (cost-of-transport proxy)
 
         def _shape(fbl, gf, steps):
@@ -320,14 +328,21 @@ class MuJoCoTendonPhysics:
             if mode == "skipbl":             # as skip, but the allowance is body-length-relative
                 return base * gf
             if mode == "musclecost":
-                # Cheney 2013's "cost for actuated voxels" regime: multiply fitness by
-                #   1 - (penalty metric / maximum possible penalty metric)
-                # with the metric = number of MUSCLE voxels. In their Fig. 10 this is the
-                # treatment that pushed evolution to adopt more inert support tissue instead
-                # of all-muscle bodies — i.e. it selects for DIFFERENTIATED morphology
-                # (skeleton + muscle) rather than a uniform actuated blob.
-                denom   = float(self.max_voxels or max(self._n_voxels, 1))
-                penalty = min(1.0, self._n_actuated_voxels / max(denom, 1.0))
+                # Cheney 2013's "cost for actuated voxels" regime, normalised by the body's
+                # OWN voxel count, i.e. the penalty is the MUSCLE FRACTION.
+                #
+                # Normalising by max_voxels instead (Cheney's literal formulation) is
+                # degenerate here: it makes the penalty shrink with body size, so on top of
+                # the body-length-normalised distance metric — which already favours small
+                # robots — evolution simply collapses to the minimum body size and stays
+                # 100% muscle. Measured on stage1_s1: corr(fitness, body_length) = -0.66,
+                # top solutions were 20-28 voxels, all 100% muscle, and travelled LESS in
+                # absolute terms than the larger champions they outscored.
+                #
+                # Muscle FRACTION is size-neutral: shrinking gains nothing, and the only way
+                # to reduce the penalty is to adopt passive support tissue. That is exactly
+                # the differentiation Cheney's Fig. 10 reports for this regime.
+                penalty = min(1.0, self._n_actuated_voxels / max(self._n_voxels, 1))
                 return base * gf * (1.0 - penalty)
             return base * gf                 # "directed" (default, unchanged)
 
