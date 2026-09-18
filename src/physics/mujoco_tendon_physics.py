@@ -31,7 +31,17 @@ class MuJoCoTendonPhysics:
         actuation_amplitude: float = 0.20,
         fitness_mode: str = "directed",
         max_voxels: Optional[int] = None,
+        friction: Optional[Dict] = None,
     ):
+        """friction: None keeps the original floor (dynamic contact, coefficient 0.7).
+            {'mode': 'single', 'mu': MU} -> one sliding coefficient for voxel-floor contact.
+            {'mode': 'stickslip', 'mu_s': MS, 'mu_k': MK, 'v_on': V1, 'v_off': V0} ->
+            Voxelyze-style static/kinetic friction: each voxel is either stuck (floor
+            friction MS) or sliding (MK). It starts sliding once its horizontal speed
+            exceeds V1 and sticks again below V0 (m/s; hysteresis stops flicker at the
+            threshold). Voxelyze switches on lateral force > MS x normal force, but MuJoCo
+            only reveals contact forces after its solve, so speed is the trigger here.
+            Either way voxel-voxel contacts are untouched."""
         self.default_timestep    = default_timestep
         self.actuation_frequency = actuation_frequency
         self.actuation_amplitude = actuation_amplitude
@@ -43,6 +53,9 @@ class MuJoCoTendonPhysics:
         self.max_voxels          = max_voxels
         self._n_actuated_voxels  = 0      # muscle voxels (materials 1,2) in the loaded body
         self._n_voxels           = 0
+        self.friction            = friction
+        self._ss_vidx            = None   # stick-slip: (n_voxels, 2) qvel indices of vx, vy
+        self._ss_sliding         = None   # stick-slip: per-voxel state (True = sliding)
 
         self.model: Optional[mujoco.MjModel] = None
         self.data:  Optional[mujoco.MjData]  = None
@@ -76,9 +89,19 @@ class MuJoCoTendonPhysics:
         # Material census for the muscle-cost fitness mode (1,2 = muscle; 3 soft, 4 stiff).
         self._n_voxels          = int((voxel_grid != 0).sum())
         self._n_actuated_voxels = int(((voxel_grid == 1) | (voxel_grid == 2)).sum())
-        xml, self.tendon_info = voxel_to_tendon_xml(voxel_grid, voxel_size, initial_height)
+        fr = self.friction
+        floor_mu = None if fr is None else (fr['mu'] if fr['mode'] == 'single' else fr['mu_s'])
+        xml, self.tendon_info = voxel_to_tendon_xml(voxel_grid, voxel_size, initial_height,
+                                                    floor_friction=floor_mu)
         self.model = mujoco.MjModel.from_xml_string(xml)
         self.data  = mujoco.MjData(self.model)
+        self._ss_vidx = self._ss_sliding = None
+        if fr is not None and fr['mode'] == 'stickslip':
+            # voxel k <-> free joint k <-> floor pair k; free-joint qvel[0:3] is the
+            # world-frame linear velocity. Every voxel starts stuck (static friction).
+            adr = self.model.jnt_dofadr[:self.model.npair]
+            self._ss_vidx    = np.stack([adr, adr + 1], axis=1)
+            self._ss_sliding = np.zeros(self.model.npair, dtype=bool)
         mujoco.mj_forward(self.model, self.data)
         # Only active tendons have position actuators; rest_lengths tracks those.
         self.rest_lengths = np.array(self.data.actuator_length, copy=True)
@@ -161,6 +184,11 @@ class MuJoCoTendonPhysics:
                 )
         self._controller = controller
 
+    def _actuator_count(self) -> int:
+        """How many things drive this body; 0 means it cannot locomote (get_fitness scores 0).
+        Here: position actuators on active tendons. Subclasses without MuJoCo actuators override."""
+        return int(self.model.nu)
+
     @property
     def num_active_tendons(self) -> int:
         """Number of position-actuated (active) tendons == model.nu."""
@@ -199,8 +227,21 @@ class MuJoCoTendonPhysics:
         if self.model is None:
             return
         self.apply_actuation()
+        if self._ss_sliding is not None:
+            self._update_floor_friction()
         mujoco.mj_step(self.model, self.data)
         self.current_time += self.default_timestep
+
+    def _update_floor_friction(self) -> None:
+        """Stick-slip: switch each voxel between static and kinetic floor friction from its
+        current horizontal speed (hysteresis v_off < v_on). Vectorised, O(n_voxels)."""
+        v     = self.data.qvel[self._ss_vidx]
+        speed = np.hypot(v[:, 0], v[:, 1])
+        fr    = self.friction
+        self._ss_sliding = np.where(self._ss_sliding, speed > fr['v_off'], speed > fr['v_on'])
+        mu = np.where(self._ss_sliding, fr['mu_k'], fr['mu_s'])
+        self.model.pair_friction[:, 0] = mu
+        self.model.pair_friction[:, 1] = mu
 
     # ------------------------------------------------------------------
     # Position / fitness
@@ -305,7 +346,7 @@ class MuJoCoTendonPhysics:
         # that was the global optimum (zero muscle = zero penalty = full credit for the
         # fall), producing rigid statues that scored 0.54 BL while never locomoting.
         # A robot that cannot actuate is not locomoting, so it scores nothing.
-        if int(self.model.nu) == 0:
+        if self._actuator_count() == 0:
             return _result(0.0)
 
         energy = 0.0   # accumulated actuation effort (cost-of-transport proxy)

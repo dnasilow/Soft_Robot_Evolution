@@ -40,9 +40,26 @@ def _make_engine(params):
     if params.get('use_flex', False):
         from src.physics.mujoco_flex_physics import MuJoCoFlexPhysics
         return MuJoCoFlexPhysics(wave_phase_n=params.get('wave_phase_n'), **kw)
+    if params.get('body', 'springs') == 'beam':
+        # Voxelyze-style bodies; picks its own stable time step per robot.
+        from src.physics.mujoco_beam_physics import MuJoCoBeamPhysics
+        return MuJoCoBeamPhysics(max_voxels=params.get('max_voxels'),
+                                 friction=params.get('friction'), **kw)
     # max_voxels is tendon-only (normalises the musclecost penalty); workers re-import
     # genome_config defaults, so the parent's --max-voxels must be threaded explicitly.
-    return MuJoCoTendonPhysics(max_voxels=params.get('max_voxels'), **kw)
+    # friction likewise (None = the original floor).
+    return MuJoCoTendonPhysics(max_voxels=params.get('max_voxels'),
+                               friction=params.get('friction'), **kw)
+
+
+def _fitness_kw(params):
+    """Optional get_fitness overrides; absent keys keep the engine defaults unchanged."""
+    kw = {}
+    if params.get('early_term_threshold') is not None:
+        kw['early_term_threshold'] = params['early_term_threshold']
+    if params.get('early_term_fraction') is not None:
+        kw['early_term_fraction'] = params['early_term_fraction']
+    return kw
 
 
 # ------------------------------------------------------------------
@@ -72,6 +89,7 @@ def _eval_worker(args):
             simulation_time    = params['simulation_time'],
             settle_time        = params['settle_time'],
             return_descriptors = want_desc,
+            **_fitness_kw(params),
         )
     except Exception:
         return (0.0, (0.0, 0.0)) if want_desc else 0.0
@@ -101,6 +119,10 @@ class MuJoCoTendonEvaluator:
         fitness_mode:        str   = "directed",
         wave_phase_n              = None,
         max_voxels:          int   = None,
+        friction:            dict  = None,   # floor friction spec (see MuJoCoTendonPhysics)
+        early_term_threshold: float = None,  # BL needed at the check point (None = 0.05)
+        early_term_fraction:  float = None,  # check point as a fraction of the window (None = 0.2)
+        body:                str   = "springs",  # springs (tendon model) | beam (Voxelyze bonds)
     ):
         self.simulation_time   = simulation_time
         self.settle_time       = settle_time
@@ -125,6 +147,10 @@ class MuJoCoTendonEvaluator:
             'fitness_mode':        fitness_mode,
             'wave_phase_n':        wave_phase_n,
             'max_voxels':          max_voxels,
+            'friction':            friction,
+            'early_term_threshold': early_term_threshold,
+            'early_term_fraction':  early_term_fraction,
+            'body':                body,
         }
 
         # Sequential engine — used when n_workers==1 and by evaluate_single
@@ -193,6 +219,7 @@ class MuJoCoTendonEvaluator:
                     simulation_time    = self.simulation_time,
                     settle_time        = self.settle_time,
                     return_descriptors = with_descriptors,
+                    **_fitness_kw(self._params),
                 )
                 if with_descriptors:
                     fitnesses.append(res[0]); descs.append(res[1])

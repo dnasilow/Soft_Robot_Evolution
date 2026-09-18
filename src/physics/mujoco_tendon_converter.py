@@ -100,6 +100,7 @@ def voxel_to_tendon_xml(
     voxel_grid: np.ndarray,
     voxel_size: float = 0.01,
     initial_height: float = 0.0,
+    floor_friction: Optional[float] = None,
 ) -> Tuple[str, List[Dict]]:
     """
     Convert voxel grid to MuJoCo XML with tendon-based actuation.
@@ -110,6 +111,13 @@ def voxel_to_tendon_xml(
                     3=Soft passive, 4=Stiff passive
         voxel_size: Size of each voxel in meters (default 0.01m = 1cm)
         initial_height: Starting height above ground in metres
+        floor_friction: None (default) keeps the original floor: the ground collides
+                    dynamically with every voxel and the contact friction is the pairwise
+                    max of the geom coefficients (0.7). A float instead routes voxel-floor
+                    contact through one explicit <pair> per voxel (pair k <-> voxel k) with
+                    that sliding coefficient, which the engine may change per step
+                    (stick-slip friction) without touching the load-bearing voxel-voxel
+                    contacts, which keep their own 0.6.
 
     Returns:
         (xml_string, tendon_info_list)
@@ -220,8 +228,11 @@ def voxel_to_tendon_xml(
     xml.append('  </asset>')
     xml.append('')
     xml.append('  <worldbody>')
+    # With explicit floor pairs the ground must not also collide dynamically, or every
+    # voxel-floor contact would be generated twice.
+    _ground_col = ' contype="0" conaffinity="0"' if floor_friction is not None else ''
     xml.append('    <geom name="ground" type="plane" size="1 1 0.1" material="grid"'
-               ' friction="0.7 0.005 0.0001" condim="3"/>')
+               f' friction="0.7 0.005 0.0001" condim="3"{_ground_col}/>')
     xml.append('    <geom name="origin_marker" type="sphere" size="0.005" pos="0 0 0"'
                ' rgba="1 0 0 1" contype="0" conaffinity="0"/>')
     xml.append('    <geom name="x_axis" type="capsule" fromto="0 0 0 0.05 0 0"'
@@ -247,6 +258,17 @@ def voxel_to_tendon_xml(
 
     xml.append('  </worldbody>')
     xml.append('')
+
+    # Explicit voxel-floor pairs. Spin/roll coefficients match what the dynamic contact
+    # used (pairwise max of the geoms: 0.005 / 0.0001); only the sliding value changes.
+    if floor_friction is not None:
+        mu = float(floor_friction)
+        xml.append('  <contact>')
+        for v in voxels:
+            xml.append(f'    <pair name="floor_{v["id"]}" geom1="ground" geom2="geom_{v["id"]}"'
+                       f' condim="3" friction="{mu} {mu} 0.005 0.0001 0.0001"/>')
+        xml.append('  </contact>')
+        xml.append('')
 
     # Tendons
     # Active tendons (at least one active-material endpoint) get bare spatial

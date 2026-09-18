@@ -276,6 +276,26 @@ def _guard_overwrite(out, will_resume: bool, force: bool) -> None:
             f"  -> pass --force to intentionally overwrite this run.\n")
 
 
+# Physics settings a checkpoint may lack (written before the setting existed): such runs
+# necessarily used the default, so a missing entry is read as that default.
+_PHYSICS_DEFAULTS = {'friction': None, 'early_term_threshold': None, 'early_term_fraction': None,
+                     'body': 'springs'}
+
+
+def _check_resume_physics(ck: dict, physics: dict) -> None:
+    """Refuse to resume a run under different physics than it started with. Runs
+    auto-resume after restarts, so a forgotten --friction/--sim-time flag would otherwise
+    silently switch the physics mid-run. Settings missing from an older checkpoint are
+    taken as their defaults (true of every such run); sim/settle times are only checked
+    when the checkpoint recorded them."""
+    stored = {**_PHYSICS_DEFAULTS, **ck.get('physics', {})}
+    diff = {k: (stored[k], v) for k, v in physics.items() if k in stored and stored[k] != v}
+    if diff:
+        lines = "\n".join(f"    {k}: checkpoint={a!r}  this command={b!r}" for k, (a, b) in diff.items())
+        raise SystemExit(f"\nERROR: this command's physics differ from the checkpoint's:\n{lines}\n"
+                         f"Resume with the run's ORIGINAL flags (or use a new --name).\n")
+
+
 # ──────────────────────────────────────────────────────────────────
 # Controller helpers
 # ──────────────────────────────────────────────────────────────────
@@ -478,6 +498,10 @@ def run_evolution(
     resume:          bool  = True,   # auto-resume from results/<name>/checkpoint.pkl if present
     force:           bool  = False,  # allow overwriting a COMPLETED run of the same --name
     species_threshold: float = SPECIES_THRESHOLD,  # NEAT compat distance; higher → fewer, larger species
+    friction:        dict  = None,   # floor friction spec (None = original floor)
+    early_term_threshold: float = None,  # BL needed at the check point (None = engine default 0.05)
+    early_term_fraction:  float = None,  # check point as a fraction of the window (None = 0.2)
+    body:            str   = "springs",  # springs (tendon model) | beam (Voxelyze bonds)
 ):
     # Keep the machine awake for the whole run; release on any exit (normal or error).
     import atexit
@@ -536,7 +560,14 @@ def run_evolution(
         fitness_mode        = fitness_mode,
         wave_phase_n        = wave_phase_n,
         max_voxels          = _cg_max_voxels(),
+        friction            = friction,
+        early_term_threshold = early_term_threshold,
+        early_term_fraction  = early_term_fraction,
+        body                 = body,
     )
+    physics = {'friction': friction, 'early_term_threshold': early_term_threshold,
+               'early_term_fraction': early_term_fraction, 'body': body,
+               'sim_time': sim_time, 'settle_time': settle_time}
 
     def _gp(cppn_list):
         """Per-robot gait provider (None list => legacy material gait). Per-voxel-phase
@@ -583,6 +614,7 @@ def run_evolution(
         print(f"\nResuming from {ckpt_path} ...")
         with open(ckpt_path, 'rb') as f:
             ck = pickle.load(f)
+        _check_resume_physics(ck, physics)
         cppns           = ck['cppns']
         genomes         = ck['genomes']
         controllers     = ck['controllers']
@@ -712,6 +744,7 @@ def run_evolution(
             'best_cppn': best_cppn, 'best_fitness': best_fitness,
             'history': history,
             'np_state': np.random.get_state(), 'rng_state': rng.bit_generator.state,
+            'physics': physics,
         }
         _tmp = out / 'checkpoint.pkl.tmp'
         with open(_tmp, 'wb') as f:
@@ -898,6 +931,10 @@ def run_map_elites(
     descriptors:     str   = "gait",  # gait (COM-height x bounce) | shape (elongation x fill)
     freeze_body:     bool  = False,   # stage 2: hold morphology fixed, evolve only control
     force:           bool  = False,   # allow overwriting a COMPLETED run of the same --name
+    friction:        dict  = None,    # floor friction spec (None = original floor)
+    early_term_threshold: float = None,  # BL needed at the check point (None = engine default 0.05)
+    early_term_fraction:  float = None,  # check point as a fraction of the window (None = 0.2)
+    body:            str   = "springs",  # springs (tendon model) | beam (Voxelyze bonds)
 ):
     def _descs(grids, sim_descs):
         """Archive descriptors: simulated gait traits, or morphology traits from the grid."""
@@ -956,7 +993,16 @@ def run_map_elites(
     print(f"  Batch/iter : {population_size}")
     print(f"  Iterations : {generations}")
     print(f"  Sim time   : {sim_time}s  +  {settle_time}s settle")
-    print(f"  Fitness    : forward (+X) body-lengths × ground-fraction")
+    _fit_desc = {
+        "directed":   "forward (+X) body-lengths x ground-fraction",
+        "forward":    "forward (+X) body-lengths, NO ground penalty (Cheney-faithful)",
+        "efficiency": "forward BL x ground-fraction / actuation effort",
+        "stable":     "forward BL x ground-fraction, bounce-penalised",
+        "skip":       "forward BL x graded ground credit (full <=2x resting, 0 at 3.5x)",
+        "skipbl":     "forward BL x graded ground credit (full <=+0.5BL, 0 at +1.0BL)",
+        "musclecost": "forward BL x ground-fraction x (1 - muscle_fraction)",
+    }.get(fitness_mode, fitness_mode)
+    print(f"  Fitness    : {_fit_desc}")
     _desc_label = ("elongation x fill-density (SHAPE)" if descriptors == "shape"
                    else "COM height x bounce")
     print(f"  Descriptors: {_desc_label}  ->  {archive_bins}x{archive_bins} = {n_cells} cells")
@@ -975,7 +1021,14 @@ def run_map_elites(
         fitness_mode        = fitness_mode,
         wave_phase_n        = wave_phase_n,
         max_voxels          = _cg_max_voxels(),
+        friction            = friction,
+        early_term_threshold = early_term_threshold,
+        early_term_fraction  = early_term_fraction,
+        body                 = body,
     )
+    physics = {'friction': friction, 'early_term_threshold': early_term_threshold,
+               'early_term_fraction': early_term_fraction, 'body': body,
+               'sim_time': sim_time, 'settle_time': settle_time}
 
     archive = {}   # (i,j) -> {'cppn','genome','fitness','desc'}
 
@@ -996,6 +1049,7 @@ def run_map_elites(
     if resume and ckpt_path.exists():
         with open(ckpt_path, 'rb') as f:
             ck = pickle.load(f)
+        _check_resume_physics(ck, physics)
         archive      = ck['archive']
         innov._count = ck['innov_count']
         history      = ck['history']
@@ -1085,7 +1139,8 @@ def run_map_elites(
         _ck = {'archive': archive, 'innov_count': innov._count, 'history': history,
                'best': best, 'next_gen': gen,
                'bounds_h': (H_LO, H_HI), 'bounds_b': (B_LO, B_HI),
-               'np_state': np.random.get_state(), 'rng_state': rng.bit_generator.state}
+               'np_state': np.random.get_state(), 'rng_state': rng.bit_generator.state,
+               'physics': physics}
         _tmp = out / 'checkpoint.pkl.tmp'
         with open(_tmp, 'wb') as f:
             pickle.dump(_ck, f)
@@ -1242,6 +1297,15 @@ if __name__ == "__main__":
                         help="Architecture spike: co-evolve a SECOND CPPN that outputs a "
                              "per-voxel actuation phase (arbitrary spatial phase field), "
                              "replacing the 4-gene global wave. Tendon engine. Backward-compatible.")
+    parser.add_argument("--grid-size", dest="grid_size", type=int, default=18,
+                        help="Interior grid side length (default 18 -> 18^3 = 5832 candidate "
+                             "positions). Cheney 2013 used 10 (10^3 = 1000). Smaller grids make "
+                             "--no-trim tractable. Max 18 for the 20^3 array.")
+    parser.add_argument("--no-trim", dest="no_trim", action="store_true", default=False,
+                        help="Cheney-faithful decode: DISABLE the top-K confidence trim, so the "
+                             "body is every voxel passing the presence gate and its size is set "
+                             "purely by the CPPN. Only tractable with a small --grid-size "
+                             "(at 18^3 it yields ~2900-voxel robots).")
     parser.add_argument("--freeze-body", dest="freeze_body", action="store_true", default=False,
                         help="Stage 2 of the two-stage protocol: hold each parent's MORPHOLOGY "
                              "fixed and mutate only the control CPPN. Use with --seed-from and "
@@ -1259,15 +1323,112 @@ if __name__ == "__main__":
     parser.add_argument("--force", dest="force", action="store_true", default=False,
                         help="Allow overwriting a COMPLETED run with the same --name "
                              "(default: refuse, to prevent accidental clobbering).")
+    parser.add_argument("--friction", dest="friction", type=float, default=None,
+                        help="Voxel-floor sliding friction coefficient (default: the original "
+                             "floor, 0.7). Voxel-voxel contact friction is left unchanged.")
+    parser.add_argument("--friction-static", dest="friction_static", type=float, default=None,
+                        help="Voxelyze-style stick-slip floor friction: coefficient while a voxel "
+                             "is stuck. Use with --friction-kinetic. Cheney's lab: 1.0 / 0.5.")
+    parser.add_argument("--friction-kinetic", dest="friction_kinetic", type=float, default=None,
+                        help="Stick-slip floor friction: coefficient while a voxel is sliding.")
+    # MuJoCo friction is soft: a stuck voxel still creeps, faster as its load nears the
+    # static limit (measured: 3 mm/s at 50%, 16.6 mm/s at 90%, 18.7 mm/s at 95% of mu_s).
+    # A slip threshold below that creep flips voxels to kinetic early (10 mm/s gave an
+    # effective breakaway of 0.76 instead of 1.0); 20 mm/s gives 0.997-1.0 with the
+    # kinetic resistance still exact (0.499-0.501). Higher values make slowly sliding
+    # voxels re-stick, so 20 mm/s is the smallest correct setting.
+    parser.add_argument("--slip-speed", dest="slip_speed", type=float, default=0.02,
+                        help="Stick-slip: horizontal voxel speed (m/s) above which a stuck voxel "
+                             "starts sliding (default 0.02, calibrated to MuJoCo's creep).")
+    parser.add_argument("--stick-speed", dest="stick_speed", type=float, default=0.01,
+                        help="Stick-slip: speed (m/s) below which a sliding voxel sticks again "
+                             "(default 0.01; must be below --slip-speed).")
+    parser.add_argument("--early-term-bl", dest="early_term_bl", type=float, default=None,
+                        help="Early termination: body-lengths a robot must cover by the check "
+                             "point (--early-term-frac) or be stopped with its partial score "
+                             "(default 0.05, tuned for 25 cycles checked at 20%%).")
+    parser.add_argument("--early-term-frac", dest="early_term_frac", type=float, default=None,
+                        help="Early-termination check point as a fraction of the measurement "
+                             "window (default 0.2; e.g. 0.5 = after 5 of 10 cycles).")
+    parser.add_argument("--body", dest="body", type=str, default="springs", choices=["springs", "beam"],
+                        help="Voxel body physics. springs (default): the original tendon model. "
+                             "beam: Voxelyze/Cheney-2013 bonds (Euler-Bernoulli beams, Cheney material "
+                             "stiffnesses, volumetric muscles where --amp is the voxel's linear strain "
+                             "amplitude, e.g. 0.2 = 20%%), Voxelyze self-collision, per-robot time step.")
     args = parser.parse_args()
+
+    # --body beam: only the material (Cheney) gait and the tendon-engine features it supports.
+    if args.body == "beam":
+        _bad = [f for f, on in (("--flex", args.flex), ("--evolve-gait", args.evolve_gait),
+                                ("--per-voxel-phase", args.per_voxel_phase), ("--use-cpg", args.use_cpg),
+                                ("--freeze-body", args.freeze_body),
+                                ("--fitness efficiency", args.fitness == "efficiency")) if on]
+        if _bad:
+            raise SystemExit(f"ERROR: --body beam cannot be combined with {', '.join(_bad)} "
+                             f"(it uses the material gait and has no MuJoCo actuators)")
+        print(f"  Body       : beam (Voxelyze Euler-Bernoulli bonds, Cheney materials, "
+              f"volumetric muscles +/-{args.amp:.0%}, per-robot time step)")
+
+    # Floor friction spec, validated here so a bad combination fails before any work.
+    friction = None
+    _ss = args.friction_static is not None or args.friction_kinetic is not None
+    if args.friction is not None and _ss:
+        raise SystemExit("ERROR: use either --friction or --friction-static/--friction-kinetic, not both")
+    if args.friction is not None:
+        if args.friction <= 0:
+            raise SystemExit("ERROR: --friction must be > 0")
+        friction = {'mode': 'single', 'mu': float(args.friction)}
+    elif _ss:
+        if args.friction_static is None or args.friction_kinetic is None:
+            raise SystemExit("ERROR: --friction-static and --friction-kinetic must be given together")
+        if not args.friction_static >= args.friction_kinetic > 0:
+            raise SystemExit("ERROR: need --friction-static >= --friction-kinetic > 0")
+        if not args.slip_speed > args.stick_speed > 0:
+            raise SystemExit("ERROR: need --slip-speed > --stick-speed > 0")
+        friction = {'mode': 'stickslip', 'mu_s': float(args.friction_static),
+                    'mu_k': float(args.friction_kinetic),
+                    'v_on': float(args.slip_speed), 'v_off': float(args.stick_speed)}
+    if friction is not None and args.flex:
+        raise SystemExit("ERROR: floor friction options apply to the tendon engine only, not --flex")
+    if args.early_term_bl is not None and args.early_term_bl < 0:
+        raise SystemExit("ERROR: --early-term-bl must be >= 0")
+    if args.early_term_frac is not None and not 0 < args.early_term_frac <= 1:
+        raise SystemExit("ERROR: --early-term-frac must be in (0, 1]")
+    if friction is not None:
+        print("  Floor      : " + (f"friction {friction['mu']}" if friction['mode'] == 'single' else
+              f"stick-slip  static {friction['mu_s']} / kinetic {friction['mu_k']}  "
+              f"(slip > {friction['v_on']} m/s, stick < {friction['v_off']} m/s)"))
+    if args.early_term_bl is not None or args.early_term_frac is not None:
+        _et_bl   = 0.05 if args.early_term_bl is None else args.early_term_bl
+        _et_frac = 0.2 if args.early_term_frac is None else args.early_term_frac
+        print(f"  Early term : {_et_bl} BL by {_et_frac:.0%} of the window "
+              f"({_et_frac * args.sim_time * args.freq:g} of {args.sim_time * args.freq:g} cycles)")
     wave_phase_n = args.gait_wavenum if args.gait == "wave" else None
     # Apply stiff-material decode bias + voxel cap globally (read by CPPNGenome.to_voxel_grid
     # in the parent, where all decoding happens; workers consume already-decoded grids).
     import src.evolution.cppn_genome as _cg
     import src.evolution.genome_config as _gc
     _cg.STIFF_BIAS = float(args.stiff_bias)
-    _cg.MAX_VOXELS_PER_ROBOT = int(args.max_voxels)
-    _gc.MAX_VOXELS_PER_ROBOT = int(args.max_voxels)
+
+    # --grid-size: resize the interior sampling grid. NOTE cppn_genome imported
+    # VOXEL_INTERIOR_MAX at module load, so BOTH copies must be set, and the cached
+    # coordinate grid invalidated, or the change silently does nothing.
+    _side = int(args.grid_size)
+    _max_side = int(_gc.VOXEL_GRID_SHAPE[0]) - 2
+    if not (3 <= _side <= _max_side):
+        raise SystemExit(f"ERROR: --grid-size must be 3..{_max_side} (array is "
+                         f"{_gc.VOXEL_GRID_SHAPE}); got {_side}")
+    _cg.VOXEL_INTERIOR_MAX = _gc.VOXEL_INTERIOR_MIN + _side
+    _gc.VOXEL_INTERIOR_MAX = _cg.VOXEL_INTERIOR_MAX
+    _cg._COORD_CACHE = None
+
+    # --no-trim: set the budget to the whole interior so the top-K trim never fires.
+    _cap = _side ** 3 if args.no_trim else int(args.max_voxels)
+    _cg.MAX_VOXELS_PER_ROBOT = _cap
+    _gc.MAX_VOXELS_PER_ROBOT = _cap
+    if args.grid_size != 18 or args.no_trim:
+        print(f"  Decoder    : interior {_side}^3 = {_side**3} positions   "
+              f"trim {'OFF (Cheney-faithful)' if args.no_trim else f'top-{_cap}'}")
 
     if args.map_elites:
         run_map_elites(
@@ -1295,6 +1456,10 @@ if __name__ == "__main__":
             descriptors     = args.descriptors,
             freeze_body     = args.freeze_body,
             force           = args.force,
+            friction        = friction,
+            early_term_threshold = args.early_term_bl,
+            early_term_fraction  = args.early_term_frac,
+            body                 = args.body,
         )
     else:
         run_evolution(
@@ -1324,4 +1489,8 @@ if __name__ == "__main__":
             resume            = args.resume,
             force             = args.force,
             species_threshold = args.species_threshold,
+            friction          = friction,
+            early_term_threshold = args.early_term_bl,
+            early_term_fraction  = args.early_term_frac,
+            body                 = args.body,
         )
