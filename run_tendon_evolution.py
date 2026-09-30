@@ -278,8 +278,11 @@ def _guard_overwrite(out, will_resume: bool, force: bool) -> None:
 
 # Physics settings a checkpoint may lack (written before the setting existed): such runs
 # necessarily used the default, so a missing entry is read as that default.
+# Values a checkpoint implicitly had if it predates the flag. `poisson`/`dt_rule` are beam-only
+# and were added on 2026-09-22, so an older beam checkpoint ran without the volumetric law.
 _PHYSICS_DEFAULTS = {'friction': None, 'early_term_threshold': None, 'early_term_fraction': None,
-                     'body': 'springs'}
+                     'body': 'springs', 'poisson': False, 'dt_rule': 'ours',
+                     'materials': 'evosoro', 'gravity': None, 'floor_contact': 'mujoco'}
 
 
 def _check_resume_physics(ck: dict, physics: dict) -> None:
@@ -502,6 +505,11 @@ def run_evolution(
     early_term_threshold: float = None,  # BL needed at the check point (None = engine default 0.05)
     early_term_fraction:  float = None,  # check point as a fraction of the window (None = 0.2)
     body:            str   = "springs",  # springs (tendon model) | beam (Voxelyze bonds)
+    poisson:         bool  = True,    # beam only: Voxelyze volumetric (Poisson) coupling
+    dt_rule:         str   = "voxelyze",  # beam only: time-step rule (voxelyze | ours)
+    materials:       str   = "evosoro",   # beam only: evosoro | cheney2013 material stiffnesses
+    gravity:         float = None,        # beam only: m/s^2 (None = the preset's own)
+    floor_contact:   str   = "mujoco",   # beam only: mujoco | voxelyze penalty floor
 ):
     # Keep the machine awake for the whole run; release on any exit (normal or error).
     import atexit
@@ -564,10 +572,20 @@ def run_evolution(
         early_term_threshold = early_term_threshold,
         early_term_fraction  = early_term_fraction,
         body                 = body,
+        poisson              = poisson,
+        dt_rule              = dt_rule,
+        materials            = materials,
+        gravity              = gravity,
+        floor_contact        = floor_contact,
     )
+    # poisson/dt_rule are beam-only: leaving them out for springs keeps older springs
+    # checkpoints resumable (the resume guard only compares the keys present here).
     physics = {'friction': friction, 'early_term_threshold': early_term_threshold,
                'early_term_fraction': early_term_fraction, 'body': body,
-               'sim_time': sim_time, 'settle_time': settle_time}
+               'sim_time': sim_time, 'settle_time': settle_time,
+               **({'poisson': poisson, 'dt_rule': dt_rule, 'materials': materials,
+                   'gravity': gravity, 'floor_contact': floor_contact}
+                  if body == 'beam' else {})}
 
     def _gp(cppn_list):
         """Per-robot gait provider (None list => legacy material gait). Per-voxel-phase
@@ -935,6 +953,11 @@ def run_map_elites(
     early_term_threshold: float = None,  # BL needed at the check point (None = engine default 0.05)
     early_term_fraction:  float = None,  # check point as a fraction of the window (None = 0.2)
     body:            str   = "springs",  # springs (tendon model) | beam (Voxelyze bonds)
+    poisson:         bool  = True,    # beam only: Voxelyze volumetric (Poisson) coupling
+    dt_rule:         str   = "voxelyze",  # beam only: time-step rule (voxelyze | ours)
+    materials:       str   = "evosoro",   # beam only: evosoro | cheney2013 material stiffnesses
+    gravity:         float = None,        # beam only: m/s^2 (None = the preset's own)
+    floor_contact:   str   = "mujoco",   # beam only: mujoco | voxelyze penalty floor
 ):
     def _descs(grids, sim_descs):
         """Archive descriptors: simulated gait traits, or morphology traits from the grid."""
@@ -1025,10 +1048,20 @@ def run_map_elites(
         early_term_threshold = early_term_threshold,
         early_term_fraction  = early_term_fraction,
         body                 = body,
+        poisson              = poisson,
+        dt_rule              = dt_rule,
+        materials            = materials,
+        gravity              = gravity,
+        floor_contact        = floor_contact,
     )
+    # poisson/dt_rule are beam-only: leaving them out for springs keeps older springs
+    # checkpoints resumable (the resume guard only compares the keys present here).
     physics = {'friction': friction, 'early_term_threshold': early_term_threshold,
                'early_term_fraction': early_term_fraction, 'body': body,
-               'sim_time': sim_time, 'settle_time': settle_time}
+               'sim_time': sim_time, 'settle_time': settle_time,
+               **({'poisson': poisson, 'dt_rule': dt_rule, 'materials': materials,
+                   'gravity': gravity, 'floor_contact': floor_contact}
+                  if body == 'beam' else {})}
 
     archive = {}   # (i,j) -> {'cppn','genome','fitness','desc'}
 
@@ -1355,6 +1388,34 @@ if __name__ == "__main__":
                              "beam: Voxelyze/Cheney-2013 bonds (Euler-Bernoulli beams, Cheney material "
                              "stiffnesses, volumetric muscles where --amp is the voxel's linear strain "
                              "amplitude, e.g. 0.2 = 20%%), Voxelyze self-collision, per-robot time step.")
+    parser.add_argument("--poisson", dest="poisson", type=str, default="on", choices=["on", "off"],
+                        help="--body beam only. on (default): Voxelyze's volumetric material law "
+                             "(Poisson 0.35) - a bond's axial force is stress x transverse area, so "
+                             "a voxel squeezed on all sides resists ~1.6x harder and bulges where it "
+                             "is free. off: the uncoupled law used by runs before 2026-09-22.")
+    parser.add_argument("--dt-rule", dest="dt_rule", type=str, default="voxelyze",
+                        choices=["voxelyze", "ours"],
+                        help="--body beam only. voxelyze (default): Voxelyze's own recommendedTimeStep "
+                             "(DtFrac 0.7 over the fastest axial bond mode). ours: the older, more "
+                             "conservative estimate used by runs before 2026-09-22.")
+    parser.add_argument("--materials", dest="materials", type=str, default="evosoro",
+                        choices=["evosoro", "cheney2013"],
+                        help="--body beam only. evosoro (default): 5 MPa soft/muscle, 500 MPa bone, "
+                             "corrected for density only. cheney2013: the values from Cheney's own "
+                             ".vxa files (10 MPa soft/muscle, 50 MPa hard - only 5x, not 100x), with "
+                             "the FULL rescaling for our 10 mm lattice. The evosoro preset corrected "
+                             "for density but not for lattice size, leaving bodies 200x too soft.")
+    parser.add_argument("--floor-contact", dest="floor_contact", type=str, default="mujoco",
+                        choices=["mujoco", "voxelyze"],
+                        help="--body beam only. mujoco (default): MuJoCo's own soft contact, whose "
+                             "stiffness ignores the material. voxelyze: Voxelyze's penalty floor, "
+                             "k = 2*E*L per voxel (CVX_Voxel::floorForce). Needed for any raised "
+                             "gravity: with MuJoCo's default a body sinks 2.7 voxels through the "
+                             "floor at Cheney's gravity, against 0.8%% of a voxel with this.")
+    parser.add_argument("--gravity", dest="gravity", type=float, default=None,
+                        help="--body beam only. Gravity in m/s^2 (positive number). Default is the "
+                             "preset's own: 9.81 for evosoro, 274.68 for cheney2013 (his 27.468 "
+                             "rescaled to our lattice so the sag per voxel matches his).")
     args = parser.parse_args()
 
     # --body beam: only the material (Cheney) gait and the tendon-engine features it supports.
@@ -1368,6 +1429,21 @@ if __name__ == "__main__":
                              f"(it uses the material gait and has no MuJoCo actuators)")
         print(f"  Body       : beam (Voxelyze Euler-Bernoulli bonds, Cheney materials, "
               f"volumetric muscles +/-{args.amp:.0%}, per-robot time step)")
+        print(f"  Volumetric : Poisson coupling {args.poisson} (nu = 0.35)   |   "
+              f"time step: {args.dt_rule} rule")
+        from src.physics.mujoco_beam_physics import e_scaled, gravity_scaled
+        _g = args.gravity if args.gravity is not None else gravity_scaled(args.materials, 0.01)
+        print(f"  Materials  : {args.materials}  (soft/muscle {e_scaled(3, args.materials, 0.01):.3g} Pa, "
+              f"hard {e_scaled(4, args.materials, 0.01):.3g} Pa)   gravity {_g:.2f} m/s^2")
+    else:
+        _beam_only = [f for f, changed in (("--poisson", args.poisson != "on"),
+                                           ("--dt-rule", args.dt_rule != "voxelyze"),
+                                           ("--materials", args.materials != "evosoro"),
+                                           ("--gravity", args.gravity is not None),
+                                           ("--floor-contact",
+                                            args.floor_contact != "mujoco")) if changed]
+        if _beam_only:
+            raise SystemExit(f"ERROR: {', '.join(_beam_only)} only applies to --body beam")
 
     # Floor friction spec, validated here so a bad combination fails before any work.
     friction = None
@@ -1460,6 +1536,11 @@ if __name__ == "__main__":
             early_term_threshold = args.early_term_bl,
             early_term_fraction  = args.early_term_frac,
             body                 = args.body,
+            poisson              = args.poisson == "on",
+            dt_rule              = args.dt_rule,
+            materials            = args.materials,
+            gravity              = args.gravity,
+            floor_contact        = args.floor_contact,
         )
     else:
         run_evolution(
@@ -1493,4 +1574,9 @@ if __name__ == "__main__":
             early_term_threshold = args.early_term_bl,
             early_term_fraction  = args.early_term_frac,
             body                 = args.body,
+            poisson              = args.poisson == "on",
+            dt_rule              = args.dt_rule,
+            materials            = args.materials,
+            gravity              = args.gravity,
+            floor_contact        = args.floor_contact,
         )

@@ -44,7 +44,12 @@ def _make_engine(params):
         # Voxelyze-style bodies; picks its own stable time step per robot.
         from src.physics.mujoco_beam_physics import MuJoCoBeamPhysics
         return MuJoCoBeamPhysics(max_voxels=params.get('max_voxels'),
-                                 friction=params.get('friction'), **kw)
+                                 friction=params.get('friction'),
+                                 poisson=params.get('poisson', True),
+                                 dt_rule=params.get('dt_rule', 'voxelyze'),
+                                 materials=params.get('materials', 'evosoro'),
+                                 gravity=params.get('gravity'),
+                                 floor_contact=params.get('floor_contact', 'mujoco'), **kw)
     # max_voxels is tendon-only (normalises the musclecost penalty); workers re-import
     # genome_config defaults, so the parent's --max-voxels must be threaded explicitly.
     # friction likewise (None = the original floor).
@@ -123,6 +128,11 @@ class MuJoCoTendonEvaluator:
         early_term_threshold: float = None,  # BL needed at the check point (None = 0.05)
         early_term_fraction:  float = None,  # check point as a fraction of the window (None = 0.2)
         body:                str   = "springs",  # springs (tendon model) | beam (Voxelyze bonds)
+        poisson:             bool  = True,   # beam only: Voxelyze volumetric coupling
+        dt_rule:             str   = "voxelyze",   # beam only: voxelyze | ours
+        materials:           str   = "evosoro",    # beam only: evosoro | cheney2013
+        gravity:             float = None,         # beam only: m/s^2 (None = the preset's own)
+        floor_contact:       str   = "mujoco",     # beam only: mujoco | voxelyze penalty floor
     ):
         self.simulation_time   = simulation_time
         self.settle_time       = settle_time
@@ -151,6 +161,11 @@ class MuJoCoTendonEvaluator:
             'early_term_threshold': early_term_threshold,
             'early_term_fraction':  early_term_fraction,
             'body':                body,
+            'poisson':             poisson,
+            'dt_rule':             dt_rule,
+            'materials':           materials,
+            'gravity':             gravity,
+            'floor_contact':       floor_contact,
         }
 
         # Sequential engine — used when n_workers==1 and by evaluate_single
