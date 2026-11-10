@@ -32,6 +32,9 @@ class MuJoCoTendonPhysics:
         fitness_mode: str = "directed",
         max_voxels: Optional[int] = None,
         friction: Optional[Dict] = None,
+        direction: str = "forward",
+        divide_by: str = "body",
+        workspace_voxels: Optional[int] = None,
     ):
         """friction: None keeps the original floor (dynamic contact, coefficient 0.7).
             {'mode': 'single', 'mu': MU} -> one sliding coefficient for voxel-floor contact.
@@ -41,7 +44,26 @@ class MuJoCoTendonPhysics:
             exceeds V1 and sticks again below V0 (m/s; hysteresis stops flicker at the
             threshold). Voxelyze switches on lateral force > MS x normal force, but MuJoCo
             only reveals contact forces after its solve, so speed is the trigger here.
-            Either way voxel-voxel contacts are untouched."""
+            Either way voxel-voxel contacts are untouched.
+
+        direction / divide_by: what distance the score counts and what it is divided by.
+            direction 'forward' (default): the +X component of the COM displacement.
+            direction 'any': the length of the 3D COM displacement in any direction - Cheney
+                2013's Voxelyze FinalCOM_Dist = (GetCM() - IniCM).Length().
+            divide_by 'body' (default): the body's own longest side -> body lengths (BL).
+            divide_by 'workspace': a FIXED width of `workspace_voxels` voxels, as Cheney 2013
+                (fitness = |dCOM| / (BoundingBoxLength x VoxelSize)). Every body is then scored
+                in the same unit, so a body shorter than the workspace gets no workspace/length
+                bonus. The early-termination threshold is in the same unit and direction."""
+        if direction not in ("forward", "any"):
+            raise ValueError(f"direction must be 'forward' or 'any', got {direction!r}")
+        if divide_by not in ("body", "workspace"):
+            raise ValueError(f"divide_by must be 'body' or 'workspace', got {divide_by!r}")
+        if divide_by == "workspace" and not (workspace_voxels and int(workspace_voxels) > 0):
+            raise ValueError("divide_by='workspace' needs workspace_voxels (the grid side, > 0)")
+        self.direction           = direction
+        self.divide_by           = divide_by
+        self.workspace_voxels    = None if workspace_voxels is None else int(workspace_voxels)
         self.default_timestep    = default_timestep
         self.actuation_frequency = actuation_frequency
         self.actuation_amplitude = actuation_amplitude
@@ -134,7 +156,8 @@ class MuJoCoTendonPhysics:
         dn   = np.sqrt((n ** 2).sum(1)) / np.sqrt(3.0)
         coords = np.column_stack([n, dn]).astype(np.float32)    # (n_active, 4)
         raw  = phase_cppn.evaluate_batch(coords)[:, 0]          # first output, tanh [-1,1]
-        self._base_phases = (np.pi * raw).astype(float)
+        gain = getattr(phase_cppn, 'phase_gain', None)          # None = full range (original)
+        self._base_phases = ((1.0 if gain is None else float(gain)) * np.pi * raw).astype(float)
 
     def _apply_gait_params(self, gait_params) -> None:
         """C6: override the material-derived base phases with an evolved spatial
@@ -257,7 +280,7 @@ class MuJoCoTendonPhysics:
         simulation_time:      float = 5.0,
         settle_time:          float = 0.5,
         early_term_fraction:  float = 0.2,
-        early_term_threshold: float = 0.05,   # body-lengths of forward (+X) progress
+        early_term_threshold: float = 0.05,   # progress in score units (see direction/divide_by)
         return_descriptors:   bool  = False,  # also return (mean COM height, bounce) for MAP-Elites
     ):
         """
@@ -269,8 +292,10 @@ class MuJoCoTendonPhysics:
         - **Directed** (+X only): spinning, drift and backward motion score 0, so the
           objective selects for real forward locomotion (more transferable than the
           old undirected net-displacement metric).
-        - **Body-length normalised**: comparable across body sizes (Cheney's unit).
+        - **Body-length normalised**: comparable across body sizes.
           body_length = largest bounding-box extent of the undeformed body + one voxel.
+          (Defaults. `direction='any'` / `divide_by='workspace'` switch to Cheney 2013's
+          undirected 3D distance over a fixed workspace width - see __init__.)
         - **ground_fraction**: fraction of measurement steps the COM stays below 2× its
           *robust resting height* — the median COM-z over the final quarter of settling,
           so a mid-settle bounce no longer inflates the threshold (the old
@@ -324,7 +349,19 @@ class MuJoCoTendonPhysics:
         _bl_lo     = settled_height + 0.5 * body_length
         _bl_hi     = settled_height + 1.0 * body_length
 
-        initial_x      = float(self.get_position()[0])
+        # Score unit and distance (constructor's direction / divide_by). The defaults reproduce
+        # the original +X / own-body-length arithmetic exactly.
+        score_unit     = (self.workspace_voxels * self.voxel_size if self.divide_by == "workspace"
+                          else body_length)
+        initial_pos    = np.array(self.get_position(), dtype=float)
+        initial_x      = float(initial_pos[0])
+
+        def _progress():
+            p = np.asarray(self.get_position(), dtype=float)
+            if self.direction == "any":
+                return float(np.linalg.norm(p - initial_pos)) / score_unit
+            return (float(p[0]) - initial_x) / score_unit
+
         measure_steps  = int(simulation_time / self.default_timestep)
         check_step     = int(measure_steps * early_term_fraction)
         grounded_steps = 0
@@ -408,11 +445,10 @@ class MuJoCoTendonPhysics:
                 grounded_steps += 1
 
             if step_idx + 1 == check_step:
-                forward_bl = (float(self.get_position()[0]) - initial_x) / body_length
-                if forward_bl < early_term_threshold:
+                progress = _progress()
+                if progress < early_term_threshold:
                     ground_fraction = grounded_steps / (step_idx + 1)
-                    return _result(_shape(forward_bl, ground_fraction, step_idx + 1))
+                    return _result(_shape(progress, ground_fraction, step_idx + 1))
 
         ground_fraction = grounded_steps / measure_steps
-        forward_bl      = (float(self.get_position()[0]) - initial_x) / body_length
-        return _result(_shape(forward_bl, ground_fraction, measure_steps))
+        return _result(_shape(_progress(), ground_fraction, measure_steps))

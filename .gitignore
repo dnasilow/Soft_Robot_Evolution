@@ -147,3 +147,12 @@ logs/
 # Windows reserved filenames
 nul
 NUL
+
+# Run outputs, third-party reference material and scratch logs (kept locally, not in the repo)
+results/
+research_reference/
+Documentation/Premature_Convergence_CoOptimization_Mertan_Cheney_2024.pdf
+mini_err.txt
+mini_out.txt
+smoke_test_err.txt
+smoke_test_out.txt

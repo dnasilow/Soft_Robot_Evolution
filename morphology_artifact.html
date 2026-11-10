@@ -1,0 +1,467 @@
+<title>Why the Robots Are Blobs</title>
+<style>
+:root{
+  --paper:#EAE7DE; --paper-2:#E1DDD2; --card:#F3F1EA;
+  --ink:#151B1E; --ink-2:#3E484C; --ink-3:#6B7679;
+  --rule:#C9C3B4; --rule-2:#D8D3C6;
+  --teal:#17414E; --teal-2:#357F8B; --gold:#B0741C; --clay:#9E4E20;
+  --line:#151B1E;            /* waterline stroke */
+  --good:#3F6E4E; --warn:#96631A; --bad:#9A3B2A;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#10161A; --paper-2:#161E22; --card:#182126;
+    --ink:#E8E4DA; --ink-2:#B3AEA2; --ink-3:#7E8A8D;
+    --rule:#2A363B; --rule-2:#222C31;
+    --teal:#6FB3BE; --teal-2:#4E9DA8; --gold:#E0A344; --clay:#D2703A;
+    --line:#F0ECE2;
+    --good:#7FB98F; --warn:#D8A44A; --bad:#D9705C;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#10161A; --paper-2:#161E22; --card:#182126;
+  --ink:#E8E4DA; --ink-2:#B3AEA2; --ink-3:#7E8A8D;
+  --rule:#2A363B; --rule-2:#222C31;
+  --teal:#6FB3BE; --teal-2:#4E9DA8; --gold:#E0A344; --clay:#D2703A;
+  --line:#F0ECE2;
+  --good:#7FB98F; --warn:#D8A44A; --bad:#D9705C;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--serif); font-size:17px; line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1060px; margin:0 auto; padding:0 28px 96px}
+header.masthead{
+  padding:56px 0 30px; border-bottom:2px solid var(--ink);
+  display:flex; flex-direction:column; gap:14px;
+}
+.eyebrow{
+  font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-3); display:flex; gap:14px; flex-wrap:wrap;
+}
+h1{
+  font-family:var(--serif); font-weight:600; font-size:clamp(34px,5.4vw,58px);
+  line-height:1.04; margin:0; letter-spacing:-.015em; text-wrap:balance;
+}
+.standfirst{
+  font-size:19px; color:var(--ink-2); margin:0; max-width:62ch; text-wrap:pretty;
+}
+h2{
+  font-family:var(--serif); font-weight:600; font-size:26px; letter-spacing:-.01em;
+  margin:0; text-wrap:balance;
+}
+h3{font-family:var(--sans); font-weight:650; font-size:14px; letter-spacing:.02em; margin:0}
+section{padding-top:52px; display:flex; flex-direction:column; gap:18px}
+p{margin:0; max-width:66ch; text-wrap:pretty}
+.sec-head{display:flex; align-items:baseline; gap:14px; border-bottom:1px solid var(--rule); padding-bottom:9px}
+.sec-num{font-family:var(--mono); font-size:12px; color:var(--ink-3); letter-spacing:.08em}
+code{font-family:var(--mono); font-size:.88em; background:var(--paper-2); padding:1px 5px; border-radius:3px}
+strong{font-weight:650}
+a{color:var(--clay)}
+
+/* ---------- instrument ---------- */
+.instrument{
+  display:grid; grid-template-columns:minmax(0,1fr) 292px; gap:0;
+  border:1px solid var(--rule); background:var(--card); margin-top:26px;
+}
+.stage{padding:22px; display:flex; flex-direction:column; gap:16px; min-width:0}
+.canvas-row{display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap}
+.cwrap{display:flex; flex-direction:column; gap:7px; min-width:0}
+.cwrap canvas{
+  width:100%; max-width:340px; height:auto; display:block;
+  border:1px solid var(--rule); background:var(--paper-2); image-rendering:pixelated;
+}
+.clabel{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--ink-3);
+}
+.panel{
+  border-left:1px solid var(--rule); padding:22px; display:flex; flex-direction:column; gap:22px;
+  background:var(--paper-2);
+}
+.ctrl{display:flex; flex-direction:column; gap:8px}
+.ctrl-head{display:flex; justify-content:space-between; align-items:baseline; gap:10px}
+.ctrl-head label{font-family:var(--sans); font-size:12.5px; font-weight:600}
+.val{font-family:var(--mono); font-size:12.5px; color:var(--clay); font-variant-numeric:tabular-nums}
+input[type=range]{width:100%; accent-color:var(--clay); cursor:pointer}
+input[type=range]:focus-visible{outline:2px solid var(--clay); outline-offset:3px}
+.hint{font-family:var(--sans); font-size:11.5px; color:var(--ink-3); line-height:1.45}
+.readout{display:flex; flex-direction:column; gap:9px; border-top:1px solid var(--rule); padding-top:16px}
+.rrow{display:flex; justify-content:space-between; align-items:baseline; gap:12px}
+.rk{font-family:var(--sans); font-size:12px; color:var(--ink-2)}
+.rv{font-family:var(--mono); font-size:13.5px; font-variant-numeric:tabular-nums; font-weight:600}
+.rv.hot{color:var(--clay)}
+.btn{
+  font-family:var(--sans); font-size:12px; font-weight:600; padding:7px 11px;
+  background:transparent; color:var(--ink); border:1px solid var(--rule); border-radius:2px; cursor:pointer;
+}
+.btn:hover{background:var(--card); border-color:var(--ink-3)}
+.btn[aria-pressed="true"]{background:var(--ink); color:var(--paper); border-color:var(--ink)}
+.btn:focus-visible{outline:2px solid var(--clay); outline-offset:2px}
+.btnrow{display:flex; gap:7px; flex-wrap:wrap}
+.scale{display:flex; flex-direction:column; gap:5px}
+.ramp{height:11px; width:100%; border:1px solid var(--rule)}
+.scale-ends{display:flex; justify-content:space-between; font-family:var(--mono); font-size:10px; color:var(--ink-3)}
+
+/* ---------- pipeline ---------- */
+.pipe{display:flex; flex-wrap:wrap; gap:9px; align-items:stretch; margin-top:4px}
+.step{
+  flex:1 1 168px; border:1px solid var(--rule); background:var(--card); padding:13px 14px;
+  display:flex; flex-direction:column; gap:5px; position:relative;
+}
+.step .n{font-family:var(--mono); font-size:10px; color:var(--ink-3); letter-spacing:.1em}
+.step .t{font-family:var(--sans); font-size:13px; font-weight:650; line-height:1.3}
+.step .d{font-family:var(--sans); font-size:11.5px; color:var(--ink-2); line-height:1.45}
+.step .num{font-family:var(--mono); font-size:11px; color:var(--clay); font-variant-numeric:tabular-nums}
+
+/* ---------- table ---------- */
+.tblwrap{overflow-x:auto; border:1px solid var(--rule); background:var(--card)}
+table{border-collapse:collapse; width:100%; min-width:660px; font-family:var(--sans); font-size:13.5px}
+th,td{text-align:left; padding:11px 14px; border-bottom:1px solid var(--rule-2); vertical-align:top}
+thead th{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:500; border-bottom:1px solid var(--rule); white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td.us{color:var(--ink)}
+.tag{
+  display:inline-block; font-family:var(--mono); font-size:10px; letter-spacing:.06em;
+  padding:2px 6px; border-radius:2px; text-transform:uppercase; white-space:nowrap;
+}
+.tag.gap{background:color-mix(in srgb,var(--bad) 15%,transparent); color:var(--bad)}
+.tag.part{background:color-mix(in srgb,var(--warn) 18%,transparent); color:var(--warn)}
+.tag.ok{background:color-mix(in srgb,var(--good) 16%,transparent); color:var(--good)}
+.rowlab{font-family:var(--sans); font-weight:650; font-size:13px}
+
+.callout{
+  border-left:3px solid var(--clay); background:var(--card); padding:16px 20px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.callout .k{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--clay);
+}
+.figures{display:flex; gap:26px; flex-wrap:wrap; margin-top:2px}
+.fig{display:flex; flex-direction:column; gap:2px}
+.fig .fv{font-family:var(--mono); font-size:25px; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.fig .fk{font-family:var(--sans); font-size:11.5px; color:var(--ink-3)}
+footer{
+  margin-top:64px; padding-top:20px; border-top:1px solid var(--rule);
+  font-family:var(--mono); font-size:11px; color:var(--ink-3); line-height:1.7;
+}
+@media (max-width:820px){
+  .instrument{grid-template-columns:1fr}
+  .panel{border-left:none; border-top:1px solid var(--rule)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <div class="eyebrow">
+    <span>Soft-robot evolution</span><span>Morphology diagnostic</span><span>Champion 1.3201 BL</span>
+  </div>
+  <h1>Why the Robots Are Blobs</h1>
+  <p class="standfirst">
+    Every champion this project has evolved is an undifferentiated slab. The cause isn't the
+    physics engine and it isn't a lack of compute — it's that a body is a <em>level set</em> of a
+    smooth field, and the fitness function never asked for anything else.
+  </p>
+</header>
+
+<section>
+  <div class="sec-head"><span class="sec-num">01</span><h2>The instrument</h2></div>
+  <p>
+    A robot's body is not a list of voxels. It's a network (a CPPN) that answers, for each of the
+    5832 grid positions, a single question: <em>how strongly should there be material here?</em>
+    That produces a scalar landscape. The body is whatever stands above a waterline.
+  </p>
+  <p>
+    Below is the actual presence field of the record champion. Move the waterline and watch the
+    body form, thin, and break apart.
+  </p>
+
+  <div class="instrument">
+    <div class="stage">
+      <div class="canvas-row">
+        <div class="cwrap" style="flex:1 1 300px">
+          <canvas id="slice" width="360" height="360"></canvas>
+          <div class="clabel">Horizontal slice &mdash; layer <span id="zlab">9</span> of 18</div>
+        </div>
+        <div class="cwrap" style="flex:0 1 220px">
+          <canvas id="side" width="260" height="260"></canvas>
+          <div class="clabel">Side elevation &mdash; all layers</div>
+        </div>
+      </div>
+      <div class="scale">
+        <div class="ramp" id="ramp"></div>
+        <div class="scale-ends"><span>-1.00 &nbsp;empty</span><span>presence value</span><span>solid&nbsp; +1.00</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ctrl">
+        <div class="ctrl-head"><label for="wl">Waterline</label><span class="val" id="wlv">0.736</span></div>
+        <input type="range" id="wl" min="-1" max="0.92" step="0.005" value="0.7355">
+        <div class="hint">The decoder doesn't pick a height &mdash; it lowers the waterline until exactly
+          300 voxels stand above it. Drag to see what other budgets would have produced.</div>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-head"><label for="z">Layer</label><span class="val" id="zv">9</span></div>
+        <input type="range" id="z" min="0" max="17" step="1" value="9">
+      </div>
+      <div class="btnrow">
+        <button class="btn" id="bField" aria-pressed="true">Field</button>
+        <button class="btn" id="bBody" aria-pressed="true">Body</button>
+        <button class="btn" id="bReset">Reset</button>
+      </div>
+      <div class="readout">
+        <div class="rrow"><span class="rk">Voxels above line</span><span class="rv hot" id="rCount">300</span></div>
+        <div class="rrow"><span class="rk">In this layer</span><span class="rv" id="rLayer">0</span></div>
+        <div class="rrow"><span class="rk">Pass the gate (&gt;0)</span><span class="rv" id="rGate">1766</span></div>
+        <div class="rrow"><span class="rk">Grid positions</span><span class="rv">5832</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">02</span><h2>How a body is decoded</h2></div>
+  <p>
+    Four steps run every time a genome becomes a robot. Step three is where the shape is decided
+    &mdash; and where the trouble starts.
+  </p>
+  <div class="pipe">
+    <div class="step">
+      <span class="n">STEP 1</span><span class="t">Query every position</span>
+      <span class="d">The network is evaluated at each grid point, taking its coordinates and distance from centre.</span>
+      <span class="num">5832 queries</span>
+    </div>
+    <div class="step">
+      <span class="n">STEP 2</span><span class="t">Gate on presence</span>
+      <span class="d">Positions whose presence value clears zero become candidates. Roughly 43% of the grid does.</span>
+      <span class="num">1766 candidates</span>
+    </div>
+    <div class="step">
+      <span class="n">STEP 3</span><span class="t">Keep the strongest</span>
+      <span class="d">Only the highest-confidence candidates survive, up to the voxel budget. This is the waterline.</span>
+      <span class="num">&rarr; 300 kept</span>
+    </div>
+    <div class="step">
+      <span class="n">STEP 4</span><span class="t">Drop loose parts</span>
+      <span class="d">Anything not face-connected to the main mass is deleted. Measured: this fires on 0&ndash;1% of bodies. It is not the constraint &mdash; limbs never form to begin with.</span>
+      <span class="num">0&ndash;1% affected</span>
+    </div>
+  </div>
+  <div class="callout">
+    <span class="k">The consequence</span>
+    <p>Because the surviving body is always the <em>top slice</em> of a smooth landscape, it is
+      compact by construction. The waterline auto-adjusts to spend the entire budget, so thinning
+      one region simply refills another. Until recently the budget was a fixed cap, which meant
+      body size was not an evolvable trait at all &mdash; 98% of bodies came out at exactly the cap.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">03</span><h2>What the champion actually is</h2></div>
+  <div class="figures">
+    <div class="fig"><span class="fv">1.3201</span><span class="fk">body-lengths travelled</span></div>
+    <div class="fig"><span class="fv">300</span><span class="fk">voxels (100% muscle)</span></div>
+    <div class="fig"><span class="fv">6&times;11&times;11</span><span class="fk">bounding box</span></div>
+    <div class="fig"><span class="fv">0.41</span><span class="fk">fill density</span></div>
+    <div class="fig"><span class="fv">1.83</span><span class="fk">elongation</span></div>
+  </div>
+  <p>
+    Not a sphere &mdash; a flattened slab, filling 41% of its own bounding box, with layer areas
+    tapering <code>39 &rarr; 4</code> from base to top. A mound. There are no thin parts, no
+    protrusions, and no functional regions: every voxel is the same material doing the same job.
+    Legs would show the inverse profile, narrow at the bottom.
+  </p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="sec-num">04</span><h2>The papers did not get blobs</h2></div>
+  <p>
+    Cheney et al. (2013), the paper this project re-implements, evolved robots their authors
+    named and catalogued: <strong>L-Walker</strong>, <strong>Incher</strong>,
+    <strong>Push-Pull</strong>, <strong>Jitter</strong>, <strong>Jumper</strong> and
+    <strong>Wings</strong> &mdash; described with hind legs, necks, heads and arms. They reached
+    3.5&ndash;4.0 body-lengths. Same encoding, same materials, same flat ground. The differences
+    are in what evolution was <em>asked</em> for.
+  </p>
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th>Constraint</th><th>This project</th><th>Cheney 2013 &middot; Corucci 2018</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="rowlab">Cost of material</td>
+          <td class="us">None. Bodies are free to be maximally dense.</td>
+          <td>Fitness multiplied by <code>1 &minus; voxels/max</code>. Corucci makes minimising voxels an explicit objective &ldquo;to favour interesting morphologies&rdquo;.</td>
+          <td><span class="tag gap">missing</span></td>
+        </tr>
+        <tr>
+          <td class="rowlab">Cost of muscle</td>
+          <td class="us">None. All-muscle bodies pay nothing.</td>
+          <td>A separate regime penalises actuated voxels &mdash; which pushed evolution to adopt inert support tissue instead.</td>
+          <td><span class="tag part">added</span></td>
+        </tr>
+        <tr>
+          <td class="rowlab">Actuation strength</td>
+          <td class="us">8% tendon-length change.</td>
+          <td>20% volumetric expansion &mdash; roughly 7&times; more ground covered per actuation cycle.</td>
+          <td><span class="tag part">testing</span></td>
+        </tr>
+        <tr>
+          <td class="rowlab">Leaving the ground</td>
+          <td class="us">Penalised. Credit is zeroed above twice resting height.</td>
+          <td>No height penalty at all &mdash; which is precisely why Jumper and Jitter exist as classes.</td>
+          <td><span class="tag part">loosened</span></td>
+        </tr>
+        <tr>
+          <td class="rowlab">Body size</td>
+          <td class="us">Hard cap; 98% of bodies sit exactly on it.</td>
+          <td>No cap. Size is shaped by penalty, so evolution genuinely chooses it.</td>
+          <td><span class="tag ok">fixed</span></td>
+        </tr>
+        <tr>
+          <td class="rowlab">Search diversity</td>
+          <td class="us">Archive spans gait traits: height &times; bounce.</td>
+          <td>Corucci measures morphology directly &mdash; symmetry and shape descriptors.</td>
+          <td><span class="tag part">added</span></td>
+        </tr>
+        <tr>
+          <td class="rowlab">Replication</td>
+          <td class="us">1&ndash;3 seeds per treatment.</td>
+          <td>35 independent runs per treatment.</td>
+          <td><span class="tag gap">gap</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout">
+    <span class="k">The synthesis</span>
+    <p>Blobs are not a physical inevitability. They are the optimal answer to the question this
+      fitness function actually asks: travel forward, pay nothing for mass, pay nothing for
+      muscle, fill the budget completely, and stay on the ground. A dense low slab wins that
+      contest every time. The papers asked a different question and got animals.</p>
+  </div>
+</section>
+
+<footer>
+  Presence field sampled from the evolved champion of run <code>pvp_s1</code> &mdash; 300 voxels,
+  1.3201 body-lengths, per-voxel evolved phase control.<br>
+  References: Cheney, MacCurdy, Clune &amp; Lipson, <em>Unshackling Evolution</em>, GECCO 2013 &middot;
+  Corucci et al., <em>Evolving Soft Locomotion in Aquatic and Terrestrial Environments</em>, 2018.
+</footer>
+
+</div>
+
+<script type="application/json" id="fielddata">{"n":18,"n_body":300,"n_positions":5832,"gate_pass":1766,"waterline":0.7355,"field_min":-0.9989,"field_max":0.9183,"field":[[[-0.948,-0.931,-0.909,-0.881,-0.845,-0.8,-0.745,-0.679,-0.601,-0.512,-0.411,-0.302,-0.186,-0.067,0.052,0.168,0.278,0.38],[-0.939,-0.919,-0.893,-0.86,-0.818,-0.766,-0.704,-0.629,-0.542,-0.444,-0.336,-0.22,-0.1,0.02,0.138,0.25,0.355,0.45],[-0.928,-0.905,-0.874,-0.836,-0.788,-0.728,-0.657,-0.573,-0.477,-0.371,-0.256,-0.136,-0.015,0.105,0.22,0.328,0.426,0.514],[-0.916,-0.888,-0.853,-0.809,-0.754,-0.686,-0.606,-0.513,-0.409,-0.295,-0.175,-0.052,0.07,0.188,0.298,0.4,0.491,0.572],[-0.902,-0.87,-0.83,-0.779,-0.716,-0.64,-0.551,-0.449,-0.337,-0.217,-0.093,0.031,0.151,0.265,0.371,0.466,0.55,0.623],[-0.886,-0.85,-0.803,-0.745,-0.675,-0.59,-0.492,-0.382,-0.263,-0.139,-0.013,0.111,0.229,0.338,0.437,0.525,0.602,0.669],[-0.869,-0.827,-0.774,-0.709,-0.63,-0.537,-0.431,-0.313,-0.189,-0.061,0.066,0.188,0.301,0.405,0.498,0.579,0.649,0.709],[-0.849,-0.802,-0.743,-0.67,-0.583,-0.481,-0.367,-0.244,-0.115,0.015,0.141,0.259,0.368,0.466,0.552,0.626,0.69,0.744],[-0.828,-0.775,-0.709,-0.628,-0.533,-0.424,-0.303,-0.174,-0.043,0.087,0.211,0.325,0.429,0.52,0.6,0.668,0.725,0.774],[-0.805,-0.746,-0.673,-0.584,-0.481,-0.365,-0.239,-0.107,0.026,0.155,0.276,0.386,0.484,0.569,0.642,0.704,0.757,0.8],[-0.78,-0.715,-0.634,-0.539,-0.429,-0.306,-0.176,-0.041,0.092,0.219,0.336,0.441,0.533,0.612,0.68,0.736,0.784,0.823],[-0.753,-0.682,-0.595,-0.492,-0.376,-0.248,-0.114,0.022,0.154,0.278,0.39,0.49,0.577,0.65,0.713,0.764,0.807,0.843],[-0.725,-0.647,-0.553,-0.444,-0.322,-0.19,-0.054,0.082,0.212,0.332,0.44,0.535,0.616,0.684,0.741,0.789,0.828,0.86],[-0.695,-0.611,-0.51,-0.396,-0.269,-0.134,0.004,0.139,0.266,0.382,0.485,0.575,0.651,0.714,0.767,0.81,0.846,0.875],[-0.664,-0.573,-0.467,-0.347,-0.216,-0.079,0.059,0.192,0.317,0.428,0.526,0.611,0.682,0.741,0.789,0.829,0.862,0.888],[-0.631,-0.534,-0.422,-0.297,-0.163,-0.025,0.112,0.243,0.364,0.471,0.564,0.643,0.709,0.764,0.809,0.846,0.875,0.899],[-0.596,-0.494,-0.377,-0.248,-0.111,0.028,0.163,0.291,0.407,0.51,0.598,0.673,0.734,0.785,0.827,0.86,0.888,0.909],[-0.561,-0.453,-0.331,-0.199,-0.06,0.078,0.212,0.336,0.448,0.546,0.629,0.699,0.757,0.804,0.843,0.873,0.898,0.918]],[[-0.95,-0.933,-0.912,-0.885,-0.85,-0.806,-0.752,-0.688,-0.611,-0.523,-0.424,-0.317,-0.202,-0.084,0.035,0.151,0.261,0.364],[-0.941,-0.921,-0.896,-0.864,-0.823,-0.773,-0.711,-0.637,-0.552,-0.455,-0.348,-0.234,-0.116,0.004,0.122,0.234,0.339,0.435],[-0.93,-0.908,-0.878,-0.84,-0.793,-0.735,-0.665,-0.582,-0.488,-0.382,-0.269,-0.15,-0.029,0.091,0.205,0.313,0.412,0.501],[-0.918,-0.892,-0.857,-0.814,-0.759,-0.693,-0.614,-0.522,-0.419,-0.306,-0.187,-0.065,0.057,0.174,0.285,0.387,0.479,0.56],[-0.905,-0.874,-0.834,-0.784,-0.722,-0.647,-0.559,-0.458,-0.346,-0.227,-0.104,0.02,0.14,0.253,0.359,0.454,0.539,0.613],[-0.89,-0.854,-0.808,-0.751,-0.681,-0.597,-0.5,-0.39,-0.272,-0.148,-0.022,0.101,0.219,0.328,0.427,0.515,0.592,0.66],[-0.872,-0.832,-0.78,-0.715,-0.637,-0.544,-0.438,-0.321,-0.197,-0.069,0.057,0.179,0.292,0.396,0.488,0.569,0.64,0.701],[-0.854,-0.807,-0.749,-0.676,-0.59,-0.488,-0.375,-0.251,-0.122,0.007,0.133,0.251,0.36,0.457,0.543,0.618,0.682,0.736],[-0.833,-0.781,-0.715,-0.635,-0.54,-0.431,-0.31,-0.182,-0.05,0.08,0.204,0.318,0.421,0.513,0.592,0.66,0.719,0.768],[-0.81,-0.752,-0.68,-0.592,-0.489,-0.373,-0.246,-0.114,0.019,0.148,0.269,0.379,0.477,0.562,0.635,0.698,0.75,0.795],[-0.786,-0.722,-0.642,-0.547,-0.438,-0.315,-0.184,-0.049,0.085,0.212,0.329,0.434,0.526,0.605,0.673,0.73,0.778,0.818],[-0.76,-0.689,-0.603,-0.501,-0.385,-0.258,-0.123,0.014,0.146,0.27,0.383,0.483,0.57,0.644,0.706,0.759,0.802,0.838],[-0.733,-0.656,-0.563,-0.455,-0.333,-0.201,-0.064,0.072,0.203,0.324,0.432,0.527,0.609,0.678,0.736,0.783,0.823,0.856],[-0.704,-0.621,-0.521,-0.407,-0.281,-0.146,-0.007,0.128,0.256,0.373,0.477,0.567,0.644,0.708,0.761,0.805,0.841,0.871],[-0.673,-0.584,-0.479,-0.359,-0.229,-0.092,0.047,0.181,0.306,0.419,0.518,0.603,0.675,0.734,0.784,0.824,0.857,0.884],[-0.641,-0.546,-0.436,-0.311,-0.178,-0.039,0.099,0.231,0.352,0.46,0.555,0.635,0.702,0.758,0.804,0.841,0.871,0.896],[-0.608,-0.507,-0.392,-0.263,-0.127,0.012,0.149,0.278,0.395,0.499,0.589,0.664,0.727,0.779,0.822,0.856,0.884,0.906],[-0.574,-0.467,-0.347,-0.215,-0.077,0.062,0.197,0.322,0.436,0.535,0.62,0.691,0.75,0.798,0.837,0.869,0.895,0.915]],[[-0.952,-0.936,-0.915,-0.889,-0.855,-0.812,-0.76,-0.697,-0.622,-0.535,-0.438,-0.332,-0.219,-0.102,0.016,0.132,0.242,0.346],[-0.943,-0.924,-0.9,-0.868,-0.829,-0.779,-0.719,-0.647,-0.563,-0.467,-0.362,-0.25,-0.132,-0.013,0.104,0.216,0.322,0.419],[-0.933,-0.911,-0.882,-0.845,-0.799,-0.742,-0.673,-0.592,-0.498,-0.394,-0.282,-0.164,-0.044,0.074,0.189,0.297,0.396,0.486],[-0.921,-0.895,-0.862,-0.819,-0.766,-0.7,-0.622,-0.532,-0.429,-0.317,-0.199,-0.078,0.043,0.159,0.27,0.372,0.465,0.547],[-0.908,-0.878,-0.839,-0.79,-0.729,-0.655,-0.567,-0.467,-0.356,-0.238,-0.115,0.007,0.127,0.24,0.345,0.441,0.526,0.601],[-0.893,-0.858,-0.814,-0.757,-0.688,-0.605,-0.508,-0.399,-0.281,-0.157,-0.032,0.09,0.207,0.316,0.415,0.503,0.581,0.649],[-0.877,-0.837,-0.786,-0.722,-0.644,-0.552,-0.446,-0.329,-0.205,-0.077,0.049,0.169,0.282,0.385,0.478,0.559,0.63,0.692],[-0.858,-0.813,-0.755,-0.683,-0.597,-0.496,-0.382,-0.258,-0.129,-0.0,0.125,0.243,0.351,0.448,0.534,0.609,0.673,0.728],[-0.838,-0.787,-0.722,-0.643,-0.548,-0.439,-0.318,-0.189,-0.057,0.073,0.197,0.311,0.413,0.504,0.584,0.652,0.711,0.76],[-0.816,-0.759,-0.687,-0.6,-0.498,-0.382,-0.254,-0.121,0.013,0.142,0.262,0.372,0.469,0.554,0.628,0.69,0.743,0.788],[-0.793,-0.729,-0.651,-0.556,-0.447,-0.324,-0.192,-0.057,0.077,0.205,0.322,0.427,0.519,0.598,0.666,0.723,0.772,0.812],[-0.768,-0.698,-0.613,-0.512,-0.396,-0.268,-0.132,0.005,0.138,0.263,0.376,0.476,0.562,0.637,0.7,0.752,0.796,0.833],[-0.741,-0.665,-0.573,-0.466,-0.344,-0.212,-0.075,0.062,0.194,0.315,0.424,0.519,0.601,0.671,0.729,0.777,0.818,0.851],[-0.713,-0.631,-0.533,-0.42,-0.294,-0.158,-0.02,0.117,0.246,0.364,0.468,0.559,0.636,0.701,0.755,0.799,0.836,0.866],[-0.684,-0.596,-0.492,-0.373,-0.243,-0.106,0.033,0.168,0.294,0.408,0.508,0.594,0.667,0.727,0.777,0.819,0.852,0.88],[-0.653,-0.559,-0.45,-0.327,-0.193,-0.054,0.084,0.217,0.34,0.449,0.545,0.626,0.694,0.751,0.798,0.836,0.867,0.892],[-0.621,-0.522,-0.407,-0.28,-0.144,-0.004,0.133,0.263,0.382,0.487,0.578,0.655,0.719,0.772,0.816,0.851,0.879,0.903],[-0.587,-0.483,-0.364,-0.233,-0.095,0.044,0.18,0.307,0.422,0.523,0.609,0.682,0.742,0.791,0.832,0.864,0.891,0.912]],[[-0.954,-0.939,-0.919,-0.893,-0.86,-0.819,-0.768,-0.706,-0.633,-0.549,-0.453,-0.349,-0.238,-0.122,-0.005,0.111,0.222,0.326],[-0.945,-0.927,-0.904,-0.873,-0.835,-0.786,-0.727,-0.657,-0.574,-0.481,-0.377,-0.266,-0.15,-0.032,0.084,0.197,0.303,0.401],[-0.936,-0.914,-0.886,-0.851,-0.806,-0.75,-0.682,-0.602,-0.51,-0.408,-0.297,-0.18,-0.061,0.057,0.171,0.279,0.379,0.47],[-0.924,-0.899,-0.867,-0.825,-0.773,-0.708,-0.631,-0.542,-0.441,-0.33,-0.213,-0.093,0.027,0.143,0.253,0.356,0.449,0.532],[-0.912,-0.882,-0.844,-0.796,-0.736,-0.663,-0.576,-0.477,-0.367,-0.25,-0.128,-0.006,0.113,0.226,0.331,0.426,0.512,0.588],[-0.897,-0.863,-0.819,-0.764,-0.695,-0.613,-0.517,-0.408,-0.291,-0.168,-0.043,0.078,0.194,0.303,0.402,0.49,0.569,0.638],[-0.881,-0.842,-0.792,-0.729,-0.652,-0.56,-0.454,-0.338,-0.213,-0.086,0.039,0.159,0.271,0.374,0.466,0.548,0.62,0.682],[-0.863,-0.819,-0.762,-0.691,-0.605,-0.505,-0.39,-0.266,-0.137,-0.008,0.117,0.234,0.341,0.438,0.523,0.599,0.664,0.72],[-0.843,-0.793,-0.73,-0.651,-0.557,-0.448,-0.326,-0.196,-0.064,0.066,0.189,0.302,0.404,0.495,0.574,0.643,0.702,0.753],[-0.822,-0.766,-0.696,-0.609,-0.507,-0.391,-0.263,-0.129,0.006,0.135,0.255,0.364,0.461,0.545,0.619,0.682,0.736,0.781],[-0.8,-0.737,-0.66,-0.566,-0.457,-0.334,-0.202,-0.065,0.07,0.197,0.314,0.419,0.51,0.59,0.658,0.716,0.765,0.806],[-0.775,-0.707,-0.623,-0.523,-0.407,-0.279,-0.143,-0.005,0.129,0.254,0.367,0.467,0.554,0.629,0.692,0.745,0.79,0.827],[-0.75,-0.675,-0.585,-0.478,-0.357,-0.225,-0.087,0.051,0.184,0.306,0.415,0.511,0.593,0.663,0.721,0.771,0.811,0.845],[-0.723,-0.642,-0.546,-0.434,-0.308,-0.172,-0.033,0.104,0.234,0.353,0.458,0.549,0.627,0.693,0.747,0.793,0.83,0.861],[-0.694,-0.608,-0.506,-0.389,-0.259,-0.121,0.018,0.154,0.281,0.396,0.497,0.584,0.658,0.719,0.77,0.812,0.847,0.875],[-0.665,-0.573,-0.465,-0.343,-0.21,-0.071,0.068,0.202,0.325,0.436,0.533,0.616,0.685,0.743,0.791,0.83,0.862,0.888],[-0.634,-0.537,-0.424,-0.298,-0.163,-0.023,0.115,0.247,0.367,0.474,0.566,0.645,0.71,0.765,0.809,0.845,0.875,0.898],[-0.602,-0.499,-0.382,-0.253,-0.115,0.025,0.161,0.29,0.406,0.509,0.597,0.671,0.733,0.784,0.825,0.859,0.886,0.908]],[[-0.956,-0.941,-0.922,-0.897,-0.866,-0.826,-0.776,-0.716,-0.645,-0.563,-0.47,-0.367,-0.258,-0.143,-0.027,0.088,0.199,0.304],[-0.948,-0.93,-0.908,-0.878,-0.841,-0.794,-0.737,-0.668,-0.587,-0.496,-0.394,-0.285,-0.17,-0.053,0.063,0.176,0.282,0.381],[-0.938,-0.918,-0.891,-0.856,-0.812,-0.758,-0.692,-0.613,-0.523,-0.422,-0.313,-0.198,-0.08,0.037,0.151,0.259,0.36,0.452],[-0.928,-0.903,-0.872,-0.831,-0.78,-0.717,-0.642,-0.553,-0.453,-0.344,-0.229,-0.11,0.009,0.125,0.235,0.338,0.432,0.516],[-0.915,-0.887,-0.85,-0.803,-0.744,-0.672,-0.586,-0.488,-0.379,-0.263,-0.142,-0.021,0.096,0.209,0.314,0.41,0.497,0.574],[-0.901,-0.868,-0.825,-0.771,-0.704,-0.622,-0.527,-0.419,-0.302,-0.179,-0.056,0.065,0.18,0.288,0.387,0.476,0.555,0.625],[-0.886,-0.848,-0.799,-0.737,-0.66,-0.569,-0.464,-0.347,-0.223,-0.096,0.028,0.147,0.258,0.36,0.453,0.535,0.607,0.67],[-0.868,-0.825,-0.769,-0.7,-0.614,-0.514,-0.399,-0.275,-0.145,-0.016,0.108,0.224,0.33,0.426,0.512,0.587,0.653,0.709],[-0.849,-0.8,-0.738,-0.66,-0.567,-0.457,-0.335,-0.204,-0.071,0.059,0.181,0.293,0.394,0.484,0.564,0.633,0.692,0.743],[-0.829,-0.774,-0.705,-0.619,-0.518,-0.401,-0.272,-0.137,-0.001,0.128,0.248,0.355,0.451,0.536,0.609,0.672,0.727,0.773],[-0.807,-0.746,-0.67,-0.577,-0.469,-0.345,-0.212,-0.074,0.062,0.19,0.306,0.41,0.501,0.58,0.648,0.707,0.756,0.798],[-0.784,-0.717,-0.634,-0.535,-0.42,-0.291,-0.155,-0.016,0.119,0.245,0.358,0.458,0.545,0.619,0.683,0.737,0.782,0.82],[-0.759,-0.686,-0.597,-0.492,-0.371,-0.239,-0.1,0.039,0.172,0.295,0.405,0.5,0.583,0.653,0.713,0.763,0.804,0.839],[-0.733,-0.654,-0.56,-0.449,-0.323,-0.188,-0.048,0.09,0.221,0.34,0.447,0.539,0.617,0.683,0.739,0.785,0.824,0.856],[-0.706,-0.622,-0.521,-0.405,-0.276,-0.139,0.001,0.138,0.266,0.383,0.485,0.573,0.648,0.71,0.762,0.805,0.841,0.87],[-0.677,-0.588,-0.482,-0.361,-0.229,-0.09,0.049,0.184,0.309,0.422,0.52,0.604,0.675,0.734,0.783,0.823,0.856,0.883],[-0.648,-0.553,-0.442,-0.317,-0.183,-0.043,0.096,0.228,0.35,0.459,0.553,0.633,0.7,0.756,0.801,0.839,0.869,0.894],[-0.617,-0.517,-0.401,-0.273,-0.137,0.003,0.141,0.271,0.389,0.494,0.584,0.66,0.723,0.775,0.818,0.853,0.881,0.904]],[[-0.958,-0.944,-0.926,-0.902,-0.872,-0.833,-0.785,-0.727,-0.658,-0.578,-0.488,-0.387,-0.28,-0.167,-0.052,0.063,0.175,0.28],[-0.95,-0.934,-0.912,-0.884,-0.848,-0.802,-0.747,-0.68,-0.601,-0.512,-0.412,-0.305,-0.192,-0.076,0.039,0.152,0.259,0.359],[-0.941,-0.922,-0.896,-0.862,-0.82,-0.767,-0.702,-0.626,-0.538,-0.439,-0.331,-0.218,-0.102,0.015,0.128,0.237,0.339,0.432],[-0.931,-0.908,-0.877,-0.838,-0.788,-0.727,-0.653,-0.566,-0.468,-0.36,-0.246,-0.129,-0.011,0.104,0.214,0.317,0.412,0.498],[-0.919,-0.892,-0.856,-0.81,-0.753,-0.682,-0.598,-0.501,-0.393,-0.278,-0.159,-0.039,0.078,0.19,0.295,0.391,0.479,0.558],[-0.906,-0.874,-0.832,-0.779,-0.713,-0.633,-0.538,-0.431,-0.314,-0.193,-0.07,0.049,0.163,0.27,0.369,0.459,0.539,0.61],[-0.89,-0.854,-0.806,-0.745,-0.67,-0.58,-0.475,-0.358,-0.233,-0.107,0.016,0.134,0.244,0.345,0.437,0.52,0.593,0.657],[-0.874,-0.832,-0.777,-0.709,-0.625,-0.524,-0.41,-0.284,-0.154,-0.025,0.098,0.212,0.317,0.412,0.498,0.573,0.64,0.698],[-0.856,-0.808,-0.747,-0.67,-0.577,-0.468,-0.345,-0.212,-0.078,0.052,0.173,0.283,0.383,0.472,0.551,0.62,0.681,0.733],[-0.836,-0.782,-0.715,-0.631,-0.529,-0.412,-0.282,-0.145,-0.009,0.121,0.239,0.346,0.44,0.524,0.597,0.661,0.716,0.763],[-0.815,-0.756,-0.681,-0.59,-0.481,-0.358,-0.223,-0.084,0.053,0.181,0.297,0.4,0.49,0.569,0.637,0.696,0.747,0.79],[-0.792,-0.727,-0.646,-0.548,-0.434,-0.306,-0.168,-0.028,0.108,0.234,0.347,0.447,0.533,0.608,0.672,0.727,0.773,0.812],[-0.769,-0.698,-0.611,-0.507,-0.387,-0.255,-0.116,0.024,0.158,0.282,0.392,0.489,0.572,0.642,0.703,0.754,0.796,0.832],[-0.744,-0.667,-0.575,-0.465,-0.341,-0.206,-0.066,0.073,0.205,0.326,0.433,0.526,0.605,0.673,0.729,0.777,0.816,0.849],[-0.718,-0.636,-0.538,-0.423,-0.295,-0.158,-0.018,0.12,0.249,0.367,0.47,0.56,0.636,0.7,0.753,0.797,0.834,0.864],[-0.691,-0.603,-0.5,-0.381,-0.25,-0.112,0.028,0.164,0.291,0.405,0.505,0.591,0.663,0.724,0.774,0.815,0.849,0.877],[-0.662,-0.57,-0.461,-0.339,-0.205,-0.066,0.074,0.208,0.331,0.442,0.538,0.62,0.688,0.746,0.793,0.831,0.863,0.889],[-0.633,-0.535,-0.422,-0.296,-0.16,-0.02,0.118,0.249,0.369,0.476,0.568,0.646,0.712,0.766,0.81,0.846,0.875,0.899]],[[-0.96,-0.947,-0.93,-0.907,-0.878,-0.841,-0.795,-0.739,-0.673,-0.595,-0.507,-0.409,-0.303,-0.192,-0.078,0.036,0.148,0.254],[-0.953,-0.937,-0.916,-0.889,-0.855,-0.811,-0.757,-0.693,-0.617,-0.53,-0.432,-0.327,-0.216,-0.102,0.013,0.126,0.234,0.335],[-0.944,-0.925,-0.901,-0.869,-0.828,-0.777,-0.714,-0.64,-0.554,-0.457,-0.352,-0.241,-0.126,-0.01,0.103,0.212,0.315,0.409],[-0.934,-0.912,-0.883,-0.845,-0.797,-0.738,-0.665,-0.581,-0.485,-0.379,-0.267,-0.151,-0.034,0.08,0.19,0.294,0.39,0.478],[-0.923,-0.897,-0.862,-0.818,-0.762,-0.693,-0.611,-0.515,-0.409,-0.296,-0.178,-0.06,0.056,0.168,0.273,0.37,0.459,0.539],[-0.91,-0.879,-0.84,-0.788,-0.724,-0.645,-0.551,-0.445,-0.329,-0.209,-0.088,0.03,0.144,0.25,0.349,0.44,0.521,0.594],[-0.896,-0.86,-0.814,-0.755,-0.682,-0.592,-0.488,-0.37,-0.246,-0.121,0.001,0.117,0.226,0.327,0.419,0.502,0.577,0.642],[-0.88,-0.839,-0.787,-0.72,-0.637,-0.537,-0.422,-0.295,-0.163,-0.035,0.086,0.198,0.301,0.396,0.481,0.558,0.625,0.684],[-0.862,-0.816,-0.757,-0.682,-0.59,-0.481,-0.357,-0.222,-0.085,0.045,0.163,0.271,0.368,0.457,0.536,0.606,0.668,0.721],[-0.843,-0.792,-0.726,-0.643,-0.543,-0.426,-0.295,-0.155,-0.016,0.113,0.23,0.334,0.427,0.51,0.583,0.648,0.704,0.753],[-0.823,-0.766,-0.693,-0.604,-0.497,-0.373,-0.237,-0.096,0.043,0.171,0.286,0.387,0.477,0.555,0.624,0.684,0.736,0.78],[-0.802,-0.739,-0.66,-0.564,-0.451,-0.323,-0.184,-0.043,0.095,0.221,0.334,0.433,0.52,0.595,0.66,0.716,0.763,0.803],[-0.779,-0.711,-0.626,-0.524,-0.406,-0.274,-0.134,0.007,0.142,0.267,0.377,0.474,0.558,0.63,0.691,0.743,0.787,0.824],[-0.755,-0.681,-0.591,-0.484,-0.361,-0.227,-0.087,0.053,0.187,0.309,0.417,0.511,0.591,0.66,0.718,0.767,0.807,0.842],[-0.731,-0.651,-0.555,-0.443,-0.317,-0.181,-0.04,0.098,0.229,0.348,0.453,0.544,0.622,0.687,0.742,0.788,0.826,0.857],[-0.705,-0.62,-0.519,-0.403,-0.273,-0.136,0.005,0.142,0.27,0.386,0.488,0.575,0.649,0.712,0.763,0.806,0.842,0.871],[-0.678,-0.588,-0.482,-0.362,-0.23,-0.091,0.049,0.184,0.309,0.422,0.52,0.604,0.675,0.734,0.783,0.823,0.856,0.883],[-0.649,-0.555,-0.444,-0.32,-0.186,-0.046,0.092,0.225,0.347,0.456,0.551,0.631,0.699,0.754,0.8,0.838,0.868,0.893]],[[-0.963,-0.95,-0.934,-0.912,-0.884,-0.849,-0.805,-0.752,-0.688,-0.613,-0.528,-0.433,-0.329,-0.22,-0.107,0.006,0.118,0.226],[-0.956,-0.941,-0.921,-0.895,-0.862,-0.821,-0.769,-0.707,-0.633,-0.549,-0.455,-0.352,-0.243,-0.13,-0.016,0.097,0.205,0.308],[-0.947,-0.93,-0.906,-0.875,-0.836,-0.787,-0.727,-0.655,-0.572,-0.478,-0.375,-0.266,-0.153,-0.038,0.075,0.185,0.288,0.384],[-0.938,-0.917,-0.889,-0.853,-0.807,-0.749,-0.68,-0.597,-0.504,-0.4,-0.29,-0.176,-0.061,0.053,0.163,0.268,0.365,0.455],[-0.927,-0.902,-0.869,-0.827,-0.773,-0.706,-0.626,-0.533,-0.429,-0.317,-0.201,-0.084,0.031,0.142,0.247,0.346,0.436,0.518],[-0.915,-0.886,-0.847,-0.798,-0.736,-0.659,-0.567,-0.462,-0.348,-0.229,-0.109,0.007,0.12,0.226,0.326,0.417,0.5,0.575],[-0.901,-0.867,-0.823,-0.766,-0.695,-0.607,-0.503,-0.387,-0.263,-0.138,-0.018,0.096,0.204,0.304,0.397,0.482,0.558,0.625],[-0.886,-0.847,-0.797,-0.732,-0.651,-0.552,-0.437,-0.309,-0.176,-0.048,0.071,0.18,0.281,0.375,0.461,0.539,0.608,0.669],[-0.869,-0.825,-0.768,-0.695,-0.605,-0.497,-0.372,-0.234,-0.094,0.036,0.151,0.254,0.35,0.438,0.517,0.589,0.652,0.707],[-0.851,-0.802,-0.738,-0.658,-0.56,-0.443,-0.311,-0.168,-0.025,0.105,0.217,0.318,0.409,0.492,0.566,0.632,0.69,0.74],[-0.832,-0.777,-0.707,-0.62,-0.514,-0.392,-0.255,-0.111,0.03,0.159,0.272,0.371,0.46,0.539,0.609,0.67,0.723,0.769],[-0.812,-0.751,-0.675,-0.581,-0.47,-0.343,-0.205,-0.062,0.077,0.205,0.317,0.416,0.503,0.579,0.645,0.702,0.751,0.793],[-0.79,-0.724,-0.642,-0.543,-0.427,-0.296,-0.157,-0.015,0.121,0.247,0.359,0.456,0.541,0.614,0.677,0.73,0.776,0.814],[-0.768,-0.696,-0.609,-0.504,-0.384,-0.251,-0.111,0.029,0.164,0.287,0.397,0.492,0.575,0.645,0.704,0.755,0.797,0.833],[-0.744,-0.668,-0.575,-0.465,-0.341,-0.207,-0.066,0.073,0.205,0.326,0.433,0.526,0.605,0.672,0.729,0.777,0.816,0.849],[-0.719,-0.638,-0.54,-0.426,-0.299,-0.162,-0.022,0.115,0.245,0.363,0.467,0.557,0.633,0.698,0.751,0.796,0.833,0.863],[-0.693,-0.607,-0.504,-0.387,-0.256,-0.119,0.021,0.157,0.284,0.399,0.5,0.586,0.659,0.721,0.771,0.813,0.848,0.876],[-0.666,-0.575,-0.468,-0.346,-0.214,-0.075,0.064,0.198,0.322,0.433,0.531,0.614,0.683,0.742,0.789,0.829,0.861,0.887]],[[-0.965,-0.953,-0.938,-0.917,-0.891,-0.858,-0.816,-0.765,-0.704,-0.632,-0.55,-0.458,-0.357,-0.25,-0.139,-0.026,0.086,0.195],[-0.958,-0.944,-0.926,-0.901,-0.87,-0.831,-0.782,-0.722,-0.652,-0.57,-0.479,-0.379,-0.272,-0.161,-0.047,0.065,0.174,0.278],[-0.951,-0.934,-0.912,-0.883,-0.846,-0.799,-0.741,-0.673,-0.592,-0.501,-0.401,-0.294,-0.183,-0.069,0.044,0.154,0.259,0.357],[-0.942,-0.922,-0.895,-0.861,-0.817,-0.763,-0.696,-0.616,-0.526,-0.425,-0.317,-0.205,-0.091,0.022,0.133,0.238,0.338,0.429],[-0.932,-0.908,-0.877,-0.837,-0.785,-0.721,-0.644,-0.553,-0.452,-0.342,-0.229,-0.113,0.001,0.112,0.218,0.318,0.41,0.494],[-0.92,-0.892,-0.856,-0.809,-0.749,-0.675,-0.586,-0.484,-0.371,-0.254,-0.137,-0.021,0.091,0.197,0.298,0.391,0.477,0.553],[-0.907,-0.875,-0.833,-0.778,-0.709,-0.625,-0.523,-0.409,-0.285,-0.162,-0.043,0.069,0.176,0.277,0.371,0.458,0.536,0.605],[-0.893,-0.856,-0.807,-0.745,-0.667,-0.571,-0.458,-0.33,-0.195,-0.068,0.048,0.155,0.255,0.35,0.437,0.517,0.588,0.651],[-0.877,-0.835,-0.78,-0.71,-0.623,-0.517,-0.393,-0.253,-0.106,0.024,0.131,0.231,0.326,0.414,0.495,0.569,0.634,0.691],[-0.86,-0.813,-0.752,-0.674,-0.579,-0.465,-0.333,-0.187,-0.037,0.093,0.198,0.295,0.386,0.47,0.546,0.614,0.673,0.725],[-0.842,-0.789,-0.722,-0.638,-0.535,-0.415,-0.279,-0.134,0.01,0.139,0.25,0.349,0.437,0.518,0.589,0.653,0.708,0.755],[-0.822,-0.765,-0.691,-0.601,-0.493,-0.368,-0.23,-0.087,0.053,0.181,0.294,0.393,0.481,0.559,0.627,0.686,0.737,0.781],[-0.802,-0.739,-0.66,-0.564,-0.451,-0.323,-0.185,-0.043,0.095,0.221,0.334,0.433,0.52,0.595,0.66,0.715,0.763,0.803],[-0.78,-0.712,-0.628,-0.527,-0.41,-0.279,-0.14,0.0,0.136,0.26,0.372,0.47,0.554,0.627,0.689,0.741,0.786,0.823],[-0.758,-0.685,-0.596,-0.49,-0.368,-0.236,-0.096,0.043,0.176,0.299,0.408,0.503,0.585,0.655,0.714,0.764,0.805,0.84],[-0.734,-0.656,-0.562,-0.452,-0.327,-0.192,-0.053,0.085,0.216,0.336,0.443,0.535,0.614,0.681,0.737,0.784,0.823,0.855],[-0.71,-0.627,-0.528,-0.413,-0.286,-0.149,-0.01,0.126,0.255,0.372,0.476,0.565,0.641,0.705,0.758,0.802,0.838,0.868],[-0.684,-0.596,-0.493,-0.374,-0.244,-0.107,0.032,0.167,0.293,0.407,0.507,0.593,0.666,0.727,0.777,0.818,0.852,0.88]],[[-0.972,-0.963,-0.95,-0.934,-0.912,-0.885,-0.851,-0.809,-0.757,-0.696,-0.625,-0.544,-0.453,-0.354,-0.249,-0.14,-0.028,0.083],[-0.967,-0.955,-0.94,-0.921,-0.895,-0.863,-0.822,-0.773,-0.713,-0.643,-0.563,-0.473,-0.375,-0.27,-0.161,-0.05,0.061,0.169],[-0.961,-0.947,-0.929,-0.906,-0.875,-0.837,-0.789,-0.731,-0.662,-0.582,-0.493,-0.395,-0.291,-0.182,-0.071,0.04,0.149,0.253],[-0.953,-0.937,-0.916,-0.888,-0.852,-0.807,-0.75,-0.683,-0.604,-0.514,-0.417,-0.312,-0.203,-0.092,0.019,0.128,0.232,0.331],[-0.945,-0.926,-0.901,-0.868,-0.825,-0.772,-0.706,-0.628,-0.538,-0.44,-0.334,-0.225,-0.114,-0.002,0.107,0.211,0.311,0.403],[-0.936,-0.913,-0.884,-0.845,-0.795,-0.733,-0.656,-0.567,-0.466,-0.358,-0.247,-0.135,-0.024,0.085,0.19,0.29,0.383,0.469],[-0.925,-0.899,-0.865,-0.82,-0.762,-0.69,-0.602,-0.499,-0.387,-0.271,-0.157,-0.045,0.063,0.168,0.268,0.362,0.449,0.528],[-0.914,-0.884,-0.844,-0.792,-0.726,-0.644,-0.544,-0.428,-0.303,-0.181,-0.067,0.041,0.145,0.245,0.34,0.428,0.508,0.58],[-0.901,-0.866,-0.821,-0.763,-0.688,-0.596,-0.485,-0.357,-0.218,-0.091,0.017,0.12,0.22,0.315,0.404,0.486,0.56,0.626],[-0.887,-0.848,-0.797,-0.732,-0.65,-0.55,-0.431,-0.295,-0.151,-0.022,0.086,0.188,0.285,0.376,0.46,0.537,0.606,0.666],[-0.872,-0.829,-0.773,-0.701,-0.612,-0.505,-0.381,-0.245,-0.105,0.025,0.14,0.244,0.34,0.429,0.509,0.582,0.646,0.702],[-0.856,-0.808,-0.747,-0.669,-0.575,-0.463,-0.336,-0.199,-0.062,0.068,0.186,0.292,0.388,0.475,0.552,0.621,0.68,0.732],[-0.839,-0.787,-0.72,-0.637,-0.538,-0.422,-0.293,-0.156,-0.02,0.11,0.229,0.336,0.431,0.516,0.59,0.655,0.711,0.759],[-0.821,-0.764,-0.693,-0.605,-0.5,-0.381,-0.25,-0.114,0.022,0.151,0.269,0.375,0.47,0.552,0.623,0.685,0.737,0.782],[-0.803,-0.741,-0.665,-0.572,-0.463,-0.341,-0.208,-0.072,0.063,0.191,0.308,0.413,0.505,0.585,0.653,0.712,0.761,0.803],[-0.783,-0.717,-0.636,-0.538,-0.426,-0.3,-0.166,-0.03,0.104,0.231,0.346,0.448,0.538,0.615,0.68,0.736,0.782,0.821],[-0.762,-0.692,-0.606,-0.504,-0.387,-0.259,-0.124,0.012,0.145,0.269,0.382,0.482,0.569,0.642,0.705,0.757,0.801,0.837],[-0.74,-0.665,-0.575,-0.468,-0.348,-0.218,-0.082,0.054,0.185,0.307,0.417,0.514,0.597,0.668,0.727,0.777,0.818,0.851]],[[-0.981,-0.975,-0.966,-0.955,-0.94,-0.921,-0.897,-0.867,-0.83,-0.785,-0.731,-0.668,-0.596,-0.514,-0.424,-0.326,-0.222,-0.114],[-0.977,-0.97,-0.959,-0.946,-0.928,-0.906,-0.877,-0.841,-0.797,-0.745,-0.683,-0.612,-0.531,-0.442,-0.345,-0.242,-0.135,-0.026],[-0.973,-0.964,-0.952,-0.935,-0.914,-0.887,-0.853,-0.811,-0.759,-0.699,-0.628,-0.549,-0.461,-0.365,-0.263,-0.156,-0.048,0.061],[-0.968,-0.957,-0.943,-0.923,-0.898,-0.866,-0.825,-0.775,-0.716,-0.646,-0.567,-0.479,-0.384,-0.283,-0.178,-0.069,0.039,0.145],[-0.963,-0.95,-0.932,-0.909,-0.879,-0.841,-0.793,-0.734,-0.665,-0.587,-0.499,-0.404,-0.304,-0.199,-0.091,0.016,0.123,0.225],[-0.956,-0.941,-0.92,-0.893,-0.858,-0.813,-0.756,-0.688,-0.609,-0.521,-0.425,-0.325,-0.22,-0.114,-0.006,0.1,0.203,0.301],[-0.949,-0.931,-0.907,-0.875,-0.834,-0.781,-0.715,-0.637,-0.546,-0.449,-0.347,-0.243,-0.137,-0.03,0.076,0.179,0.278,0.37],[-0.941,-0.92,-0.892,-0.856,-0.808,-0.747,-0.671,-0.581,-0.479,-0.373,-0.267,-0.161,-0.055,0.05,0.153,0.253,0.347,0.434],[-0.932,-0.908,-0.876,-0.834,-0.78,-0.711,-0.626,-0.525,-0.412,-0.299,-0.19,-0.084,0.021,0.124,0.225,0.32,0.409,0.491],[-0.923,-0.895,-0.859,-0.812,-0.752,-0.675,-0.582,-0.473,-0.353,-0.234,-0.123,-0.015,0.09,0.192,0.289,0.381,0.465,0.542],[-0.912,-0.881,-0.841,-0.789,-0.723,-0.64,-0.541,-0.427,-0.304,-0.182,-0.066,0.045,0.151,0.252,0.347,0.435,0.515,0.587],[-0.901,-0.867,-0.822,-0.765,-0.693,-0.606,-0.502,-0.385,-0.261,-0.136,-0.016,0.098,0.206,0.306,0.399,0.483,0.559,0.626],[-0.889,-0.851,-0.803,-0.741,-0.664,-0.572,-0.464,-0.345,-0.219,-0.092,0.031,0.147,0.255,0.355,0.445,0.526,0.598,0.661],[-0.876,-0.835,-0.782,-0.716,-0.635,-0.538,-0.427,-0.305,-0.177,-0.049,0.075,0.192,0.3,0.399,0.487,0.565,0.633,0.693],[-0.863,-0.818,-0.761,-0.69,-0.604,-0.503,-0.389,-0.265,-0.136,-0.006,0.118,0.235,0.343,0.439,0.525,0.6,0.665,0.72],[-0.848,-0.8,-0.739,-0.664,-0.573,-0.469,-0.351,-0.225,-0.094,0.036,0.16,0.277,0.382,0.476,0.559,0.631,0.693,0.745],[-0.833,-0.781,-0.716,-0.636,-0.542,-0.433,-0.312,-0.184,-0.052,0.078,0.202,0.316,0.42,0.511,0.591,0.66,0.718,0.767],[-0.817,-0.761,-0.692,-0.608,-0.509,-0.397,-0.273,-0.143,-0.01,0.119,0.242,0.354,0.455,0.544,0.62,0.686,0.741,0.787]],[[-0.987,-0.983,-0.977,-0.969,-0.96,-0.947,-0.93,-0.909,-0.883,-0.851,-0.812,-0.765,-0.71,-0.646,-0.573,-0.491,-0.401,-0.304],[-0.985,-0.98,-0.973,-0.963,-0.951,-0.936,-0.916,-0.891,-0.86,-0.822,-0.777,-0.723,-0.66,-0.589,-0.508,-0.42,-0.324,-0.222],[-0.982,-0.976,-0.967,-0.956,-0.942,-0.923,-0.9,-0.87,-0.833,-0.789,-0.736,-0.675,-0.604,-0.526,-0.438,-0.344,-0.243,-0.138],[-0.979,-0.971,-0.961,-0.948,-0.931,-0.908,-0.88,-0.845,-0.801,-0.75,-0.69,-0.62,-0.543,-0.457,-0.364,-0.264,-0.16,-0.054],[-0.975,-0.966,-0.954,-0.938,-0.918,-0.891,-0.858,-0.816,-0.765,-0.706,-0.637,-0.561,-0.476,-0.384,-0.286,-0.183,-0.077,0.029],[-0.971,-0.96,-0.946,-0.928,-0.903,-0.872,-0.832,-0.783,-0.724,-0.656,-0.58,-0.496,-0.405,-0.308,-0.206,-0.102,0.004,0.109],[-0.966,-0.953,-0.937,-0.915,-0.887,-0.85,-0.803,-0.746,-0.678,-0.601,-0.517,-0.427,-0.331,-0.231,-0.127,-0.022,0.083,0.186],[-0.96,-0.946,-0.927,-0.902,-0.868,-0.825,-0.771,-0.705,-0.628,-0.543,-0.452,-0.357,-0.257,-0.154,-0.049,0.055,0.158,0.258],[-0.954,-0.938,-0.916,-0.887,-0.849,-0.8,-0.738,-0.664,-0.578,-0.485,-0.388,-0.288,-0.185,-0.081,0.024,0.128,0.228,0.324],[-0.947,-0.929,-0.904,-0.871,-0.828,-0.773,-0.705,-0.623,-0.53,-0.43,-0.327,-0.223,-0.118,-0.012,0.093,0.195,0.293,0.384],[-0.94,-0.919,-0.891,-0.855,-0.807,-0.747,-0.673,-0.585,-0.486,-0.381,-0.273,-0.164,-0.055,0.052,0.157,0.257,0.352,0.439],[-0.933,-0.909,-0.878,-0.837,-0.785,-0.72,-0.641,-0.549,-0.445,-0.335,-0.222,-0.109,0.002,0.111,0.215,0.314,0.405,0.489],[-0.924,-0.898,-0.864,-0.82,-0.763,-0.694,-0.61,-0.513,-0.406,-0.292,-0.175,-0.058,0.056,0.165,0.269,0.365,0.454,0.533],[-0.915,-0.887,-0.849,-0.801,-0.741,-0.667,-0.579,-0.478,-0.367,-0.25,-0.129,-0.01,0.106,0.215,0.318,0.412,0.497,0.573],[-0.906,-0.874,-0.834,-0.782,-0.717,-0.639,-0.547,-0.443,-0.328,-0.208,-0.085,0.036,0.153,0.262,0.364,0.455,0.537,0.609],[-0.896,-0.861,-0.817,-0.762,-0.693,-0.611,-0.515,-0.406,-0.289,-0.166,-0.041,0.081,0.198,0.307,0.406,0.495,0.573,0.642],[-0.885,-0.848,-0.8,-0.741,-0.668,-0.582,-0.481,-0.369,-0.249,-0.123,0.003,0.125,0.241,0.348,0.445,0.531,0.606,0.672],[-0.874,-0.833,-0.782,-0.719,-0.642,-0.551,-0.447,-0.332,-0.208,-0.081,0.045,0.168,0.283,0.388,0.482,0.565,0.637,0.698]],[[-0.991,-0.989,-0.985,-0.98,-0.973,-0.964,-0.953,-0.939,-0.921,-0.898,-0.871,-0.837,-0.797,-0.749,-0.694,-0.629,-0.556,-0.474],[-0.99,-0.986,-0.982,-0.976,-0.967,-0.957,-0.943,-0.926,-0.905,-0.878,-0.846,-0.807,-0.761,-0.706,-0.643,-0.572,-0.492,-0.403],[-0.988,-0.984,-0.978,-0.971,-0.961,-0.948,-0.932,-0.912,-0.886,-0.855,-0.817,-0.772,-0.719,-0.658,-0.588,-0.509,-0.423,-0.329],[-0.986,-0.981,-0.974,-0.965,-0.954,-0.938,-0.919,-0.895,-0.864,-0.828,-0.784,-0.732,-0.672,-0.604,-0.527,-0.442,-0.35,-0.251],[-0.983,-0.977,-0.969,-0.959,-0.945,-0.927,-0.904,-0.875,-0.839,-0.796,-0.746,-0.687,-0.62,-0.545,-0.462,-0.371,-0.274,-0.172],[-0.98,-0.973,-0.964,-0.951,-0.935,-0.914,-0.886,-0.852,-0.811,-0.761,-0.703,-0.638,-0.564,-0.482,-0.393,-0.298,-0.197,-0.093],[-0.977,-0.969,-0.958,-0.943,-0.924,-0.899,-0.867,-0.827,-0.778,-0.722,-0.657,-0.584,-0.504,-0.417,-0.323,-0.224,-0.121,-0.016],[-0.973,-0.964,-0.951,-0.934,-0.911,-0.882,-0.845,-0.799,-0.743,-0.679,-0.608,-0.528,-0.442,-0.35,-0.252,-0.15,-0.045,0.059],[-0.969,-0.958,-0.944,-0.924,-0.898,-0.865,-0.822,-0.769,-0.707,-0.636,-0.557,-0.472,-0.38,-0.283,-0.182,-0.078,0.027,0.131],[-0.965,-0.952,-0.935,-0.913,-0.884,-0.846,-0.798,-0.74,-0.671,-0.593,-0.508,-0.416,-0.319,-0.218,-0.114,-0.008,0.096,0.198],[-0.96,-0.946,-0.927,-0.902,-0.869,-0.827,-0.774,-0.71,-0.635,-0.551,-0.46,-0.363,-0.261,-0.156,-0.049,0.057,0.161,0.261],[-0.955,-0.939,-0.917,-0.89,-0.853,-0.807,-0.75,-0.681,-0.601,-0.511,-0.414,-0.312,-0.205,-0.097,0.012,0.118,0.222,0.319],[-0.949,-0.931,-0.908,-0.877,-0.837,-0.787,-0.726,-0.652,-0.567,-0.473,-0.37,-0.263,-0.152,-0.041,0.069,0.176,0.278,0.372],[-0.943,-0.923,-0.897,-0.864,-0.821,-0.767,-0.701,-0.623,-0.534,-0.434,-0.327,-0.215,-0.101,0.012,0.123,0.23,0.329,0.421],[-0.936,-0.915,-0.886,-0.85,-0.803,-0.746,-0.676,-0.594,-0.5,-0.396,-0.285,-0.169,-0.052,0.063,0.174,0.28,0.377,0.466],[-0.929,-0.905,-0.875,-0.835,-0.785,-0.724,-0.65,-0.563,-0.465,-0.357,-0.242,-0.124,-0.005,0.112,0.223,0.327,0.422,0.507],[-0.922,-0.896,-0.862,-0.82,-0.766,-0.701,-0.623,-0.532,-0.43,-0.318,-0.2,-0.079,0.042,0.158,0.269,0.37,0.463,0.545],[-0.914,-0.886,-0.849,-0.803,-0.746,-0.677,-0.595,-0.5,-0.393,-0.278,-0.157,-0.034,0.087,0.203,0.312,0.412,0.501,0.58]],[[-0.994,-0.992,-0.99,-0.986,-0.982,-0.976,-0.969,-0.959,-0.947,-0.932,-0.913,-0.889,-0.861,-0.827,-0.786,-0.737,-0.681,-0.616],[-0.993,-0.991,-0.988,-0.984,-0.978,-0.971,-0.962,-0.951,-0.936,-0.918,-0.896,-0.868,-0.835,-0.795,-0.749,-0.694,-0.631,-0.559],[-0.992,-0.989,-0.985,-0.981,-0.974,-0.966,-0.955,-0.941,-0.924,-0.902,-0.876,-0.844,-0.805,-0.76,-0.707,-0.646,-0.576,-0.497],[-0.991,-0.987,-0.983,-0.977,-0.969,-0.959,-0.946,-0.93,-0.909,-0.884,-0.853,-0.815,-0.771,-0.72,-0.66,-0.592,-0.516,-0.432],[-0.989,-0.985,-0.98,-0.973,-0.963,-0.951,-0.936,-0.916,-0.892,-0.862,-0.826,-0.783,-0.733,-0.676,-0.609,-0.535,-0.452,-0.362],[-0.987,-0.982,-0.976,-0.968,-0.957,-0.943,-0.924,-0.901,-0.873,-0.838,-0.796,-0.748,-0.691,-0.627,-0.555,-0.474,-0.386,-0.291],[-0.985,-0.979,-0.972,-0.962,-0.949,-0.933,-0.911,-0.884,-0.851,-0.811,-0.764,-0.709,-0.646,-0.575,-0.497,-0.41,-0.317,-0.218],[-0.982,-0.976,-0.967,-0.956,-0.941,-0.922,-0.897,-0.865,-0.827,-0.781,-0.728,-0.667,-0.598,-0.521,-0.437,-0.345,-0.248,-0.146],[-0.98,-0.972,-0.962,-0.949,-0.932,-0.91,-0.881,-0.845,-0.802,-0.75,-0.691,-0.623,-0.548,-0.465,-0.376,-0.28,-0.179,-0.075],[-0.977,-0.968,-0.957,-0.942,-0.923,-0.897,-0.865,-0.824,-0.776,-0.718,-0.653,-0.579,-0.498,-0.41,-0.315,-0.214,-0.111,-0.006],[-0.973,-0.964,-0.951,-0.934,-0.912,-0.884,-0.848,-0.803,-0.749,-0.686,-0.615,-0.535,-0.448,-0.354,-0.255,-0.151,-0.045,0.061],[-0.97,-0.959,-0.945,-0.926,-0.901,-0.87,-0.83,-0.781,-0.723,-0.654,-0.577,-0.492,-0.399,-0.3,-0.196,-0.089,0.018,0.124],[-0.966,-0.954,-0.938,-0.917,-0.89,-0.856,-0.812,-0.759,-0.696,-0.623,-0.54,-0.449,-0.35,-0.247,-0.139,-0.03,0.078,0.183],[-0.962,-0.948,-0.931,-0.908,-0.878,-0.841,-0.794,-0.737,-0.669,-0.59,-0.502,-0.406,-0.303,-0.195,-0.084,0.026,0.135,0.239],[-0.957,-0.943,-0.923,-0.898,-0.866,-0.825,-0.775,-0.713,-0.641,-0.558,-0.465,-0.364,-0.256,-0.144,-0.031,0.08,0.189,0.292],[-0.952,-0.936,-0.915,-0.888,-0.853,-0.809,-0.755,-0.689,-0.613,-0.525,-0.427,-0.321,-0.21,-0.095,0.02,0.132,0.24,0.341],[-0.947,-0.93,-0.907,-0.877,-0.839,-0.792,-0.734,-0.664,-0.583,-0.491,-0.389,-0.279,-0.164,-0.047,0.069,0.182,0.288,0.386],[-0.942,-0.922,-0.897,-0.865,-0.824,-0.774,-0.712,-0.638,-0.553,-0.456,-0.35,-0.236,-0.118,0.001,0.117,0.229,0.333,0.429]],[[-0.996,-0.995,-0.993,-0.991,-0.988,-0.984,-0.979,-0.973,-0.965,-0.954,-0.942,-0.926,-0.906,-0.882,-0.853,-0.818,-0.777,-0.728],[-0.996,-0.994,-0.992,-0.989,-0.986,-0.981,-0.975,-0.967,-0.958,-0.945,-0.93,-0.911,-0.888,-0.86,-0.827,-0.787,-0.74,-0.685],[-0.995,-0.993,-0.99,-0.987,-0.983,-0.977,-0.97,-0.961,-0.949,-0.935,-0.917,-0.895,-0.868,-0.835,-0.797,-0.751,-0.698,-0.637],[-0.994,-0.992,-0.989,-0.985,-0.98,-0.973,-0.964,-0.954,-0.94,-0.922,-0.901,-0.875,-0.844,-0.807,-0.763,-0.712,-0.652,-0.584],[-0.993,-0.99,-0.987,-0.982,-0.976,-0.968,-0.958,-0.945,-0.929,-0.908,-0.883,-0.853,-0.818,-0.775,-0.725,-0.668,-0.602,-0.528],[-0.991,-0.988,-0.984,-0.979,-0.972,-0.962,-0.95,-0.935,-0.916,-0.892,-0.863,-0.829,-0.788,-0.74,-0.684,-0.62,-0.548,-0.468],[-0.99,-0.986,-0.982,-0.975,-0.967,-0.956,-0.942,-0.924,-0.901,-0.874,-0.841,-0.801,-0.755,-0.701,-0.64,-0.57,-0.492,-0.406],[-0.988,-0.984,-0.979,-0.971,-0.961,-0.949,-0.932,-0.911,-0.885,-0.854,-0.816,-0.772,-0.72,-0.66,-0.592,-0.516,-0.433,-0.341],[-0.986,-0.982,-0.975,-0.967,-0.955,-0.941,-0.922,-0.898,-0.868,-0.832,-0.79,-0.74,-0.682,-0.617,-0.543,-0.461,-0.372,-0.276],[-0.985,-0.979,-0.972,-0.962,-0.949,-0.932,-0.911,-0.884,-0.85,-0.81,-0.762,-0.707,-0.644,-0.572,-0.492,-0.405,-0.311,-0.211],[-0.982,-0.976,-0.968,-0.957,-0.942,-0.923,-0.899,-0.869,-0.831,-0.787,-0.734,-0.673,-0.604,-0.526,-0.441,-0.348,-0.25,-0.147],[-0.98,-0.973,-0.963,-0.951,-0.935,-0.914,-0.887,-0.853,-0.812,-0.763,-0.705,-0.639,-0.564,-0.48,-0.389,-0.292,-0.189,-0.084],[-0.977,-0.969,-0.959,-0.945,-0.927,-0.904,-0.874,-0.837,-0.792,-0.738,-0.676,-0.604,-0.523,-0.434,-0.338,-0.236,-0.13,-0.023],[-0.975,-0.966,-0.954,-0.939,-0.919,-0.893,-0.861,-0.82,-0.771,-0.713,-0.646,-0.568,-0.482,-0.388,-0.287,-0.181,-0.073,0.036],[-0.972,-0.962,-0.949,-0.932,-0.91,-0.882,-0.847,-0.803,-0.75,-0.688,-0.615,-0.532,-0.441,-0.342,-0.237,-0.128,-0.017,0.093],[-0.968,-0.957,-0.943,-0.925,-0.901,-0.87,-0.832,-0.785,-0.728,-0.661,-0.584,-0.496,-0.4,-0.296,-0.187,-0.075,0.037,0.147],[-0.965,-0.953,-0.937,-0.917,-0.891,-0.858,-0.817,-0.766,-0.705,-0.634,-0.551,-0.459,-0.358,-0.25,-0.138,-0.024,0.089,0.199],[-0.961,-0.948,-0.931,-0.909,-0.881,-0.845,-0.8,-0.746,-0.681,-0.605,-0.518,-0.421,-0.316,-0.204,-0.089,0.027,0.14,0.248]],[[-0.998,-0.997,-0.996,-0.994,-0.992,-0.99,-0.986,-0.982,-0.977,-0.97,-0.961,-0.951,-0.937,-0.921,-0.901,-0.876,-0.847,-0.812],[-0.997,-0.996,-0.995,-0.993,-0.991,-0.988,-0.984,-0.979,-0.972,-0.964,-0.954,-0.941,-0.925,-0.906,-0.883,-0.854,-0.82,-0.78],[-0.996,-0.995,-0.994,-0.992,-0.989,-0.985,-0.98,-0.974,-0.967,-0.957,-0.945,-0.93,-0.911,-0.889,-0.862,-0.829,-0.79,-0.745],[-0.996,-0.994,-0.993,-0.99,-0.987,-0.982,-0.977,-0.97,-0.96,-0.949,-0.935,-0.917,-0.896,-0.87,-0.838,-0.801,-0.757,-0.705],[-0.995,-0.993,-0.991,-0.988,-0.984,-0.979,-0.972,-0.964,-0.953,-0.94,-0.923,-0.902,-0.877,-0.847,-0.812,-0.769,-0.72,-0.662],[-0.994,-0.992,-0.99,-0.986,-0.981,-0.975,-0.968,-0.957,-0.945,-0.929,-0.909,-0.886,-0.857,-0.823,-0.782,-0.734,-0.679,-0.615],[-0.993,-0.991,-0.988,-0.984,-0.978,-0.971,-0.962,-0.95,-0.935,-0.917,-0.894,-0.867,-0.834,-0.795,-0.75,-0.696,-0.635,-0.566],[-0.992,-0.99,-0.986,-0.981,-0.975,-0.966,-0.956,-0.942,-0.925,-0.904,-0.878,-0.847,-0.809,-0.766,-0.715,-0.656,-0.588,-0.513],[-0.991,-0.988,-0.984,-0.978,-0.971,-0.961,-0.949,-0.933,-0.914,-0.889,-0.86,-0.825,-0.783,-0.734,-0.677,-0.612,-0.539,-0.458],[-0.99,-0.986,-0.981,-0.975,-0.967,-0.956,-0.942,-0.924,-0.901,-0.874,-0.841,-0.801,-0.754,-0.7,-0.638,-0.567,-0.488,-0.401],[-0.988,-0.984,-0.979,-0.972,-0.962,-0.95,-0.934,-0.914,-0.888,-0.858,-0.82,-0.776,-0.725,-0.665,-0.597,-0.521,-0.436,-0.344],[-0.987,-0.982,-0.976,-0.968,-0.957,-0.943,-0.925,-0.903,-0.875,-0.841,-0.799,-0.751,-0.694,-0.629,-0.555,-0.473,-0.383,-0.286],[-0.985,-0.98,-0.973,-0.964,-0.952,-0.936,-0.917,-0.892,-0.861,-0.823,-0.778,-0.724,-0.662,-0.592,-0.512,-0.424,-0.33,-0.229],[-0.983,-0.977,-0.97,-0.959,-0.946,-0.929,-0.907,-0.88,-0.846,-0.804,-0.755,-0.697,-0.63,-0.553,-0.469,-0.376,-0.276,-0.172],[-0.981,-0.975,-0.966,-0.955,-0.94,-0.921,-0.897,-0.867,-0.83,-0.785,-0.731,-0.669,-0.596,-0.515,-0.424,-0.327,-0.223,-0.115],[-0.979,-0.972,-0.962,-0.95,-0.934,-0.913,-0.887,-0.854,-0.814,-0.765,-0.707,-0.639,-0.562,-0.475,-0.38,-0.278,-0.17,-0.06],[-0.977,-0.969,-0.958,-0.945,-0.927,-0.904,-0.876,-0.84,-0.797,-0.744,-0.682,-0.609,-0.527,-0.435,-0.335,-0.229,-0.118,-0.006],[-0.974,-0.965,-0.954,-0.939,-0.92,-0.895,-0.864,-0.826,-0.779,-0.722,-0.655,-0.578,-0.491,-0.394,-0.29,-0.18,-0.067,0.046]],[[-0.998,-0.998,-0.997,-0.996,-0.995,-0.993,-0.991,-0.988,-0.985,-0.98,-0.974,-0.967,-0.958,-0.947,-0.934,-0.917,-0.897,-0.872],[-0.998,-0.997,-0.997,-0.995,-0.994,-0.992,-0.989,-0.986,-0.982,-0.976,-0.97,-0.961,-0.951,-0.938,-0.922,-0.902,-0.878,-0.85],[-0.998,-0.997,-0.996,-0.994,-0.993,-0.99,-0.987,-0.983,-0.978,-0.972,-0.964,-0.954,-0.941,-0.926,-0.907,-0.885,-0.857,-0.825],[-0.997,-0.996,-0.995,-0.993,-0.991,-0.988,-0.985,-0.98,-0.974,-0.967,-0.957,-0.945,-0.931,-0.913,-0.891,-0.865,-0.834,-0.796],[-0.997,-0.996,-0.994,-0.992,-0.99,-0.986,-0.982,-0.977,-0.969,-0.961,-0.949,-0.936,-0.919,-0.898,-0.873,-0.843,-0.807,-0.765],[-0.996,-0.995,-0.993,-0.991,-0.988,-0.984,-0.979,-0.972,-0.964,-0.954,-0.941,-0.925,-0.905,-0.881,-0.853,-0.818,-0.778,-0.73],[-0.996,-0.994,-0.992,-0.989,-0.986,-0.981,-0.975,-0.968,-0.958,-0.946,-0.931,-0.912,-0.89,-0.863,-0.83,-0.791,-0.746,-0.693],[-0.995,-0.993,-0.991,-0.988,-0.984,-0.978,-0.971,-0.962,-0.951,-0.937,-0.92,-0.899,-0.873,-0.842,-0.805,-0.762,-0.711,-0.652],[-0.994,-0.992,-0.989,-0.986,-0.981,-0.975,-0.967,-0.957,-0.944,-0.928,-0.908,-0.884,-0.854,-0.819,-0.778,-0.73,-0.673,-0.609],[-0.993,-0.991,-0.988,-0.984,-0.978,-0.971,-0.962,-0.95,-0.936,-0.917,-0.895,-0.867,-0.835,-0.795,-0.749,-0.696,-0.634,-0.563],[-0.992,-0.99,-0.986,-0.981,-0.975,-0.967,-0.957,-0.944,-0.927,-0.906,-0.881,-0.85,-0.813,-0.77,-0.719,-0.66,-0.592,-0.516],[-0.991,-0.988,-0.984,-0.979,-0.972,-0.963,-0.951,-0.936,-0.918,-0.895,-0.866,-0.832,-0.791,-0.743,-0.687,-0.622,-0.549,-0.467],[-0.99,-0.987,-0.982,-0.976,-0.968,-0.958,-0.945,-0.929,-0.908,-0.882,-0.851,-0.813,-0.768,-0.715,-0.653,-0.583,-0.504,-0.417],[-0.989,-0.985,-0.98,-0.973,-0.965,-0.953,-0.939,-0.921,-0.898,-0.869,-0.834,-0.793,-0.743,-0.685,-0.619,-0.543,-0.459,-0.367],[-0.988,-0.983,-0.978,-0.97,-0.961,-0.948,-0.932,-0.912,-0.887,-0.855,-0.817,-0.771,-0.718,-0.655,-0.583,-0.502,-0.412,-0.315],[-0.986,-0.981,-0.975,-0.967,-0.956,-0.943,-0.925,-0.903,-0.875,-0.841,-0.799,-0.749,-0.691,-0.623,-0.546,-0.46,-0.365,-0.264],[-0.985,-0.979,-0.972,-0.963,-0.952,-0.937,-0.917,-0.893,-0.863,-0.825,-0.78,-0.726,-0.663,-0.59,-0.508,-0.417,-0.318,-0.212],[-0.983,-0.977,-0.969,-0.96,-0.947,-0.93,-0.909,-0.883,-0.85,-0.809,-0.76,-0.702,-0.634,-0.557,-0.469,-0.373,-0.27,-0.161]],[[-0.999,-0.999,-0.998,-0.997,-0.997,-0.996,-0.994,-0.992,-0.99,-0.987,-0.983,-0.979,-0.973,-0.965,-0.956,-0.945,-0.931,-0.914],[-0.999,-0.998,-0.998,-0.997,-0.996,-0.995,-0.993,-0.991,-0.988,-0.985,-0.98,-0.975,-0.968,-0.959,-0.948,-0.935,-0.919,-0.899],[-0.998,-0.998,-0.997,-0.996,-0.995,-0.994,-0.992,-0.989,-0.986,-0.982,-0.976,-0.97,-0.962,-0.951,-0.939,-0.923,-0.904,-0.882],[-0.998,-0.998,-0.997,-0.996,-0.994,-0.993,-0.99,-0.987,-0.983,-0.978,-0.972,-0.964,-0.955,-0.943,-0.928,-0.91,-0.888,-0.862],[-0.998,-0.997,-0.996,-0.995,-0.993,-0.991,-0.988,-0.985,-0.98,-0.974,-0.967,-0.958,-0.947,-0.933,-0.916,-0.895,-0.87,-0.84],[-0.998,-0.997,-0.996,-0.994,-0.992,-0.99,-0.986,-0.982,-0.977,-0.97,-0.961,-0.951,-0.938,-0.922,-0.902,-0.878,-0.849,-0.815],[-0.997,-0.996,-0.995,-0.993,-0.991,-0.988,-0.984,-0.979,-0.973,-0.965,-0.955,-0.943,-0.927,-0.909,-0.886,-0.859,-0.827,-0.788],[-0.997,-0.996,-0.994,-0.992,-0.989,-0.986,-0.981,-0.976,-0.968,-0.959,-0.948,-0.934,-0.916,-0.895,-0.869,-0.839,-0.802,-0.758],[-0.996,-0.995,-0.993,-0.991,-0.988,-0.984,-0.979,-0.972,-0.964,-0.953,-0.94,-0.924,-0.904,-0.88,-0.851,-0.816,-0.775,-0.726],[-0.996,-0.994,-0.992,-0.989,-0.986,-0.981,-0.975,-0.968,-0.958,-0.946,-0.931,-0.913,-0.89,-0.863,-0.83,-0.791,-0.745,-0.692],[-0.995,-0.993,-0.991,-0.988,-0.984,-0.979,-0.972,-0.963,-0.953,-0.939,-0.922,-0.901,-0.876,-0.845,-0.808,-0.765,-0.714,-0.655],[-0.994,-0.992,-0.99,-0.986,-0.982,-0.976,-0.968,-0.959,-0.946,-0.931,-0.912,-0.888,-0.86,-0.826,-0.785,-0.737,-0.681,-0.617],[-0.994,-0.991,-0.988,-0.985,-0.979,-0.973,-0.964,-0.953,-0.94,-0.923,-0.901,-0.875,-0.843,-0.805,-0.76,-0.708,-0.647,-0.577],[-0.993,-0.99,-0.987,-0.983,-0.977,-0.97,-0.96,-0.948,-0.933,-0.913,-0.89,-0.861,-0.826,-0.784,-0.734,-0.677,-0.61,-0.535],[-0.992,-0.989,-0.985,-0.981,-0.974,-0.966,-0.956,-0.942,-0.925,-0.904,-0.878,-0.846,-0.807,-0.761,-0.707,-0.644,-0.573,-0.492],[-0.991,-0.988,-0.984,-0.978,-0.971,-0.962,-0.951,-0.936,-0.917,-0.894,-0.865,-0.83,-0.788,-0.737,-0.679,-0.611,-0.534,-0.448],[-0.99,-0.986,-0.982,-0.976,-0.968,-0.958,-0.945,-0.929,-0.908,-0.883,-0.851,-0.813,-0.767,-0.712,-0.649,-0.576,-0.493,-0.403],[-0.989,-0.985,-0.98,-0.973,-0.965,-0.954,-0.94,-0.922,-0.899,-0.871,-0.837,-0.795,-0.745,-0.686,-0.618,-0.54,-0.452,-0.357]]],"body":[[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]],"mat":[[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],[[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]]}</script>
+<script>
+(function(){
+  const D = JSON.parse(document.getElementById('fielddata').textContent);
+  const N = D.n, F = D.field, B = D.body;
+  const STOPS = [[15,48,56],[28,84,98],[53,127,139],[127,174,172],[207,196,158],[223,163,68],[176,95,28]];
+  function ramp(t){
+    t = Math.max(0, Math.min(1, t));
+    const x = t * (STOPS.length - 1), i = Math.min(STOPS.length - 2, Math.floor(x)), f = x - i;
+    const a = STOPS[i], b = STOPS[i+1];
+    return 'rgb(' + Math.round(a[0]+(b[0]-a[0])*f) + ',' + Math.round(a[1]+(b[1]-a[1])*f) + ',' +
+                    Math.round(a[2]+(b[2]-a[2])*f) + ')';
+  }
+  // legend
+  (function(){
+    const r = document.getElementById('ramp');
+    let s = 'linear-gradient(to right';
+    for (let i=0;i<=10;i++) s += ',' + ramp(i/10);
+    r.style.background = s + ')';
+  })();
+
+  const cv = document.getElementById('slice'), cx = cv.getContext('2d');
+  const sv = document.getElementById('side'),  sx = sv.getContext('2d');
+  const elZ = document.getElementById('z'), elW = document.getElementById('wl');
+  const showField = {on:true}, showBody = {on:true};
+
+  function ink(){ return getComputedStyle(document.body).getPropertyValue('--line').trim() || '#000'; }
+
+  function countAbove(w){
+    let n = 0;
+    for (let z=0;z<N;z++) for (let y=0;y<N;y++) for (let x=0;x<N;x++) if (F[z][y][x] >= w) n++;
+    return n;
+  }
+  function draw(){
+    const w = parseFloat(elW.value), z = parseInt(elZ.value,10);
+    const cell = cv.width / N;
+    cx.clearRect(0,0,cv.width,cv.height);
+    let layer = 0;
+    for (let y=0;y<N;y++){
+      for (let x=0;x<N;x++){
+        const v = F[z][y][x], px = x*cell, py = (N-1-y)*cell;
+        if (showField.on){ cx.fillStyle = ramp((v+1)/2); cx.fillRect(px,py,cell+0.5,cell+0.5); }
+        else { cx.fillStyle = 'rgba(0,0,0,0)'; cx.fillRect(px,py,cell+0.5,cell+0.5); }
+        if (v >= w){
+          layer++;
+          if (showBody.on){
+            cx.fillStyle = showField.on ? 'rgba(255,255,255,0.16)' : ramp((v+1)/2);
+            cx.fillRect(px,py,cell+0.5,cell+0.5);
+            cx.strokeStyle = ink(); cx.lineWidth = 1.1;
+            cx.strokeRect(px+0.5,py+0.5,cell-1,cell-1);
+          }
+        }
+      }
+    }
+    // side elevation: for each (x,z) show whether ANY y in that column is above the line
+    const sc = sv.width / N;
+    sx.clearRect(0,0,sv.width,sv.height);
+    for (let z2=0; z2<N; z2++){
+      for (let x=0; x<N; x++){
+        let best = -1;
+        for (let y=0;y<N;y++) best = Math.max(best, F[z2][y][x]);
+        const px = x*sc, py = (N-1-z2)*sc;
+        sx.fillStyle = ramp((best+1)/2); sx.globalAlpha = 0.35;
+        sx.fillRect(px,py,sc+0.5,sc+0.5); sx.globalAlpha = 1;
+        if (best >= w){
+          sx.fillStyle = ramp((best+1)/2); sx.fillRect(px,py,sc+0.5,sc+0.5);
+          sx.strokeStyle = ink(); sx.lineWidth = 0.9;
+          sx.strokeRect(px+0.45,py+0.45,sc-0.9,sc-0.9);
+        }
+      }
+    }
+    // ground line
+    sx.strokeStyle = ink(); sx.lineWidth = 1.5;
+    sx.beginPath(); sx.moveTo(0, sv.height-0.75); sx.lineTo(sv.width, sv.height-0.75); sx.stroke();
+
+    document.getElementById('wlv').textContent = w.toFixed(3);
+    document.getElementById('zv').textContent  = z;
+    document.getElementById('zlab').textContent = z;
+    document.getElementById('rLayer').textContent = layer;
+    const tot = countAbove(w);
+    const rc = document.getElementById('rCount');
+    rc.textContent = tot;
+    rc.style.color = (tot === D.n_body) ? '' : 'var(--teal-2)';
+  }
+  elZ.addEventListener('input', draw);
+  elW.addEventListener('input', draw);
+  function toggle(btn, state){
+    btn.addEventListener('click', function(){
+      state.on = !state.on;
+      btn.setAttribute('aria-pressed', state.on ? 'true' : 'false');
+      draw();
+    });
+  }
+  toggle(document.getElementById('bField'), showField);
+  toggle(document.getElementById('bBody'),  showBody);
+  document.getElementById('bReset').addEventListener('click', function(){
+    elW.value = D.waterline; elZ.value = 9; draw();
+  });
+  document.getElementById('rGate').textContent = D.gate_pass;
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  if (mq.addEventListener) mq.addEventListener('change', draw);
+  draw();
+})();
+</script>

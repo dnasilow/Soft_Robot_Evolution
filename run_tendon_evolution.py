@@ -185,7 +185,8 @@ def _breed_child(parent_cppn1: CPPNGenome,
                  rng: np.random.Generator,
                  crossover_rate: float,
                  mutation_rate: float,
-                 freeze_body: bool = False) -> tuple[CPPNGenome, np.ndarray]:
+                 freeze_body: bool = False,
+                 phase_gain_init: float = None) -> tuple[CPPNGenome, np.ndarray]:
     """
     Produce a child CPPN + decoded grid.
     Falls back to parent 1 (unchanged) if child grid is invalid after 5 tries.
@@ -200,9 +201,10 @@ def _breed_child(parent_cppn1: CPPNGenome,
         from src.evolution.cppn_genome import _phase_innov
         child_cppn = parent_cppn1.copy()          # body genes + size gene untouched
         if getattr(child_cppn, 'phase_cppn', None) is None:
-            child_cppn.init_phase_cppn(rng)
+            child_cppn.init_phase_cppn(rng, gain=phase_gain_init)
         else:
             child_cppn.phase_cppn = child_cppn.phase_cppn.mutate(_phase_innov(), rate=mutation_rate)
+            child_cppn.phase_cppn.mutate_phase_gain(rng)  # no-op unless a gain was set
         grid = child_cppn.to_voxel_grid()         # identical body: same CPPN, same size gene
         if grid is None:
             grid = parent_cppn1.to_voxel_grid()
@@ -282,7 +284,36 @@ def _guard_overwrite(out, will_resume: bool, force: bool) -> None:
 # and were added on 2026-09-22, so an older beam checkpoint ran without the volumetric law.
 _PHYSICS_DEFAULTS = {'friction': None, 'early_term_threshold': None, 'early_term_fraction': None,
                      'body': 'springs', 'poisson': False, 'dt_rule': 'ours',
-                     'materials': 'evosoro', 'gravity': None, 'floor_contact': 'mujoco'}
+                     'materials': 'evosoro', 'gravity': None, 'floor_contact': 'mujoco',
+                     'phase_mode': 'offset', 'direction': 'forward', 'divide_by': 'body',
+                     'workspace_voxels': None}
+
+
+# What each --fitness mode does with the distance. The distance itself (direction and unit) is
+# set by --direction / --divide-by and printed on the banner's Score line.
+_FIT_DESC = {
+    "directed":   "distance x ground-fraction",
+    "forward":    "distance, NO ground penalty (Cheney-faithful)",
+    "efficiency": "distance x ground-fraction / actuation effort",
+    "stable":     "distance x ground-fraction, bounce-penalised",
+    "skip":       "distance x graded ground credit (full <=2x resting, 0 at 3.5x)",
+    "skipbl":     "distance x graded ground credit (full <=+0.5BL, 0 at +1.0BL)",
+    "musclecost": "distance x ground-fraction x (1 - muscle_fraction)",
+}
+
+
+def _score_unit(divide_by: str) -> str:
+    """Log label for scores: BL = the body's own lengths, W = fixed workspace widths."""
+    return 'W' if divide_by == 'workspace' else 'BL'
+
+
+def _score_desc(direction: str, divide_by: str, workspace_voxels) -> str:
+    """Banner text for what the score measures (--direction / --divide-by)."""
+    dist = ("3D COM displacement in ANY direction" if direction == 'any'
+            else "forward (+X) COM displacement")
+    unit = (f"per FIXED workspace width of {workspace_voxels} voxels [W] (Cheney 2013)"
+            if divide_by == 'workspace' else "per own body length [BL]")
+    return f"{dist}, {unit}"
 
 
 def _check_resume_physics(ck: dict, physics: dict) -> None:
@@ -510,6 +541,11 @@ def run_evolution(
     materials:       str   = "evosoro",   # beam only: evosoro | cheney2013 material stiffnesses
     gravity:         float = None,        # beam only: m/s^2 (None = the preset's own)
     floor_contact:   str   = "mujoco",   # beam only: mujoco | voxelyze penalty floor
+    phase_mode:      str   = "offset",   # beam only: control CPPN offsets vs replaces
+    phase_gain_init: float = None,       # initial control gain (None = full-range field)
+    direction:       str   = "forward",  # score distance: forward (+X) | any (3D, Cheney 2013)
+    divide_by:       str   = "body",     # score unit: own body length | fixed workspace width
+    workspace_voxels: int  = None,       # workspace width in voxels (the grid side)
 ):
     # Keep the machine awake for the whole run; release on any exit (normal or error).
     import atexit
@@ -544,7 +580,8 @@ def run_evolution(
     else:
         print(f"  Controller : OPEN-LOOP material-phase (A1, Cheney-faithful) — no CPG")
     print(f"  Encoding   : CPPN + NEAT crossover")
-    print(f"  Fitness    : forward (+X) distance in body-lengths × ground-fraction")
+    print(f"  Fitness    : {_FIT_DESC.get(fitness_mode, fitness_mode)}")
+    print(f"  Score      : {_score_desc(direction, divide_by, workspace_voxels)}")
     if use_age_pareto:
         print(f"  Selection  : Age-Fitness Pareto  (inject {n_inject}/gen)")
     else:
@@ -577,15 +614,23 @@ def run_evolution(
         materials            = materials,
         gravity              = gravity,
         floor_contact        = floor_contact,
+        phase_mode           = phase_mode,
+        direction            = direction,
+        divide_by            = divide_by,
+        workspace_voxels     = workspace_voxels,
     )
+    _u = _score_unit(divide_by)   # log label for scores (BL or W)
     # poisson/dt_rule are beam-only: leaving them out for springs keeps older springs
     # checkpoints resumable (the resume guard only compares the keys present here).
     physics = {'friction': friction, 'early_term_threshold': early_term_threshold,
                'early_term_fraction': early_term_fraction, 'body': body,
                'sim_time': sim_time, 'settle_time': settle_time,
                **({'poisson': poisson, 'dt_rule': dt_rule, 'materials': materials,
-                   'gravity': gravity, 'floor_contact': floor_contact}
-                  if body == 'beam' else {})}
+                   'gravity': gravity, 'floor_contact': floor_contact,
+                   'phase_mode': phase_mode}
+                  if body == 'beam' else {}),
+               'direction': direction, 'divide_by': divide_by,
+               **({'workspace_voxels': workspace_voxels} if divide_by == 'workspace' else {})}
 
     def _gp(cppn_list):
         """Per-robot gait provider (None list => legacy material gait). Per-voxel-phase
@@ -599,7 +644,7 @@ def run_evolution(
         if evolve_gait and c.to_gait_params() is None:
             c.init_gait(rng)
         if per_voxel_phase and getattr(c, 'phase_cppn', None) is None:
-            c.init_phase_cppn(rng)
+            c.init_phase_cppn(rng, gain=phase_gain_init)
         if evolve_size and getattr(c, 'size_gene', None) is None:
             c.init_size_gene(rng)
 
@@ -611,7 +656,7 @@ def run_evolution(
     test_genome = _tg if _tg is not None else create_connected_genome()
     try:
         test_fit = evaluator.evaluate_single(test_genome)
-        print(f"  Sanity check passed — fitness={test_fit:.4f}BL  "
+        print(f"  Sanity check passed — fitness={test_fit:.4f}{_u}  "
               f"voxels={int((test_genome != 0).sum())}")
     except Exception as e:
         print(f"  SANITY CHECK FAILED: {e}")
@@ -733,8 +778,8 @@ def run_evolution(
         spec_str  = f"  species={n_species}"
         age_str   = f"  max_age={int(np.max(ages))}" if use_age_pareto else ""
         print(f"Gen {gen+1:3d}/{generations}  "
-              f"best={gen_best:.4f}BL  mean={gen_mean:.4f}BL  "
-              f"worst={gen_wst:.4f}BL  [{elapsed:.1f}s]{age_str}{spec_str}{cppn_str}")
+              f"best={gen_best:.4f}{_u}  mean={gen_mean:.4f}{_u}  "
+              f"worst={gen_wst:.4f}{_u}  [{elapsed:.1f}s]{age_str}{spec_str}{cppn_str}")
 
         # ── Per-generation checkpoint (Ctrl+C safe after this) ─────
         with open('best_robot_tendon.pkl', 'wb') as f:
@@ -880,7 +925,8 @@ def run_evolution(
 
     # ── Save final results ──────────────────────────────────────────
     print("\n" + "=" * 70)
-    print(f"EVOLUTION COMPLETE — best fitness: {best_fitness:.4f} body-lengths (forward +X)")
+    print(f"EVOLUTION COMPLETE — best fitness: {best_fitness:.4f}{_u} "
+          f"({_score_desc(direction, divide_by, workspace_voxels)})")
     print("=" * 70)
 
     with open(out / 'best_robot.pkl', 'wb') as f:
@@ -958,6 +1004,11 @@ def run_map_elites(
     materials:       str   = "evosoro",   # beam only: evosoro | cheney2013 material stiffnesses
     gravity:         float = None,        # beam only: m/s^2 (None = the preset's own)
     floor_contact:   str   = "mujoco",   # beam only: mujoco | voxelyze penalty floor
+    phase_mode:      str   = "offset",   # beam only: control CPPN offsets vs replaces
+    phase_gain_init: float = None,       # initial control gain (None = full-range field)
+    direction:       str   = "forward",  # score distance: forward (+X) | any (3D, Cheney 2013)
+    divide_by:       str   = "body",     # score unit: own body length | fixed workspace width
+    workspace_voxels: int  = None,       # workspace width in voxels (the grid side)
 ):
     def _descs(grids, sim_descs):
         """Archive descriptors: simulated gait traits, or morphology traits from the grid."""
@@ -977,7 +1028,7 @@ def run_map_elites(
         if evolve_gait and c.to_gait_params() is None:
             c.init_gait(rng)
         if per_voxel_phase and getattr(c, 'phase_cppn', None) is None:
-            c.init_phase_cppn(rng)
+            c.init_phase_cppn(rng, gain=phase_gain_init)
         if evolve_size and getattr(c, 'size_gene', None) is None:
             c.init_size_gene(rng)
     """
@@ -1016,16 +1067,8 @@ def run_map_elites(
     print(f"  Batch/iter : {population_size}")
     print(f"  Iterations : {generations}")
     print(f"  Sim time   : {sim_time}s  +  {settle_time}s settle")
-    _fit_desc = {
-        "directed":   "forward (+X) body-lengths x ground-fraction",
-        "forward":    "forward (+X) body-lengths, NO ground penalty (Cheney-faithful)",
-        "efficiency": "forward BL x ground-fraction / actuation effort",
-        "stable":     "forward BL x ground-fraction, bounce-penalised",
-        "skip":       "forward BL x graded ground credit (full <=2x resting, 0 at 3.5x)",
-        "skipbl":     "forward BL x graded ground credit (full <=+0.5BL, 0 at +1.0BL)",
-        "musclecost": "forward BL x ground-fraction x (1 - muscle_fraction)",
-    }.get(fitness_mode, fitness_mode)
-    print(f"  Fitness    : {_fit_desc}")
+    print(f"  Fitness    : {_FIT_DESC.get(fitness_mode, fitness_mode)}")
+    print(f"  Score      : {_score_desc(direction, divide_by, workspace_voxels)}")
     _desc_label = ("elongation x fill-density (SHAPE)" if descriptors == "shape"
                    else "COM height x bounce")
     print(f"  Descriptors: {_desc_label}  ->  {archive_bins}x{archive_bins} = {n_cells} cells")
@@ -1053,15 +1096,23 @@ def run_map_elites(
         materials            = materials,
         gravity              = gravity,
         floor_contact        = floor_contact,
+        phase_mode           = phase_mode,
+        direction            = direction,
+        divide_by            = divide_by,
+        workspace_voxels     = workspace_voxels,
     )
+    _u = _score_unit(divide_by)   # log label for scores (BL or W)
     # poisson/dt_rule are beam-only: leaving them out for springs keeps older springs
     # checkpoints resumable (the resume guard only compares the keys present here).
     physics = {'friction': friction, 'early_term_threshold': early_term_threshold,
                'early_term_fraction': early_term_fraction, 'body': body,
                'sim_time': sim_time, 'settle_time': settle_time,
                **({'poisson': poisson, 'dt_rule': dt_rule, 'materials': materials,
-                   'gravity': gravity, 'floor_contact': floor_contact}
-                  if body == 'beam' else {})}
+                   'gravity': gravity, 'floor_contact': floor_contact,
+                   'phase_mode': phase_mode}
+                  if body == 'beam' else {}),
+               'direction': direction, 'divide_by': divide_by,
+               **({'workspace_voxels': workspace_voxels} if divide_by == 'workspace' else {})}
 
     archive = {}   # (i,j) -> {'cppn','genome','fitness','desc'}
 
@@ -1093,7 +1144,7 @@ def run_map_elites(
         H_LO, H_HI = ck.get('bounds_h', (H_LO, H_HI))
         B_LO, B_HI = ck.get('bounds_b', (B_LO, B_HI))
         print(f"\nResumed at iteration {start_gen + 1}/{generations}  "
-              f"(filled {len(archive)}/{n_cells}, best {best['fitness']:.4f}BL)")
+              f"(filled {len(archive)}/{n_cells}, best {best['fitness']:.4f}{_u})")
     else:
         # Auto-calibrate the archive bounds to the seed gait distribution (5th–95th
         # percentile + 25% margin) so the 16×16 grid spans the real gait space instead
@@ -1119,7 +1170,7 @@ def run_map_elites(
             fits, descs = evaluator.evaluate_batch(grids, with_descriptors=True,
                                                    gait_params=_gp(cppns))
             descs = _descs(grids, descs)
-            print(f"  Loaded {len(grids)} elites  (re-eval best {max(fits):.4f}BL)")
+            print(f"  Loaded {len(grids)} elites  (re-eval best {max(fits):.4f}{_u})")
         else:
             print(f"\nSeeding archive with {population_size} random robots...")
             cppns, grids = [], []
@@ -1159,8 +1210,8 @@ def run_map_elites(
                     'cppn': be['cppn'].copy(), 'desc': be['desc']}
 
         print(f"Iter {gen+1:3d}/{generations}  "
-              f"filled={coverage:3d}/{n_cells}  max={max_fit:.4f}BL  "
-              f"top10={top10:.4f}BL  QD={qd_score:7.2f}  [{elapsed:.1f}s]")
+              f"filled={coverage:3d}/{n_cells}  max={max_fit:.4f}{_u}  "
+              f"top10={top10:.4f}{_u}  QD={qd_score:7.2f}  [{elapsed:.1f}s]")
 
         with open(out / 'best_robot.pkl', 'wb') as f:
             pickle.dump({'genome': best['genome'], 'controller': None,
@@ -1215,6 +1266,7 @@ def run_map_elites(
                 e1['cppn'], e2['cppn'], e1['fitness'], e2['fitness'],
                 innov, rng, crossover_rate, mutation_rate,
                 freeze_body=freeze_body,
+                phase_gain_init=phase_gain_init,
             )
             new_cppns.append(child_cppn); new_grids.append(child_g)
 
@@ -1228,8 +1280,8 @@ def run_map_elites(
     # ── Save final archive ──────────────────────────────────────────────
     print("\n" + "=" * 70)
     _final10 = sorted((e['fitness'] for e in archive.values()), reverse=True)[:10]
-    print(f"MAP-ELITES COMPLETE — best {best['fitness']:.4f}BL  |  "
-          f"top10-mean {float(np.mean(_final10)) if _final10 else 0.0:.4f}BL  |  "
+    print(f"MAP-ELITES COMPLETE — best {best['fitness']:.4f}{_u}  |  "
+          f"top10-mean {float(np.mean(_final10)) if _final10 else 0.0:.4f}{_u}  |  "
           f"filled {len(archive)}/{n_cells} cells  |  QD-score {history['qd_score'][-1]:.2f}")
     print("=" * 70)
     with open(out / 'archive.pkl', 'wb') as f:
@@ -1405,6 +1457,20 @@ if __name__ == "__main__":
                              ".vxa files (10 MPa soft/muscle, 50 MPa hard - only 5x, not 100x), with "
                              "the FULL rescaling for our 10 mm lattice. The evosoro preset corrected "
                              "for density but not for lattice size, leaving bodies 200x too soft.")
+    parser.add_argument("--phase-gain-init", dest="phase_gain_init", type=float, default=None,
+                        help="With --per-voxel-phase: start every NEW control network with this "
+                             "evolvable gain on its phase field (log-normal mutation, bounded to "
+                             "[0.001, 1]). Default: none, i.e. a full-range random field, as before. "
+                             "For stage 2 on beam bodies use a small value such as 0.05 - a "
+                             "full-range random field wrecked the seeded bodies (1.62 -> 0.09 BL) "
+                             "before stage 2 could begin, while 0.05 keeps them intact.")
+    parser.add_argument("--phase-mode", dest="phase_mode", type=str, default="offset",
+                        choices=["offset", "replace"],
+                        help="--body beam with --per-voxel-phase/--evolve-gait. offset (default): "
+                             "the control CPPN ADDS to the material gait, so a near-zero network is "
+                             "the gait the body was evolved with and stage 2 searches outward from a "
+                             "working baseline. replace: overwrite it, as the tendon engine does - "
+                             "on beam bodies that scores 0.0000 for ANY field, leaving no gradient.")
     parser.add_argument("--floor-contact", dest="floor_contact", type=str, default="mujoco",
                         choices=["mujoco", "voxelyze"],
                         help="--body beam only. mujoco (default): MuJoCo's own soft contact, whose "
@@ -1416,17 +1482,42 @@ if __name__ == "__main__":
                         help="--body beam only. Gravity in m/s^2 (positive number). Default is the "
                              "preset's own: 9.81 for evosoro, 274.68 for cheney2013 (his 27.468 "
                              "rescaled to our lattice so the sag per voxel matches his).")
+    parser.add_argument("--direction", dest="direction", type=str, default="forward",
+                        choices=["forward", "any"],
+                        help="What distance the score counts. forward (default): the +X component of "
+                             "the centre-of-mass displacement (backward = 0). any: the length of the 3D "
+                             "displacement in any direction, as Cheney 2013 (Voxelyze FinalCOM_Dist).")
+    parser.add_argument("--divide-by", dest="divide_by", type=str, default="body",
+                        choices=["body", "workspace"],
+                        help="What the distance is divided by. body (default): the robot's own longest "
+                             "side -> body lengths (BL). workspace: a FIXED width of --grid-size voxels, "
+                             "as Cheney 2013 -> workspace widths (W); a robot shorter than the workspace "
+                             "no longer gets a workspace/length bonus. --early-term-bl is then in W.")
     args = parser.parse_args()
 
     # --body beam: only the material (Cheney) gait and the tendon-engine features it supports.
     if args.body == "beam":
-        _bad = [f for f, on in (("--flex", args.flex), ("--evolve-gait", args.evolve_gait),
-                                ("--per-voxel-phase", args.per_voxel_phase), ("--use-cpg", args.use_cpg),
-                                ("--freeze-body", args.freeze_body),
+        # --per-voxel-phase / --evolve-gait / --freeze-body became available for beam bodies on
+        # 2026-10-02 (the engine now takes a per-voxel phase field), which is what stage 2 of the
+        # two-stage protocol needs. --flex / --use-cpg / --fitness efficiency remain impossible:
+        # the beam body has no MuJoCo actuators and no tendons for a CPG to drive.
+        _bad = [f for f, on in (("--flex", args.flex), ("--use-cpg", args.use_cpg),
                                 ("--fitness efficiency", args.fitness == "efficiency")) if on]
         if _bad:
             raise SystemExit(f"ERROR: --body beam cannot be combined with {', '.join(_bad)} "
-                             f"(it uses the material gait and has no MuJoCo actuators)")
+                             f"(it uses volumetric muscles and has no MuJoCo actuators)")
+        if args.per_voxel_phase or args.evolve_gait:
+            _what = ('per-voxel evolvable phase (control CPPN)' if args.per_voxel_phase
+                     else 'evolved traveling wave (4 genes)')
+            _how = ('ADDS to the material gait (near-zero network = the material gait)'
+                    if args.phase_mode == 'offset' else 'REPLACES the material 2-phase gait')
+            print(f"  Gait       : {_what}")
+            print(f"               {_how}")
+        if args.freeze_body:
+            print("  Stage 2    : --freeze-body - morphology held fixed, only control mutates")
+        if args.phase_gain_init is not None:
+            print(f"  Ctrl gain  : new control nets start at gain {args.phase_gain_init:g} "
+                  f"(evolvable, bounded 0.001-1)")
         print(f"  Body       : beam (Voxelyze Euler-Bernoulli bonds, Cheney materials, "
               f"volumetric muscles +/-{args.amp:.0%}, per-robot time step)")
         print(f"  Volumetric : Poisson coupling {args.poisson} (nu = 0.35)   |   "
@@ -1470,6 +1561,9 @@ if __name__ == "__main__":
         raise SystemExit("ERROR: --early-term-bl must be >= 0")
     if args.early_term_frac is not None and not 0 < args.early_term_frac <= 1:
         raise SystemExit("ERROR: --early-term-frac must be in (0, 1]")
+    if args.flex and (args.direction != "forward" or args.divide_by != "body"):
+        raise SystemExit("ERROR: --direction / --divide-by apply to the springs and beam bodies, "
+                         "not --flex (it has its own fitness code)")
     if friction is not None:
         print("  Floor      : " + (f"friction {friction['mu']}" if friction['mode'] == 'single' else
               f"stick-slip  static {friction['mu_s']} / kinetic {friction['mu_k']}  "
@@ -1477,7 +1571,8 @@ if __name__ == "__main__":
     if args.early_term_bl is not None or args.early_term_frac is not None:
         _et_bl   = 0.05 if args.early_term_bl is None else args.early_term_bl
         _et_frac = 0.2 if args.early_term_frac is None else args.early_term_frac
-        print(f"  Early term : {_et_bl} BL by {_et_frac:.0%} of the window "
+        print(f"  Early term : {_et_bl} {_score_unit(args.divide_by)}"
+              f"{' in any direction' if args.direction == 'any' else ''} by {_et_frac:.0%} of the window "
               f"({_et_frac * args.sim_time * args.freq:g} of {args.sim_time * args.freq:g} cycles)")
     wave_phase_n = args.gait_wavenum if args.gait == "wave" else None
     # Apply stiff-material decode bias + voxel cap globally (read by CPPNGenome.to_voxel_grid
@@ -1541,6 +1636,11 @@ if __name__ == "__main__":
             materials            = args.materials,
             gravity              = args.gravity,
             floor_contact        = args.floor_contact,
+            phase_mode           = args.phase_mode,
+            phase_gain_init      = args.phase_gain_init,
+            direction            = args.direction,
+            divide_by            = args.divide_by,
+            workspace_voxels     = _side,
         )
     else:
         run_evolution(
@@ -1579,4 +1679,9 @@ if __name__ == "__main__":
             materials            = args.materials,
             gravity              = args.gravity,
             floor_contact        = args.floor_contact,
+            phase_mode           = args.phase_mode,
+            phase_gain_init      = args.phase_gain_init,
+            direction            = args.direction,
+            divide_by            = args.divide_by,
+            workspace_voxels     = _side,
         )

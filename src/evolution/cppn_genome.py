@@ -237,12 +237,26 @@ class CPPNGenome:
                            MIN_VOXELS_PER_ROBOT, MAX_VOXELS_PER_ROBOT))
 
     # ── Per-voxel evolvable phase (control CPPN) ───────────────────────────
-    def init_phase_cppn(self, rng: np.random.Generator) -> None:
+    def init_phase_cppn(self, rng: np.random.Generator, gain: Optional[float] = None) -> None:
         """Seed a random co-evolving control CPPN (call on the initial population when
         --per-voxel-phase is on). Uses a separate innovation counter so its gene IDs
-        never collide with the body CPPN's."""
+        never collide with the body CPPN's.
+
+        gain (--phase-gain-init): an evolvable multiplier on the control field. None keeps the
+        original behaviour (a full-range field). A small value makes a fresh network start as a
+        small perturbation of the body's existing gait - needed for stage 2 on beam bodies, where
+        a full-range random field destroyed the seeded bodies (1.62 -> 0.09 BL)."""
         seed = int(rng.integers(2**31))
         self.phase_cppn = CPPNGenome(_phase_innov(), np.random.default_rng(seed))
+        self.phase_cppn.phase_gain = None if gain is None else float(gain)
+
+    def mutate_phase_gain(self, rng: np.random.Generator, sigma: float = 0.3,
+                          lo: float = 1e-3, hi: float = 1.0) -> None:
+        """Log-normal step on this control CPPN's gain, if it has one. Multiplicative, so a gain
+        that starts small can still grow to the full range over generations."""
+        g = getattr(self, 'phase_gain', None)
+        if g is not None:
+            self.phase_gain = float(np.clip(g * np.exp(rng.normal(0.0, sigma)), lo, hi))
 
     def has_phase_cppn(self) -> bool:
         return getattr(self, 'phase_cppn', None) is not None
@@ -458,6 +472,7 @@ class CPPNGenome:
         # phase_cppn is None, so mutate() does not recurse. Uses the phase innovation counter.
         if getattr(child, 'phase_cppn', None) is not None:
             child.phase_cppn = child.phase_cppn.mutate(_phase_innov(), rate=rate)
+            child.phase_cppn.mutate_phase_gain(rng)      # no-op unless a gain was set
 
         return child
 
@@ -621,6 +636,9 @@ class CPPNGenome:
         _pc = getattr(self, 'phase_cppn', None)
         child.phase_cppn  = None if _pc is None else _pc._clone()
         child.size_gene   = getattr(self, 'size_gene', None)
+        # Control-gain gene of a control (phase) CPPN. _clone copies an EXPLICIT list of
+        # attributes, so anything not named here is silently dropped on every copy/mutation.
+        child.phase_gain  = getattr(self, 'phase_gain', None)
         return child
 
     def copy(self) -> 'CPPNGenome':
