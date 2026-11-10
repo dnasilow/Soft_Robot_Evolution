@@ -30,9 +30,9 @@ class OptimizedCUDAPhysicsEngine:
             print(f"GPU Memory: {mem_info[1] / 1e9:.1f} GB total, {mem_info[0] / 1e9:.1f} GB free")
             print(f"Default timestep: {default_timestep} s")
             if SPARSE_AVAILABLE:
-                print("✓ CuPy sparse matrices available (fastest force distribution)")
+                print("[OK] CuPy sparse matrices available (fastest force distribution)")
             else:
-                print("! Using fallback force distribution (still fast)")
+                print("[WARN] Using fallback force distribution (still fast)")
             OptimizedCUDAPhysicsEngine._gpu_info_printed = True
         
         # GPU memory - preallocate everything
@@ -45,6 +45,7 @@ class OptimizedCUDAPhysicsEngine:
         self.d_spring_node1 = cp.zeros(max_springs, dtype=cp.int32)
         self.d_spring_node2 = cp.zeros(max_springs, dtype=cp.int32)
         self.d_rest_lengths = cp.zeros(max_springs, dtype=cp.float32)
+        self.d_original_rest_lengths = cp.zeros(max_springs, dtype=cp.float32)  # Backup for actuation
         self.d_stiffnesses = cp.zeros(max_springs, dtype=cp.float32)
         self.d_damping = cp.zeros(max_springs, dtype=cp.float32)
         
@@ -76,6 +77,10 @@ class OptimizedCUDAPhysicsEngine:
         self.num_actuators = 0
         self.force_distribution_matrix = None
 
+        # FIXED: Ensure GPU operations complete before returning
+        # Prevents race conditions in batch evaluation
+        cp.cuda.Stream.null.synchronize()
+
     def add_robot(self, robot):
         """Add robot with optimized data structures"""
         nodes = robot.get_nodes()
@@ -94,7 +99,9 @@ class OptimizedCUDAPhysicsEngine:
         spring_indices = springs['indices'] + self.num_nodes
         self.d_spring_node1[self.num_springs:self.num_springs+s] = cp.asarray(spring_indices[:, 0], dtype=cp.int32)
         self.d_spring_node2[self.num_springs:self.num_springs+s] = cp.asarray(spring_indices[:, 1], dtype=cp.int32)
-        self.d_rest_lengths[self.num_springs:self.num_springs+s] = cp.asarray(springs['rest_length'], dtype=cp.float32)
+        rest_lengths = cp.asarray(springs['rest_length'], dtype=cp.float32)
+        self.d_rest_lengths[self.num_springs:self.num_springs+s] = rest_lengths
+        self.d_original_rest_lengths[self.num_springs:self.num_springs+s] = rest_lengths  # Backup for actuation
         self.d_stiffnesses[self.num_springs:self.num_springs+s] = cp.asarray(springs['stiffness'], dtype=cp.float32)
         self.d_damping[self.num_springs:self.num_springs+s] = cp.asarray(springs['damping'], dtype=cp.float32)
         
@@ -186,27 +193,39 @@ class OptimizedCUDAPhysicsEngine:
             
             # Unit displacement vectors
             unit_displacement = displacement / safe_lengths[:, cp.newaxis]  # (num_springs, 3)
-            
-            # Spring force magnitudes
-            extensions = lengths - self.d_rest_lengths[:self.num_springs]
+
+            # CRITICAL FIX: Spring force direction was inverted!
+            # Correct physics: F = k * (rest_length - current_length)
+            # - If rest > current (compressed): F > 0, pushes nodes apart (expands)
+            # - If rest < current (stretched): F < 0, pulls nodes together (contracts)
+            # Previous code had: F = k * (current - rest) which is backwards!
+            extensions = self.d_rest_lengths[:self.num_springs] - lengths  # FLIPPED SIGN
+
+            # ADDED: Clamp spring extensions to prevent explosions (2024-12-19)
+            # Limit maximum stretch to 1.2× rest length (20%), compression to 0.2× rest length (80%)
+            rest_lengths_safe = self.d_rest_lengths[:self.num_springs]
+            max_extension = rest_lengths_safe * 0.8  # Allow 80% compression
+            min_extension = -rest_lengths_safe * 0.2  # Allow 20% stretch (1.2× total length)
+            extensions = cp.clip(extensions, min_extension, max_extension)
+
             spring_forces = self.d_stiffnesses[:self.num_springs] * extensions  # (num_springs,)
             
-            # Damping forces
+            # Damping forces (simple velocity-proportional damping)
             vel1 = self.d_velocities[self.d_spring_node1[:self.num_springs]]
             vel2 = self.d_velocities[self.d_spring_node2[:self.num_springs]]
             relative_vel = vel2 - vel1  # (num_springs, 3)
-            
+
             # Project relative velocity onto displacement direction
             vel_projections = cp.sum(relative_vel * unit_displacement, axis=1)  # (num_springs,)
             damping_forces = self.d_damping[:self.num_springs] * vel_projections
             
             # Total force magnitudes
             total_forces = spring_forces + damping_forces  # (num_springs,)
-            
-            # Limit forces to prevent instability
-            max_force = 55.0
-            total_forces = cp.clip(total_forces, -max_force, max_force)
-            
+
+            # FIXED: Removed restrictive 55N force limit - now using unified 5000N limit
+            # in integrate_positions_vectorized() which allows realistic spring forces
+            # for robots with mass up to ~500 kg (gravity + spring compression forces)
+
             # Force vectors (springs push/pull along their direction)
             force_vectors = unit_displacement * total_forces[:, cp.newaxis]  # (num_springs, 3)
             
@@ -250,17 +269,18 @@ class OptimizedCUDAPhysicsEngine:
         """Vectorized actuator force application"""
         if self.num_actuators == 0:
             return
-            
+
         # Get all actuator data at once
         spring_ids = self.d_actuator_spring_ids[:self.num_actuators]
         phases = self.d_actuator_phases[:self.num_actuators]
         signals = self.d_actuator_signals[:self.num_actuators]
-        
+
         # Vectorized sinusoidal actuation
         actuation = cp.sin(self.time * 2 * cp.pi * self.actuation_frequency + phases) * signals
-        
+
+        # FIXED: Use original rest lengths to prevent compounding actuation bug
         # Modify rest lengths (±20% actuation as per Lipson)
-        original_lengths = self.d_rest_lengths[spring_ids]
+        original_lengths = self.d_original_rest_lengths[spring_ids]
         self.d_rest_lengths[spring_ids] = original_lengths * (1.0 + 0.2 * actuation)
 
     def integrate_positions_vectorized(self, dt):
@@ -280,29 +300,47 @@ class OptimizedCUDAPhysicsEngine:
             scale_factors = 5000.0 / (force_magnitudes + 1e-6)
             self.d_forces[active_slice][force_limit_mask] *= scale_factors[force_limit_mask, cp.newaxis]
         
-        # Update velocities with LESS DAMPING
+        # EXPLICIT EULER: Simple and stable
+        # Compute acceleration from forces
         accelerations = self.d_forces[active_slice] / self.d_masses[active_slice, cp.newaxis]
-        self.d_velocities[active_slice] = self.d_velocities[active_slice] * 0.999 + accelerations * dt  
-        
-        # RELAXED VELOCITY LIMITING
+
+        # Update velocity with damping
+        damping_coefficient = 15.0  # s^-1 (high damping for stability)
+        self.d_velocities[active_slice] += accelerations * dt
+        self.d_velocities[active_slice] *= cp.exp(-damping_coefficient * dt)  # Exponential damping
+
+        # FIXED: Increased velocity limiting for realistic dynamics
+        # Typical terminal velocity for soft robots ~34 m/s, allowing 100 m/s for safety
+        # and fast actuation dynamics without numerical instability
         vel_magnitudes = cp.linalg.norm(self.d_velocities[active_slice], axis=1)
-        vel_limit_mask = vel_magnitudes > 50.0  # Increased from 10 m/s to 20 m/s
+        vel_limit_mask = vel_magnitudes > 100.0  # Increased from 50 m/s to 100 m/s
         if cp.any(vel_limit_mask):
-            scale_factors = 50.0 / (vel_magnitudes + 1e-6)
+            scale_factors = 100.0 / (vel_magnitudes + 1e-6)
             self.d_velocities[active_slice][vel_limit_mask] *= scale_factors[vel_limit_mask, cp.newaxis]
-        
-        # Update positions (unchanged)
+
+        # Update positions
         self.d_positions[active_slice] += self.d_velocities[active_slice] * dt
-        
-        # Ground collision (unchanged)
-        below_ground = self.d_positions[active_slice, 1] < 0.0
-        self.d_positions[active_slice, 1] = cp.maximum(self.d_positions[active_slice, 1], 0.0)
-        
+
+        # SIMPLIFIED: Hard ground contact with position clamping and velocity damping
+        # Previous spring-based approach caused instability
+        ground_level = 0.0
+        below_ground = self.d_positions[active_slice, 1] < ground_level
+
         if cp.any(below_ground):
-            self.d_velocities[active_slice, 1][below_ground] *= -0.3  # Bounce
-            self.d_velocities[active_slice, 0][below_ground] *= 0.8   # Friction
-            self.d_velocities[active_slice, 2][below_ground] *= 0.8   # Friction
-        
+            # Clamp positions to ground
+            self.d_positions[active_slice, 1][below_ground] = ground_level
+
+            # Kill downward velocity with strong damping
+            self.d_velocities[active_slice, 1][below_ground] = cp.maximum(
+                self.d_velocities[active_slice, 1][below_ground] * 0.1,  # 90% velocity loss
+                0.0  # Don't allow negative (downward) velocity
+            )
+
+            # Apply horizontal friction
+            friction_coefficient = 0.5
+            self.d_velocities[active_slice, 0][below_ground] *= (1.0 - friction_coefficient)
+            self.d_velocities[active_slice, 2][below_ground] *= (1.0 - friction_coefficient)
+
         # Clear forces
         self.d_forces[active_slice] = 0.0    
 
@@ -310,16 +348,27 @@ class OptimizedCUDAPhysicsEngine:
         """Optimized physics step - should be 10-50x faster"""
         if dt is None:
             dt = self.default_timestep
-        
+
+        # CRITICAL FIX: Apply actuation BEFORE computing forces
+        # Previous bug: Actuation modified rest lengths AFTER forces were computed
+        # This caused 1-timestep lag and energy pumping instability
+        self.apply_actuator_forces_vectorized()
+
         # Clear forces
         self.d_forces[:self.num_nodes] = 0.0
-        
-        # Vectorized computations
+
+        # Compute spring forces using updated rest lengths
         self.compute_spring_forces_vectorized()
-        self.apply_actuator_forces_vectorized()
+
+        # Integrate positions
         self.integrate_positions_vectorized(dt)
-        
+
         self.time += dt
+
+        # FIXED: Synchronize after critical physics operations
+        # Ensures GPU computations complete before CPU accesses data
+        if self.num_nodes > 0:
+            cp.cuda.Stream.null.synchronize()
     
     def get_positions(self):
         """Get positions (minimize CPU-GPU transfer)"""
