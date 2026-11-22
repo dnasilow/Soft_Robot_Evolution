@@ -88,12 +88,44 @@ At generation 10 the ratio of medians is 1.14 with a bootstrapped 95% interval o
 
 Cost: with 12 runs side by side, a generation took a median of 91 seconds (121 in the slowest run), so 1000 generations is at least 25 to 34 hours per run, and more once bodies grow.
 
+## 6. Running an arm of the campaign
+
+`start_arm.py` starts the 35 runs of arm R or Rc of [PROTOCOL.md](../PROTOCOL.md) and looks after them. From the project folder:
+
+```
+python paper\reference_2013\start_arm.py --arm R                        start it
+python paper\reference_2013\start_arm.py --arm R --status               where every run is; starts nothing
+python paper\reference_2013\start_arm.py --arm R --restart-incomplete   after an interruption
+```
+
+- **It opens a console window of its own**, through the Windows shell, so the campaign does not depend on the program the command was typed in. That window is the campaign: the runs live in a WSL session that it holds open. Closing the window, logging off, restarting Windows or shutting WSL down (`wsl --shutdown`) stops them. One Ctrl+C is ignored with a warning; two within five seconds stop the runs.
+- **It keeps Windows awake** for as long as it runs, with the keep-awake of `run_tendon_evolution.py`.
+- **It starts the runs through `run_2013_search.sh`**, all 35 side by side, one core each. Finished runs are skipped, runs in progress are never touched, and a second launcher for the same arm is refused.
+- **Every ten minutes** it copies the learning curves to `results/rerun2013/` and prints generations and time. It does not print scores.
+- **At the end** it checks that every seed finished with 1000 generations and prints the comparison with the deposited runs. For each finished run `results/rerun2013/<run>/` then holds the learning curve, the robots of every recorded generation (the settings record the whole population every tenth generation), the genomes of the champions and of the final population as the program saved them, and the program's log.
+- **Each launch is recorded** in `results/rerun2013/<arm>_launches.json`: time, command, code version, and the checksums of the two programs, their libraries and the settings file. A launch on a different build is refused. The protocol must be frozen before an arm starts.
+
+**After an interruption** the unfinished runs cannot be continued. `--restart-incomplete` moves their folders to `runs/_interrupted/` on the WSL side and starts those seeds again from the beginning. That repeats the lost run instead of replacing it, because the program gives the same run for the same seed. Checked on 21 November:
+
+| Check | Result |
+|---|---|
+| Seeds 1 to 3 for ten generations, three runs side by side (`det_P0_s1` to `s3`), against the same seeds in the pilot, twelve side by side | Every score identical in all ten generations |
+| Seeds 1 and 2 cut short and started again, once by killing the launcher (`dryB`), once by Ctrl+C twice (`dryC`) | The same scores as the pilot, to the last digit |
+| Both programs rebuilt from the scripts in this folder | Byte for byte the programs the pilot ran with (SHA-256 of the two programs and three libraries) |
+
+Run alone, a run takes about 55 seconds per generation at the start.
+
+`build_2013_simulator.sh` used to clear the whole reference folder, which also holds the run folders. It now replaces only the simulator's own folder, and both build scripts refuse to run while runs are in progress.
+
+`--seeds`, `--gens` and `--tag` are for trials of the launcher. They need a tag of their own, so a trial cannot be written into an arm.
+
 ## Files
 
 | File | Purpose |
 |---|---|
 | `build_2013_search.sh`, `compat_2013_search.h`, `patches_2013_search/` | Build the original search program |
-| `run_2013_search.sh`, `collect_2013_runs.sh`, `summarise_reruns.py` | Re-run the original experiment and compare it with the deposit |
+| `start_arm.py` | Starts and looks after a whole arm of the campaign (section 6) |
+| `run_2013_search.sh`, `collect_2013_runs.sh`, `stop_2013_runs.sh`, `summarise_reruns.py` | Re-run the original experiment, copy out and stop its runs, and compare it with the deposit |
 | `make_template.py` | Writes the settings template from a deposited robot file, after checking the files agree |
 | `build_2013_simulator.sh` | Builds the simulator in WSL from `research_reference/repositories/softbots2013Code.tgz` |
 | `replay_in_2013_simulator.sh` | Runs a folder of robot files in it, in parallel, and writes a CSV |
