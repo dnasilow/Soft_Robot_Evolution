@@ -144,6 +144,8 @@ class MuJoCoTendonEvaluator:
         divide_by:           str   = "body",       # score unit: own body length | fixed workspace
         workspace_voxels:    int   = None,         # workspace width in voxels (divide_by='workspace')
         global_damping:      float = None,         # beam only: global damping ratio (None = 0.01)
+        penalty:             str   = "none",       # 2013 cost condition: none|voxels|actuated|connections
+        penalty_exp:         float = 1.0,          # exponent of that penalty
     ):
         self.simulation_time   = simulation_time
         self.settle_time       = settle_time
@@ -183,6 +185,15 @@ class MuJoCoTendonEvaluator:
             'workspace_voxels':    workspace_voxels,
             'global_damping':      global_damping,
         }
+        # 2013 cost conditions: fitness * (1 - (count / maximum) ** exponent), applied to whatever
+        # the engine returned (see src/evolution/cheney2013.py). 'none' leaves fitness untouched.
+        from src.evolution import cheney2013 as _c13
+        if penalty not in _c13.PENALTIES:
+            raise ValueError(f"penalty must be one of {_c13.PENALTIES}, got {penalty!r}")
+        if penalty != 'none' and workspace_voxels is None:
+            raise ValueError("a penalty needs workspace_voxels (the side of the workspace)")
+        self.penalty, self.penalty_exp = penalty, float(penalty_exp)
+        self._workspace_voxels = workspace_voxels
 
         # Sequential engine — used when n_workers==1 and by evaluate_single
         self.engine = _make_engine(self._params)
@@ -225,8 +236,8 @@ class MuJoCoTendonEvaluator:
             if with_descriptors:
                 fits  = np.array([r[0] for r in results], dtype=float)
                 descs = [r[1] for r in results]
-                return fits, descs
-            return np.array(results, dtype=float)
+                return self._penalise(genomes, fits), descs
+            return self._penalise(genomes, np.array(results, dtype=float))
 
         # ── Sequential path ────────────────────────────────────────────
         fitnesses, descs = [], []
@@ -261,8 +272,18 @@ class MuJoCoTendonEvaluator:
                 fitnesses.append(0.0); descs.append((0.0, 0.0))
 
         if with_descriptors:
-            return np.array(fitnesses, dtype=float), descs
-        return np.array(fitnesses, dtype=float)
+            return self._penalise(genomes, np.array(fitnesses, dtype=float)), descs
+        return self._penalise(genomes, np.array(fitnesses, dtype=float))
+
+    def _penalise(self, genomes, fits: np.ndarray) -> np.ndarray:
+        """Apply the 2013 cost penalty, if one was asked for, to a batch of fitness values."""
+        if self.penalty == 'none':
+            return fits
+        from src.evolution import cheney2013 as c13
+        n = self._workspace_voxels
+        return np.array([f * c13.penalty_factor(c13.workspace_grid(g, n), self.penalty,
+                                                self.penalty_exp, n)
+                         for f, g in zip(fits, genomes)], dtype=float)
 
     # ------------------------------------------------------------------
     def evaluate_single(self, genome: np.ndarray, controller=None) -> float:

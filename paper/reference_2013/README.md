@@ -45,10 +45,24 @@ With the recorded scores now confirmed, the transplant test of 18 November (`../
 
 Transfer is not symmetric. Bodies evolved under heavy damping move slowly and survive the move to the 2013 physics; bodies evolved under the 2013 physics rely on lightly damped dynamics that the heavier damping removes.
 
+## 4. Evolving in the 2013 simulator
+
+Since 21 November the evolution script can use the 2013 simulator as its evaluator:
+
+```
+python run_tendon_evolution.py --simulator voxelyze2013 --no-age-pareto --pop 30 --gen 1000 --seed 1 --name <new name>
+```
+
+- `src/evolution/voxelyze2013_evaluator.py` writes each body into the 2013 settings template, runs the simulator (inside WSL on Windows) and reads back the distance. It gives exactly the scores of the reference replay above, caches results by body (the simulator is deterministic, and the 2013 code cached the same way), and has the same interface as the MuJoCo evaluator.
+- `src/evolution/voxelyze2013_template.vxa` is that template, produced by `make_template.py`. The 300 deposited robot files it was checked against are identical apart from the body and the name of the result file, in both conditions, so one template is the simulation settings of the whole experiment.
+- `src/evolution/cheney2013.py` holds the rules read from the 2013 source: how a body is written, the score, what happens to missing, NaN and absurd results, the "fewer than 2 voxels is not simulated" rule, and the cost penalties. `--penalty actuated` reproduces the adjusted-to-original score ratio of the deposited cost-condition robots.
+- With this simulator the physics options of the script are refused rather than ignored, because they could not take effect.
+
 ## Files
 
 | File | Purpose |
 |---|---|
+| `make_template.py` | Writes the settings template from a deposited robot file, after checking the files agree |
 | `build_2013_simulator.sh` | Builds the simulator in WSL from `research_reference/repositories/softbots2013Code.tgz` |
 | `replay_in_2013_simulator.sh` | Runs a folder of robot files in it, in parallel, and writes a CSV |
 | `analyse_replay_2013.py` | Table 1 above |

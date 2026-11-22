@@ -286,7 +286,8 @@ _PHYSICS_DEFAULTS = {'friction': None, 'early_term_threshold': None, 'early_term
                      'body': 'springs', 'poisson': False, 'dt_rule': 'ours',
                      'materials': 'evosoro', 'gravity': None, 'floor_contact': 'mujoco',
                      'phase_mode': 'offset', 'direction': 'forward', 'divide_by': 'body',
-                     'workspace_voxels': None, 'global_damping': None}
+                     'workspace_voxels': None, 'global_damping': None,
+                     'simulator': 'mujoco', 'penalty': 'none', 'penalty_exp': 1.0}
 
 # --preset: named sets of options. Each entry is (argparse dest, value); an option given
 # explicitly on the command line always wins over the preset.
@@ -326,6 +327,32 @@ def _apply_preset(args, given: set) -> list:
         setattr(args, dest, value)
         applied.append((dest, value))
     return applied
+
+
+def _swap_in_simulator(evaluator, simulator, n_workers, workspace_voxels, penalty, penalty_exp):
+    """--simulator voxelyze2013: evaluate in the ORIGINAL 2013 simulator instead of MuJoCo. Its
+    gravity, stiffness, damping, friction, actuation and duration are fixed by the 2013 settings
+    template, so none of this script's physics options apply to it."""
+    if simulator == 'mujoco':
+        return evaluator
+    if simulator != 'voxelyze2013':
+        raise ValueError(f"simulator must be 'mujoco' or 'voxelyze2013', got {simulator!r}")
+    evaluator.close()
+    from src.evolution.voxelyze2013_evaluator import Voxelyze2013Evaluator
+    return Voxelyze2013Evaluator(n_workers=n_workers, workspace_voxels=workspace_voxels,
+                                 penalty=penalty, penalty_exp=penalty_exp)
+
+
+# With --simulator voxelyze2013 these options are fixed by the 2013 experiment. Giving one of
+# them a different value is an error; the values are set so that the banner, the log labels and
+# the manifest say what actually ran.
+_VX2013_FIXED = {'sim_time': 0.25, 'settle': 0.0, 'freq': 40.0, 'amp': 0.14, 'direction': 'any',
+                 'divide_by': 'workspace', 'fitness': 'forward', 'grid_size': 10}
+# ... and these configure the MuJoCo engine only, so giving them at all is an error.
+_VX2013_NO_EFFECT = ('body', 'materials', 'floor_contact', 'friction', 'friction_static',
+                     'friction_kinetic', 'slip_speed', 'stick_speed', 'poisson', 'dt_rule',
+                     'gravity', 'damping_global', 'early_term_bl', 'early_term_frac', 'phase_mode',
+                     'phase_gain_init', 'preset', 'gait', 'gait_wavenum')
 
 
 def _git_state():
@@ -617,6 +644,9 @@ def run_evolution(
     divide_by:       str   = "body",     # score unit: own body length | fixed workspace width
     workspace_voxels: int  = None,       # workspace width in voxels (the grid side)
     global_damping:  float = None,       # beam only: global damping ratio (None = 0.01)
+    simulator:       str   = "mujoco",   # mujoco | voxelyze2013 (the original 2013 simulator)
+    penalty:         str   = "none",     # 2013 cost condition: none|voxels|actuated|connections
+    penalty_exp:     float = 1.0,        # exponent of that penalty
 ):
     # Keep the machine awake for the whole run; release on any exit (normal or error).
     import atexit
@@ -653,6 +683,12 @@ def run_evolution(
     print(f"  Encoding   : CPPN + NEAT crossover")
     print(f"  Fitness    : {_FIT_DESC.get(fitness_mode, fitness_mode)}")
     print(f"  Score      : {_score_desc(direction, divide_by, workspace_voxels)}")
+    if simulator != 'mujoco':
+        print("  Simulator  : the ORIGINAL 2013 simulator (Voxel_Sim_NoGui). Gravity, stiffness,\n"
+              "               damping, friction, actuation and duration are its own 2013 settings.")
+    if penalty != 'none':
+        print(f"  Penalty    : fitness x (1 - ({penalty} / maximum)^{penalty_exp:g})   "
+              f"(2013 cost condition)")
     if use_age_pareto:
         print(f"  Selection  : Age-Fitness Pareto  (inject {n_inject}/gen)")
     else:
@@ -690,7 +726,11 @@ def run_evolution(
         divide_by            = divide_by,
         workspace_voxels     = workspace_voxels,
         global_damping       = global_damping,
+        penalty              = penalty,
+        penalty_exp          = penalty_exp,
     )
+    evaluator = _swap_in_simulator(evaluator, simulator, n_workers, workspace_voxels,
+                                   penalty, penalty_exp)
     _u = _score_unit(divide_by)   # log label for scores (BL or W)
     # poisson/dt_rule are beam-only: leaving them out for springs keeps older springs
     # checkpoints resumable (the resume guard only compares the keys present here).
@@ -702,7 +742,8 @@ def run_evolution(
                    'phase_mode': phase_mode, 'global_damping': global_damping}
                   if body == 'beam' else {}),
                'direction': direction, 'divide_by': divide_by,
-               **({'workspace_voxels': workspace_voxels} if divide_by == 'workspace' else {})}
+               **({'workspace_voxels': workspace_voxels} if divide_by == 'workspace' else {}),
+               'simulator': simulator, 'penalty': penalty, 'penalty_exp': penalty_exp}
 
     def _gp(cppn_list):
         """Per-robot gait provider (None list => legacy material gait). Per-voxel-phase
@@ -1083,6 +1124,9 @@ def run_map_elites(
     divide_by:       str   = "body",     # score unit: own body length | fixed workspace width
     workspace_voxels: int  = None,       # workspace width in voxels (the grid side)
     global_damping:  float = None,       # beam only: global damping ratio (None = 0.01)
+    simulator:       str   = "mujoco",   # mujoco | voxelyze2013 (the original 2013 simulator)
+    penalty:         str   = "none",     # 2013 cost condition: none|voxels|actuated|connections
+    penalty_exp:     float = 1.0,        # exponent of that penalty
 ):
     def _descs(grids, sim_descs):
         """Archive descriptors: simulated gait traits, or morphology traits from the grid."""
@@ -1143,6 +1187,12 @@ def run_map_elites(
     print(f"  Sim time   : {sim_time}s  +  {settle_time}s settle")
     print(f"  Fitness    : {_FIT_DESC.get(fitness_mode, fitness_mode)}")
     print(f"  Score      : {_score_desc(direction, divide_by, workspace_voxels)}")
+    if simulator != 'mujoco':
+        print("  Simulator  : the ORIGINAL 2013 simulator (Voxel_Sim_NoGui). Gravity, stiffness,\n"
+              "               damping, friction, actuation and duration are its own 2013 settings.")
+    if penalty != 'none':
+        print(f"  Penalty    : fitness x (1 - ({penalty} / maximum)^{penalty_exp:g})   "
+              f"(2013 cost condition)")
     _desc_label = ("elongation x fill-density (SHAPE)" if descriptors == "shape"
                    else "COM height x bounce")
     print(f"  Descriptors: {_desc_label}  ->  {archive_bins}x{archive_bins} = {n_cells} cells")
@@ -1175,7 +1225,11 @@ def run_map_elites(
         divide_by            = divide_by,
         workspace_voxels     = workspace_voxels,
         global_damping       = global_damping,
+        penalty              = penalty,
+        penalty_exp          = penalty_exp,
     )
+    evaluator = _swap_in_simulator(evaluator, simulator, n_workers, workspace_voxels,
+                                   penalty, penalty_exp)
     _u = _score_unit(divide_by)   # log label for scores (BL or W)
     # poisson/dt_rule are beam-only: leaving them out for springs keeps older springs
     # checkpoints resumable (the resume guard only compares the keys present here).
@@ -1187,7 +1241,8 @@ def run_map_elites(
                    'phase_mode': phase_mode, 'global_damping': global_damping}
                   if body == 'beam' else {}),
                'direction': direction, 'divide_by': divide_by,
-               **({'workspace_voxels': workspace_voxels} if divide_by == 'workspace' else {})}
+               **({'workspace_voxels': workspace_voxels} if divide_by == 'workspace' else {}),
+               'simulator': simulator, 'penalty': penalty, 'penalty_exp': penalty_exp}
 
     archive = {}   # (i,j) -> {'cppn','genome','fitness','desc'}
 
@@ -1572,6 +1627,22 @@ if __name__ == "__main__":
                              "--sim-time 0.25 --settle 0 --direction any --divide-by workspace "
                              "--fitness forward --grid-size 10 --no-trim. It does not set the search "
                              "(--pop, --gen, --no-age-pareto, --map-elites).")
+    parser.add_argument("--simulator", dest="simulator", type=str, default="mujoco",
+                        choices=["mujoco", "voxelyze2013"],
+                        help="mujoco (default): this project's engine. voxelyze2013: the ORIGINAL "
+                             "simulator of Cheney et al. 2013, built unmodified by "
+                             "paper/reference_2013/build_2013_simulator.sh (inside WSL on Windows). "
+                             "Every body is run with the 2013 settings file, so the physics options "
+                             "of this script do not apply and are refused; about 3 s per robot. "
+                             "Not with --map-elites, --flex or evolved gaits.")
+    parser.add_argument("--penalty", dest="penalty", type=str, default="none",
+                        choices=["none", "voxels", "actuated", "connections"],
+                        help="The cost conditions of Cheney et al. 2013: fitness is multiplied by "
+                             "1 - (count / maximum)^exponent, where count is the body's voxels, its "
+                             "actuated (muscle) voxels, or its voxel-to-voxel connections. Works "
+                             "with either simulator. Default none.")
+    parser.add_argument("--penalty-exp", dest="penalty_exp", type=float, default=1.0,
+                        help="Exponent of --penalty (default 1, as in the main 2013 conditions).")
     parser.add_argument("--direction", dest="direction", type=str, default="forward",
                         choices=["forward", "any"],
                         help="What distance the score counts. forward (default): the +X component of "
@@ -1590,10 +1661,35 @@ if __name__ == "__main__":
     # overwrites what appears on the command line (this also handles --opt=value and
     # abbreviated option names).
     _preset_applied = []
+    _unset = object()
+    _probe = parser.parse_args(namespace=argparse.Namespace(**{k: _unset for k in vars(args)}))
+    _given = {k for k, v in vars(_probe).items() if v is not _unset}
+
+    # --simulator voxelyze2013: the physics is the 2013 simulator's own. Refuse options that
+    # could not take effect, and set the fixed ones so the banner and the manifest are truthful.
+    if args.simulator == "voxelyze2013":
+        _bad = [f"--{d.replace('_', '-')}" for d in _VX2013_NO_EFFECT if d in _given]
+        _bad += [f"--{d.replace('_', '-')} {getattr(args, d)} (the 2013 value is {v})"
+                 for d, v in _VX2013_FIXED.items() if d in _given and getattr(args, d) != v]
+        _bad += [f for f, on in (("--map-elites", args.map_elites), ("--flex", args.flex),
+                                 ("--use-cpg", args.use_cpg), ("--evolve-gait", args.evolve_gait),
+                                 ("--per-voxel-phase", args.per_voxel_phase),
+                                 ("--freeze-body", args.freeze_body)) if on]
+        if _bad:
+            raise SystemExit("ERROR: with --simulator voxelyze2013 the physics, actuation and score "
+                             "are those of the 2013 experiment; these cannot be used with it:\n    "
+                             + "\n    ".join(_bad))
+        for _d, _v in _VX2013_FIXED.items():
+            setattr(args, _d, _v)
+        if 'max_voxels' not in _given:
+            args.no_trim = True               # the 2013 experiment has no voxel cap
+    if args.penalty_exp <= 0:
+        raise SystemExit("ERROR: --penalty-exp must be > 0")
+    if args.penalty != "none" and args.flex:
+        raise SystemExit("ERROR: --penalty applies to the springs and beam bodies and the 2013 "
+                         "simulator, not --flex")
+
     if args.preset is not None:
-        _unset = object()
-        _probe = parser.parse_args(namespace=argparse.Namespace(**{k: _unset for k in vars(args)}))
-        _given = {k for k, v in vars(_probe).items() if v is not _unset}
         _preset_applied = _apply_preset(args, _given)
         _kept = sorted(d for d, _ in _PRESETS[args.preset] if d in _given)
         print(f"  Preset     : {args.preset}  ->  "
@@ -1774,6 +1870,9 @@ if __name__ == "__main__":
             divide_by            = args.divide_by,
             workspace_voxels     = _side,
             global_damping       = args.damping_global,
+            simulator            = args.simulator,
+            penalty              = args.penalty,
+            penalty_exp          = args.penalty_exp,
         )
     else:
         run_evolution(
@@ -1818,4 +1917,7 @@ if __name__ == "__main__":
             divide_by            = args.divide_by,
             workspace_voxels     = _side,
             global_damping       = args.damping_global,
+            simulator            = args.simulator,
+            penalty              = args.penalty,
+            penalty_exp          = args.penalty_exp,
         )

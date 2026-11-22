@@ -148,7 +148,24 @@ Details and scripts in [reference_2013/](reference_2013/README.md).
 - **Your robots in it.** The `cheney_score_s1` champion scores 1.86 there (2.72 in your engine as configured), the best of its final population 2.10, and the two simulators rank that population alike (+0.89). Measured in one simulator, your best body is at about 45% of a typical 2013 champion. Those bodies were evolved under the other settings, so this says nothing yet about the search.
 - **Engine options are in.** `--damping-global` and `--preset cheney2013` exist with tests, defaults unchanged, and every run now writes a `manifest.json`.
 
-**Proposal that follows from this (decision 10 in section 13).** Run the re-evolution experiments in the 2013 simulator itself, driven by your search code. The physics is then the 2013 physics by construction, and a 1000-generation run should take about an hour and a half instead of more than a day, so the original design of 35 runs of 1000 generations per condition becomes affordable. The MuJoCo engine stays in the paper as the independent second implementation: transplants in both directions, the settings audit, the sensitivity study, and a smaller matched set of runs.
+**Decided on 21 November (decision 10): the re-evolution experiments run in the 2013 simulator itself**, driven by your search code. The physics is then the 2013 physics by construction. The MuJoCo engine stays in the paper as the independent second implementation: transplants in both directions, the settings audit, the sensitivity study, and a smaller matched set of runs. The design is in [PROTOCOL.md](PROTOCOL.md), still a draft.
+
+### 3.8 21 November: evolving in the 2013 simulator, and a first pilot
+
+- **Built.** `--simulator voxelyze2013` evaluates every body in the original simulator, with the 2013 settings template (identical in 300 deposited files of both conditions). It returns exactly the scores of the reference replay. `--penalty actuated` (also `voxels`, `connections`) is the 2013 cost condition and works with either simulator. 19 new tests.
+- **Cost.** 5 to 7 seconds per generation at population 30, so about two hours for a 1000-generation run.
+- **Pilot, one seed, 100 generations, your CPPN-NEAT unchanged** (`pilot_vx2013_s1`; not part of any arm):
+
+| Generation | This run | Deposited median (25th–75th percentile) | Deposited runs below this one |
+|---|---|---|---|
+| 1 | 0.91 | 0.85 (0.81–0.99) | 22 of 35 |
+| 10 | 1.80 | 1.50 (1.32–1.81) | 25 of 35 |
+| 30 | 1.95 | 2.15 (1.90–2.50) | 10 of 35 |
+| 100 | 2.05 | 3.26 (2.75–3.59) | 2 of 35 |
+
+- **Reading.** With the physics now identical to 2013, the run starts ahead of most deposited runs and then stalls, the same pattern as in your own engine. The champion's network did not grow after generation 10. One seed proves nothing, but it points at the search, which is what arm B of the protocol tests.
+- **Shape.** The pilot champion is squat: 482 voxels, the whole 100-cell footprint on the floor, 98% muscle. Deposited champions perch on a median of 26 cells. So that difference survives the change of simulator.
+- **Transfer.** The pilot champion scores 2.73 in the MuJoCo engine with the 2013 preset, a third more than in the simulator it evolved in. The deposited champions lose a third going the same way. The two simulators differ in both directions depending on the body.
 
 ---
 
@@ -211,6 +228,8 @@ The honest position: on flat ground with distance as the only objective, limbs a
 - RQ4. How sensitive are evolved score and body shape to damping, amplitude, floor contact and search settings?
 
 ### Experiments
+
+**Superseded on 21 November by [PROTOCOL.md](PROTOCOL.md).** Evolution now runs in the original 2013 simulator (arms A to C, 35 seeds of 1000 generations each), with the MuJoCo engine as the independent second implementation (arms D and E). The table below is the earlier design, kept for the record; E0 and E1 are done (sections 3.3 and 3.7).
 
 | | What | Runs | Purpose |
 |---|---|---|---|
@@ -344,6 +363,6 @@ Google Scholar blocks automated access from this network with a "not a robot" ch
 
 | 10 | Use the rebuilt 2013 simulator as the evaluation back end for the re-evolution experiments (section 3.7), keeping the MuJoCo engine as the independent second implementation | Yes |
 
-**Decided on 21 November 2026:** 1 yes. 2 yes, as new options with defaults unchanged, together with the 2013 cost penalty, a switch for the 2013 CPPN-NEAT settings and a run manifest. 3 yes. 4 yes. 6 yes: branch `paper/reproduction`, small commits, pushed. 7: scipy, pandas and pytest. Still open: 5, 8, 9, 10.
+**Decided on 21 November 2026:** 1 yes. 2 yes, as new options with defaults unchanged, together with the 2013 cost penalty, a switch for the 2013 CPPN-NEAT settings and a run manifest. 3 yes. 4 yes. 6 yes: branch `paper/reproduction`, small commits, pushed. 7: scipy, pandas and pytest. 10 yes. Still open: 5, 8, 9, and how to realise the 2013 search for arm B (re-run the original search code, or port its settings).
 
-**Done on 21 November 2026:** scripts rescued into `analysis/archive_2026/`; packages installed and pinned in `requirements.txt`; the 2013 simulator built and checked (section 3.7); `--damping-global`, `--preset cheney2013` and the run manifest added with tests. Not yet done from decision 2: the 2013 cost penalty and the switch for the 2013 CPPN-NEAT settings.
+**Done on 21 November 2026:** scripts rescued into `analysis/archive_2026/`; packages installed and pinned in `requirements.txt`; the 2013 simulator built and checked (section 3.7); `--damping-global`, `--preset cheney2013` and the run manifest; `--simulator voxelyze2013` and `--penalty` (section 3.8); a 100-generation pilot; the protocol drafted. Not yet done: the 2013 search settings (arm B), storing the original score per generation for cost runs, the render and verify tools reading the manifest, and freezing the protocol.
