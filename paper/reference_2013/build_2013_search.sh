@@ -28,6 +28,9 @@ REF="$HOME/softbots2013_ref"
 H="$REF/softbots/hyperneat/HyperNEAT_v2_5"
 JOBS="${JOBS:-16}"
 
+if pgrep -x Hypercube_NEAT > /dev/null; then
+  echo "runs are in progress: not rebuilding under them (they load this build's libraries)"; exit 3
+fi
 mkdir -p "$REF"
 cd "$REF"
 rm -rf softbots/hyperneat

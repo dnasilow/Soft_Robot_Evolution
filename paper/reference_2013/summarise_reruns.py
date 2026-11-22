@@ -52,6 +52,8 @@ def main():
 
     runs = {}
     for d in sorted(glob.glob(os.path.join(ROOT, 'results', 'rerun2013', a.prefix + '*'))):
+        if not os.path.isfile(os.path.join(d, 'curve.txt')):      # log files; runs before generation 1
+            continue
         c = read_curve(os.path.join(d, 'curve.txt'))
         if len(c):
             runs[os.path.basename(d)] = c

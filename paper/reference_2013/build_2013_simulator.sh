@@ -16,9 +16,14 @@ set -euo pipefail
 ARCHIVE=/mnt/c/SoftRobotEvolution/research_reference/repositories/softbots2013Code.tgz
 REF="$HOME/softbots2013_ref"
 
-rm -rf "$REF"
+if pgrep -x voxelize > /dev/null || pgrep -x Hypercube_NEAT > /dev/null; then
+  echo "simulations are in progress: not rebuilding under them"; exit 3
+fi
+# Only the simulator's own folder is replaced. The run folders (runs/) and the build of the
+# search program live under the same root and must survive a rebuild.
 mkdir -p "$REF"
 cd "$REF"
+rm -rf softbots/Voxel_Sim_NoGui
 tar -xzf "$ARCHIVE" softbots/Voxel_Sim_NoGui
 cd softbots/Voxel_Sim_NoGui
 rm -f voxelize
