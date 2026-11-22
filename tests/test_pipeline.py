@@ -3,6 +3,7 @@ evaluator, worker processes, resume safeguard, command line, render and scorecar
 
 Run from the repo root:   python -m unittest discover -s tests -t . -v
 """
+import json
 import os
 import pickle
 import subprocess
@@ -309,6 +310,128 @@ class TestScoreSwitches(unittest.TestCase):
                          '--name', 'score_flex', '--direction', 'any'], tmp)
             self.assertIn('not --flex', r.stdout + r.stderr)
             self.assertFalse(os.path.exists(os.path.join(tmp, 'results')))
+
+
+class TestDampingAndPreset(unittest.TestCase):
+    """--damping-global and --preset cheney2013 must reach the engine, the worker processes, the
+    resume guard and the run manifest, and leave every default run unchanged."""
+    P2013 = dict(simulation_time=0.25, settle_time=0.0, actuation_amplitude=0.14,
+                 actuation_frequency=40.0, attach_controller=False, fitness_mode='forward',
+                 friction=SS, body='beam', materials='cheney2013', floor_contact='voxelyze',
+                 poisson=False, direction='any', divide_by='workspace', workspace_voxels=10)
+
+    def test_evaluator_passes_it_through(self):
+        from src.evolution.mujoco_tendon_evaluator import MuJoCoTendonEvaluator
+        from src.physics.mujoco_beam_physics import ZETA_GLOBAL
+        ev = MuJoCoTendonEvaluator(n_workers=1, body='beam')
+        self.assertEqual(ev.engine.global_damping, ZETA_GLOBAL)
+        ev = MuJoCoTendonEvaluator(n_workers=1, body='beam', global_damping=0.001)
+        self.assertEqual(ev.engine.global_damping, 0.001)
+
+    def test_workers_get_the_same_damping(self):
+        from src.physics.mujoco_beam_physics import MuJoCoBeamPhysics
+        from src.evolution.mujoco_tendon_evaluator import MuJoCoTendonEvaluator
+        g = legs_walker()
+        e = MuJoCoBeamPhysics(actuation_amplitude=0.14, actuation_frequency=40.0,
+                              fitness_mode='forward', friction=SS, materials='cheney2013',
+                              floor_contact='voxelyze', poisson=False, direction='any',
+                              divide_by='workspace', workspace_voxels=10, global_damping=0.001)
+        e.load_robot(g)
+        direct = float(e.get_fitness(0.25, 0.0))
+        ev = MuJoCoTendonEvaluator(n_workers=2, global_damping=0.001, **self.P2013)
+        got = [float(x) for x in ev.evaluate_batch([g, g])]
+        ev.close()
+        self.assertEqual(got, [direct, direct])
+        ev = MuJoCoTendonEvaluator(n_workers=2, **self.P2013)         # default damping differs
+        default = [float(x) for x in ev.evaluate_batch([g])]
+        ev.close()
+        self.assertNotAlmostEqual(default[0], direct, places=3)
+
+    def test_resume_checks_the_damping(self):
+        sys.path.insert(0, ROOT)
+        import run_tendon_evolution as R
+        base = {'friction': SS, 'body': 'beam', 'sim_time': 0.25, 'settle_time': 0.0}
+
+        def ok(ck, phys):
+            try:
+                R._check_resume_physics(ck, phys)
+                return True
+            except SystemExit:
+                return False
+        new = {**base, 'global_damping': 0.001}
+        old = {**base, 'global_damping': None}
+        self.assertTrue(ok({'physics': new}, new))
+        self.assertFalse(ok({'physics': new}, old))
+        self.assertTrue(ok({'physics': base}, old))       # checkpoints before the flag: the default
+        self.assertFalse(ok({'physics': base}, new))
+
+    def test_preset_fills_only_what_was_not_given(self):
+        import argparse
+        sys.path.insert(0, ROOT)
+        import run_tendon_evolution as R
+        a = argparse.Namespace(preset='cheney2013', amp=0.2)
+        applied = dict(R._apply_preset(a, given={'amp'}))
+        self.assertEqual(a.amp, 0.2)                       # the explicit value is kept
+        self.assertNotIn('amp', applied)
+        self.assertEqual((a.body, a.materials, a.floor_contact), ('beam', 'cheney2013', 'voxelyze'))
+        self.assertEqual((a.poisson, a.damping_global, a.freq), ('off', 0.001, 40.0))
+        self.assertEqual((a.sim_time, a.settle, a.direction, a.divide_by),
+                         (0.25, 0.0, 'any', 'workspace'))
+        self.assertEqual((a.grid_size, a.no_trim, a.fitness), (10, True, 'forward'))
+        self.assertEqual((a.friction_static, a.friction_kinetic), (1.0, 0.5))
+        b = argparse.Namespace(preset='cheney2013')
+        R._apply_preset(b, given={'friction'})             # a single-coefficient floor was asked for
+        self.assertFalse(hasattr(b, 'friction_static'))
+        self.assertEqual(b.amp, 0.14)
+
+    def test_help_lists_the_flags(self):
+        r = subprocess.run([sys.executable, os.path.join(ROOT, 'run_tendon_evolution.py'), '--help'],
+                           capture_output=True, text=True, timeout=60)
+        self.assertIn('--damping-global', r.stdout)
+        self.assertIn('--preset {cheney2013}', r.stdout)
+
+    def test_damping_rejected_with_springs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = run_cli(['--map-elites', '--gen', '1', '--pop', '2', '--workers', '1',
+                         '--name', 'cli_reject_damp', '--damping-global', '0.001'], tmp)
+            self.assertIn('only applies to --body beam', r.stdout + r.stderr)
+            self.assertFalse(os.path.exists(os.path.join(tmp, 'results')))
+
+    def test_preset_run_and_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = run_cli(['--preset', 'cheney2013', '--no-age-pareto', '--gen', '1', '--pop', '4',
+                         '--workers', '1', '--grid-size', '5', '--name', 'preset_run'], tmp)
+            self.assertIn('EVOLUTION COMPLETE', r.stdout, r.stderr[-800:])
+            self.assertIn('Preset     : cheney2013', r.stdout)
+            self.assertIn('kept from the command line: grid_size=5', r.stdout)
+            self.assertIn('volumetric muscles +/-14%', r.stdout)
+            self.assertIn('Poisson coupling off', r.stdout)
+            self.assertIn('gravity 274.68', r.stdout)
+            self.assertIn('Damping    : global ratio 0.001', r.stdout)
+            self.assertIn('per FIXED workspace width of 5 voxels [W]', r.stdout)
+            with open(os.path.join(tmp, 'results', 'preset_run', 'manifest.json')) as fh:
+                runs = json.load(fh)['invocations']
+            self.assertEqual(len(runs), 1)
+            s = runs[0]['settings']
+            self.assertEqual((s['amp'], s['poisson'], s['damping_global'], s['grid_size'], s['no_trim']),
+                             (0.14, 'off', 0.001, 5, True))
+            self.assertEqual(runs[0]['preset_applied']['damping_global'], 0.001)
+            self.assertNotIn('grid_size', runs[0]['preset_applied'])
+            self.assertEqual(len(runs[0]['git_commit']), 40)
+            self.assertIn('--preset', runs[0]['command'])
+
+    def test_default_run_has_default_damping_and_a_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            r = run_cli(['--no-age-pareto', '--gen', '1', '--pop', '4', '--workers', '1',
+                         '--sim-time', '0.25', '--settle', '0', '--freq', '40', '--grid-size', '5',
+                         '--no-trim', '--body', 'beam', '--name', 'damp_default'], tmp)
+            self.assertIn('EVOLUTION COMPLETE', r.stdout, r.stderr[-800:])
+            self.assertIn('Damping    : global ratio 0.01\n', r.stdout)
+            self.assertNotIn('Preset', r.stdout)
+            with open(os.path.join(tmp, 'results', 'damp_default', 'manifest.json')) as fh:
+                runs = json.load(fh)['invocations']
+            self.assertIsNone(runs[0]['settings']['damping_global'])
+            self.assertEqual(runs[0]['preset_applied'], {})
 
 
 @unittest.skipUnless(os.path.exists(os.path.join(ROOT, 'results', 'cheney_floor_s1', 'archive.pkl')),

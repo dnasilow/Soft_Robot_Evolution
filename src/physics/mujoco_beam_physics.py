@@ -16,7 +16,8 @@ Bond   = every face-adjacent pair, an Euler-Bernoulli frame element (Voxelyze CV
 Damping (Voxelyze, verbatim structure): bond damping in the bond's frame with coefficients
          zeta*sqrt(m)*sqrt(k) (VX_Link sqA1, sqB1, sqB2xFMp, sqB3xIp, sqA2xIp), zeta = 1
          (evosoro BondDampingZ); global "slow" damping zeta_g*2*sqrt(m*E*L) on every voxel's
-         velocity (and 2*sqrt(I*E*L^3) on its spin), zeta_g = 0.01 (evosoro SlowDampingZ).
+         velocity (and 2*sqrt(I*E*L^3) on its spin), zeta_g = 0.01 (evosoro SlowDampingZ) unless
+         global_damping is given (the deposited 2013 robot files all say SlowDampingZ 0.001).
 Muscles (volumetric, Hiller & Lipson eq. 40): voxel strain s = amp*sin(w*t + phase), phase 0 for
          material 1 and pi for material 2; a bond's rest length is L*(1 + (s_i + s_j)/2). A voxel's
          floor-contact size also follows its strain (Voxelyze floorPenetration uses baseSize).
@@ -150,7 +151,8 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
                  dt_rule: str = "voxelyze", materials: str = "evosoro",
                  gravity: Optional[float] = None, floor_contact: str = "mujoco",
                  phase_mode: str = "offset", direction: str = "forward",
-                 divide_by: str = "body", workspace_voxels: Optional[int] = None):
+                 divide_by: str = "body", workspace_voxels: Optional[int] = None,
+                 global_damping: Optional[float] = None):
         # default_timestep is accepted for interface compatibility but not used: each robot gets
         # its own stable step in load_robot (Voxelyze-style).
         super().__init__(default_timestep=0.0005, actuation_frequency=actuation_frequency,
@@ -175,6 +177,11 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
         self.dt_frac = dt_frac                # None = the step rule's own default
         self.dt_rule = dt_rule
         self.poisson = bool(poisson)
+        # Global ("slow") damping ratio. None = ZETA_GLOBAL (0.01, evosoro), which every run up to
+        # November 2026 used; the 2013 experiment's files say 0.001.
+        if global_damping is not None and not global_damping >= 0:
+            raise ValueError(f"global_damping must be >= 0, got {global_damping!r}")
+        self.global_damping = ZETA_GLOBAL if global_damping is None else float(global_damping)
         self.external = None          # optional (n, 6) extra world-frame force/torque (tests)
         self.test_damping = 0.0       # optional global drag rate for static tests only
 
@@ -226,8 +233,8 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
         self._iperm = np.argsort(self._perm, axis=1)
         # global damping per voxel (own material)
         Ev = np.array([e_scaled(v, self.materials, L) for v in mats])
-        self.g_lin = ZETA_GLOBAL * 2 * np.sqrt(m * Ev * L)
-        self.g_rot = ZETA_GLOBAL * 2 * np.sqrt(I * Ev * L ** 3)
+        self.g_lin = self.global_damping * 2 * np.sqrt(m * Ev * L)
+        self.g_rot = self.global_damping * 2 * np.sqrt(I * Ev * L ** 3)
         # ---- Poisson bookkeeping (Voxelyze CVX_Voxel::strain(true)) ----
         # An axis with a bond on BOTH sides is constrained by its neighbours ("tension" in
         # Voxelyze); any other axis is free to bulge. A voxel held to the world counts as

@@ -919,3 +919,45 @@ class TestCheneyScore(unittest.TestCase):
             e.load_robot(g)
             out.append(f"{float(e.get_fitness(0.25, 0.0, **et)):.4f}")
         self.assertEqual(out, ["2.6118", "2.6149"])
+
+
+class TestGlobalDampingOption(unittest.TestCase):
+    """global_damping (--damping-global): the default is the value every earlier run used, and an
+    explicit value reaches the forces. The deposited 2013 robot files say SlowDampingZ 0.001."""
+
+    def lone(self, **kw):
+        e = MuJoCoBeamPhysics(actuation_amplitude=0.0, fitness_mode='forward', **kw)
+        e.load_robot(grid_with([(1, 1, 1)]), initial_height=0.05)
+        e.model.opt.gravity[:] = 0
+        return e
+
+    def test_default_is_the_old_value(self):
+        self.assertEqual(ZETA_GLOBAL, 0.01)
+        e = self.lone()
+        self.assertEqual(e.global_damping, ZETA_GLOBAL)
+        same = self.lone(global_damping=ZETA_GLOBAL)
+        np.testing.assert_array_equal(e.g_lin, same.g_lin)
+        np.testing.assert_array_equal(e.g_rot, same.g_rot)
+
+    def test_coefficients_scale_with_it(self):
+        a, b = self.lone(), self.lone(global_damping=0.001)
+        np.testing.assert_allclose(b.g_lin, a.g_lin / 10, rtol=1e-12)
+        np.testing.assert_allclose(b.g_rot, a.g_rot / 10, rtol=1e-12)
+        self.assertEqual(self.lone(global_damping=0.0).g_lin.max(), 0.0)
+
+    def test_decay_rate_follows_it(self):
+        """A lone voxel coasting in zero gravity slows at rate zeta*2*sqrt(E*L/m). With 0.001 it
+        keeps 91% of its speed over 0.2 s; with the default 0.01 it would keep 41%."""
+        e = self.lone(global_damping=0.001)
+        e.data.qvel[0] = 0.1
+        mujoco.mj_forward(e.model, e.data)
+        T = 0.2
+        for _ in range(int(T / e.default_timestep)):
+            e.step()
+        rate = 0.001 * 2 * np.sqrt(e_scaled(3) * L / e._m)
+        self.assertAlmostEqual(e.data.qvel[0] / (0.1 * np.exp(-rate * T)), 1.0, delta=0.01)
+        self.assertGreater(e.data.qvel[0], 0.08)
+
+    def test_negative_is_refused(self):
+        with self.assertRaises(ValueError):
+            MuJoCoBeamPhysics(global_damping=-0.1)

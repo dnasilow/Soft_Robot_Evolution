@@ -286,7 +286,77 @@ _PHYSICS_DEFAULTS = {'friction': None, 'early_term_threshold': None, 'early_term
                      'body': 'springs', 'poisson': False, 'dt_rule': 'ours',
                      'materials': 'evosoro', 'gravity': None, 'floor_contact': 'mujoco',
                      'phase_mode': 'offset', 'direction': 'forward', 'divide_by': 'body',
-                     'workspace_voxels': None}
+                     'workspace_voxels': None, 'global_damping': None}
+
+# --preset: named sets of options. Each entry is (argparse dest, value); an option given
+# explicitly on the command line always wins over the preset.
+#
+# cheney2013 = the physics and the scoring protocol of Cheney et al. 2013 as read from the 300
+# deposited robot files sampled and the full 2013 source (paper/PLAN.md section 3.4): 10^3
+# workspace with no voxel cap, 5x stiffness ratio, 2.8 g, 40 Hz, +-14% linear actuation
+# ((TempAmp 39 - TempBase 25) x CTE 0.01), no Poisson coupling (PoissonKickBackEnabled 0),
+# SlowDampingZ 0.001, friction 1.0 static / 0.5 kinetic, 0.25 s = 10 cycles measured from
+# initialisation, score = 3D displacement / workspace width with no ground term.
+# It does NOT set the search (population, generations, selection): those are separate.
+_PRESETS = {
+    'cheney2013': [
+        ('body', 'beam'), ('materials', 'cheney2013'), ('floor_contact', 'voxelyze'),
+        ('friction_static', 1.0), ('friction_kinetic', 0.5),
+        ('freq', 40.0), ('amp', 0.14), ('poisson', 'off'), ('damping_global', 0.001),
+        ('sim_time', 0.25), ('settle', 0.0),
+        ('direction', 'any'), ('divide_by', 'workspace'), ('fitness', 'forward'),
+        ('grid_size', 10), ('no_trim', True),
+    ],
+}
+
+# Set by the command-line entry point; written into the run folder once the overwrite guard has
+# passed. Library callers (tests, notebooks) that never set it get no manifest.
+_RUN_MANIFEST = None
+
+
+def _apply_preset(args, given: set) -> list:
+    """Set every preset option the user did not give explicitly. Returns the (dest, value) pairs
+    that were applied, for the banner and the manifest."""
+    applied = []
+    for dest, value in _PRESETS[args.preset]:
+        if dest in given:
+            continue
+        if dest in ('friction_static', 'friction_kinetic') and 'friction' in given:
+            continue                      # the user asked for a single-coefficient floor instead
+        setattr(args, dest, value)
+        applied.append((dest, value))
+    return applied
+
+
+def _git_state():
+    """(commit hash, tracked files that differ from it); ('', []) outside a git checkout."""
+    import subprocess
+    root = os.path.dirname(os.path.abspath(__file__))
+    try:
+        head = subprocess.run(['git', '-C', root, 'rev-parse', 'HEAD'],
+                              capture_output=True, text=True, timeout=15).stdout.strip()
+        dirty = subprocess.run(['git', '-C', root, 'status', '--porcelain', '--untracked-files=no'],
+                               capture_output=True, text=True, timeout=15).stdout
+        return head, [line[3:].strip() for line in dirty.splitlines() if line.strip()]
+    except Exception:
+        return '', []
+
+
+def _write_manifest(out) -> None:
+    """Append this invocation (command, every setting, code and package versions) to
+    <run>/manifest.json so the exact configuration of a run can be read back later. A resumed
+    run adds an entry; nothing is overwritten."""
+    if _RUN_MANIFEST is None:
+        return
+    path = Path(out) / 'manifest.json'
+    entries = []
+    if path.exists():
+        try:
+            entries = json.loads(path.read_text()).get('invocations', [])
+        except Exception:
+            entries = []
+    entries.append(_RUN_MANIFEST)
+    path.write_text(json.dumps({'invocations': entries}, indent=1))
 
 
 # What each --fitness mode does with the distance. The distance itself (direction and unit) is
@@ -546,6 +616,7 @@ def run_evolution(
     direction:       str   = "forward",  # score distance: forward (+X) | any (3D, Cheney 2013)
     divide_by:       str   = "body",     # score unit: own body length | fixed workspace width
     workspace_voxels: int  = None,       # workspace width in voxels (the grid side)
+    global_damping:  float = None,       # beam only: global damping ratio (None = 0.01)
 ):
     # Keep the machine awake for the whole run; release on any exit (normal or error).
     import atexit
@@ -618,6 +689,7 @@ def run_evolution(
         direction            = direction,
         divide_by            = divide_by,
         workspace_voxels     = workspace_voxels,
+        global_damping       = global_damping,
     )
     _u = _score_unit(divide_by)   # log label for scores (BL or W)
     # poisson/dt_rule are beam-only: leaving them out for springs keeps older springs
@@ -627,7 +699,7 @@ def run_evolution(
                'sim_time': sim_time, 'settle_time': settle_time,
                **({'poisson': poisson, 'dt_rule': dt_rule, 'materials': materials,
                    'gravity': gravity, 'floor_contact': floor_contact,
-                   'phase_mode': phase_mode}
+                   'phase_mode': phase_mode, 'global_damping': global_damping}
                   if body == 'beam' else {}),
                'direction': direction, 'divide_by': divide_by,
                **({'workspace_voxels': workspace_voxels} if divide_by == 'workspace' else {})}
@@ -668,6 +740,7 @@ def run_evolution(
     ckpt_path = out / 'checkpoint.pkl'
     resuming  = bool(resume) and ckpt_path.exists()
     _guard_overwrite(out, resuming, force)
+    _write_manifest(out)
     start_gen = 0
     history = {'best_fitness': [], 'mean_fitness': [], 'worst_fitness': []}
     best_genome = best_controller = best_cppn = None
@@ -1009,6 +1082,7 @@ def run_map_elites(
     direction:       str   = "forward",  # score distance: forward (+X) | any (3D, Cheney 2013)
     divide_by:       str   = "body",     # score unit: own body length | fixed workspace width
     workspace_voxels: int  = None,       # workspace width in voxels (the grid side)
+    global_damping:  float = None,       # beam only: global damping ratio (None = 0.01)
 ):
     def _descs(grids, sim_descs):
         """Archive descriptors: simulated gait traits, or morphology traits from the grid."""
@@ -1100,6 +1174,7 @@ def run_map_elites(
         direction            = direction,
         divide_by            = divide_by,
         workspace_voxels     = workspace_voxels,
+        global_damping       = global_damping,
     )
     _u = _score_unit(divide_by)   # log label for scores (BL or W)
     # poisson/dt_rule are beam-only: leaving them out for springs keeps older springs
@@ -1109,7 +1184,7 @@ def run_map_elites(
                'sim_time': sim_time, 'settle_time': settle_time,
                **({'poisson': poisson, 'dt_rule': dt_rule, 'materials': materials,
                    'gravity': gravity, 'floor_contact': floor_contact,
-                   'phase_mode': phase_mode}
+                   'phase_mode': phase_mode, 'global_damping': global_damping}
                   if body == 'beam' else {}),
                'direction': direction, 'divide_by': divide_by,
                **({'workspace_voxels': workspace_voxels} if divide_by == 'workspace' else {})}
@@ -1129,6 +1204,7 @@ def run_map_elites(
     start_gen = 0
     ckpt_path = out / 'checkpoint.pkl'
     _guard_overwrite(out, bool(resume) and ckpt_path.exists(), force)
+    _write_manifest(out)
 
     if resume and ckpt_path.exists():
         with open(ckpt_path, 'rb') as f:
@@ -1482,6 +1558,20 @@ if __name__ == "__main__":
                         help="--body beam only. Gravity in m/s^2 (positive number). Default is the "
                              "preset's own: 9.81 for evosoro, 274.68 for cheney2013 (his 27.468 "
                              "rescaled to our lattice so the sag per voxel matches his).")
+    parser.add_argument("--damping-global", dest="damping_global", type=float, default=None,
+                        help="--body beam only. Global ('slow') damping ratio on every voxel's "
+                             "velocity and spin. Default 0.01 (evosoro's SlowDampingZ), which every "
+                             "run up to November 2026 used. The deposited 2013 robot files all say "
+                             "0.001.")
+    parser.add_argument("--preset", dest="preset", type=str, default=None, choices=["cheney2013"],
+                        help="A named set of options; anything you also give explicitly wins. "
+                             "cheney2013: the physics and scoring of Cheney et al. 2013 as read from "
+                             "its deposited files and source: --body beam --materials cheney2013 "
+                             "--floor-contact voxelyze --friction-static 1.0 --friction-kinetic 0.5 "
+                             "--freq 40 --amp 0.14 --poisson off --damping-global 0.001 "
+                             "--sim-time 0.25 --settle 0 --direction any --divide-by workspace "
+                             "--fitness forward --grid-size 10 --no-trim. It does not set the search "
+                             "(--pop, --gen, --no-age-pareto, --map-elites).")
     parser.add_argument("--direction", dest="direction", type=str, default="forward",
                         choices=["forward", "any"],
                         help="What distance the score counts. forward (default): the +X component of "
@@ -1494,6 +1584,23 @@ if __name__ == "__main__":
                              "as Cheney 2013 -> workspace widths (W); a robot shorter than the workspace "
                              "no longer gets a workspace/length bonus. --early-term-bl is then in W.")
     args = parser.parse_args()
+
+    # --preset: fill in every option of the preset that was not given explicitly. "Given" is
+    # found by parsing once more into a namespace pre-filled with a marker: argparse only
+    # overwrites what appears on the command line (this also handles --opt=value and
+    # abbreviated option names).
+    _preset_applied = []
+    if args.preset is not None:
+        _unset = object()
+        _probe = parser.parse_args(namespace=argparse.Namespace(**{k: _unset for k in vars(args)}))
+        _given = {k for k, v in vars(_probe).items() if v is not _unset}
+        _preset_applied = _apply_preset(args, _given)
+        _kept = sorted(d for d, _ in _PRESETS[args.preset] if d in _given)
+        print(f"  Preset     : {args.preset}  ->  "
+              + ", ".join(f"{d}={v}" for d, v in _preset_applied))
+        if _kept:
+            print(f"               kept from the command line: "
+                  + ", ".join(f"{d}={getattr(args, d)}" for d in _kept))
 
     # --body beam: only the material (Cheney) gait and the tendon-engine features it supports.
     if args.body == "beam":
@@ -1522,15 +1629,21 @@ if __name__ == "__main__":
               f"volumetric muscles +/-{args.amp:.0%}, per-robot time step)")
         print(f"  Volumetric : Poisson coupling {args.poisson} (nu = 0.35)   |   "
               f"time step: {args.dt_rule} rule")
-        from src.physics.mujoco_beam_physics import e_scaled, gravity_scaled
+        from src.physics.mujoco_beam_physics import e_scaled, gravity_scaled, ZETA_GLOBAL
         _g = args.gravity if args.gravity is not None else gravity_scaled(args.materials, 0.01)
         print(f"  Materials  : {args.materials}  (soft/muscle {e_scaled(3, args.materials, 0.01):.3g} Pa, "
               f"hard {e_scaled(4, args.materials, 0.01):.3g} Pa)   gravity {_g:.2f} m/s^2")
+        if args.damping_global is not None and not args.damping_global >= 0:
+            raise SystemExit("ERROR: --damping-global must be >= 0")
+        _zg = ZETA_GLOBAL if args.damping_global is None else args.damping_global
+        print(f"  Damping    : global ratio {_zg:g}"
+              + ("" if args.damping_global is None else "  (--damping-global)"))
     else:
         _beam_only = [f for f, changed in (("--poisson", args.poisson != "on"),
                                            ("--dt-rule", args.dt_rule != "voxelyze"),
                                            ("--materials", args.materials != "evosoro"),
                                            ("--gravity", args.gravity is not None),
+                                           ("--damping-global", args.damping_global is not None),
                                            ("--floor-contact",
                                             args.floor_contact != "mujoco")) if changed]
         if _beam_only:
@@ -1601,6 +1714,25 @@ if __name__ == "__main__":
         print(f"  Decoder    : interior {_side}^3 = {_side**3} positions   "
               f"trim {'OFF (Cheney-faithful)' if args.no_trim else f'top-{_cap}'}")
 
+    # Everything needed to read this run's configuration back later; the run function writes it
+    # to <run>/manifest.json after its overwrite guard has passed.
+    import platform
+    import sys
+    import mujoco
+    _head, _modified = _git_state()
+    _RUN_MANIFEST = {
+        'started':        time.strftime('%Y-%m-%d %H:%M:%S'),
+        'command':        [os.path.basename(sys.argv[0])] + sys.argv[1:],
+        'settings':       dict(sorted(vars(args).items())),
+        'preset_applied': dict(_preset_applied),
+        'git_commit':     _head,
+        'git_modified':   _modified,
+        'python':         platform.python_version(),
+        'mujoco':         mujoco.__version__,
+        'numpy':          np.__version__,
+        'platform':       platform.platform(),
+    }
+
     if args.map_elites:
         run_map_elites(
             population_size = args.pop,
@@ -1641,6 +1773,7 @@ if __name__ == "__main__":
             direction            = args.direction,
             divide_by            = args.divide_by,
             workspace_voxels     = _side,
+            global_damping       = args.damping_global,
         )
     else:
         run_evolution(
@@ -1684,4 +1817,5 @@ if __name__ == "__main__":
             direction            = args.direction,
             divide_by            = args.divide_by,
             workspace_voxels     = _side,
+            global_damping       = args.damping_global,
         )

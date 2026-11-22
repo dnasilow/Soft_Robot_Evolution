@@ -54,6 +54,7 @@ def _make_engine(params):
                                  materials=params.get('materials', 'evosoro'),
                                  gravity=params.get('gravity'),
                                  floor_contact=params.get('floor_contact', 'mujoco'),
+                                 global_damping=params.get('global_damping'),
                                  phase_mode=params.get('phase_mode', 'offset'), **kw)
     # max_voxels is tendon-only (normalises the musclecost penalty); workers re-import
     # genome_config defaults, so the parent's --max-voxels must be threaded explicitly.
@@ -142,6 +143,7 @@ class MuJoCoTendonEvaluator:
         direction:           str   = "forward",    # score: +X component | any-direction 3D
         divide_by:           str   = "body",       # score unit: own body length | fixed workspace
         workspace_voxels:    int   = None,         # workspace width in voxels (divide_by='workspace')
+        global_damping:      float = None,         # beam only: global damping ratio (None = 0.01)
     ):
         self.simulation_time   = simulation_time
         self.settle_time       = settle_time
@@ -179,6 +181,7 @@ class MuJoCoTendonEvaluator:
             'direction':           direction,
             'divide_by':           divide_by,
             'workspace_voxels':    workspace_voxels,
+            'global_damping':      global_damping,
         }
 
         # Sequential engine — used when n_workers==1 and by evaluate_single

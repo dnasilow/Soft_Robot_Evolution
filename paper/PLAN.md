@@ -138,6 +138,18 @@ The comparison is with the `--no-age-pareto` path your Cheney runs used. The 201
 - **The algorithm is a plausible second factor.** Its settings differ from his, its curve flattens early, and one seed cannot say more.
 - **Do not start from scratch.** Nothing maintained could replace the engine (section 4), and the evidence says it is close. The original 2013 simulator ships with a Makefile and this machine has a WSL Ubuntu installation, so it can probably be built as a reference to close the remaining gap.
 
+### 3.7 21 November: the original 2013 simulator, rebuilt as the reference
+
+Details and scripts in [reference_2013/](reference_2013/README.md).
+
+- **It builds and it reproduces its own numbers.** Compiled unmodified from the authors' archive in WSL (g++ 15). Over the 2,037 deposited robots with a recorded score, the median ratio of reproduced to recorded score is 0.998; 81% are within 5% and 95% within 20%. The no-cost run champions give a median of 4.32 against the recorded 4.39. So the recorded scores are real and reproducible, and the simulator can serve as the measuring stick.
+- **Same code, different compiler, is not bit-identical.** About one robot in five differs by more than 5%. That is the floor for any reproduction of these numbers.
+- **It is fast.** About 3 s per robot on one core, against 40 to 50 s in the MuJoCo engine.
+- **Your robots in it.** The `cheney_score_s1` champion scores 1.86 there (2.72 in your engine as configured), the best of its final population 2.10, and the two simulators rank that population alike (+0.89). Measured in one simulator, your best body is at about 45% of a typical 2013 champion. Those bodies were evolved under the other settings, so this says nothing yet about the search.
+- **Engine options are in.** `--damping-global` and `--preset cheney2013` exist with tests, defaults unchanged, and every run now writes a `manifest.json`.
+
+**Proposal that follows from this (decision 10 in section 13).** Run the re-evolution experiments in the 2013 simulator itself, driven by your search code. The physics is then the 2013 physics by construction, and a 1000-generation run should take about an hour and a half instead of more than a day, so the original design of 35 runs of 1000 generations per condition becomes affordable. The MuJoCo engine stays in the paper as the independent second implementation: transplants in both directions, the settings audit, the sensitivity study, and a smaller matched set of runs.
+
 ---
 
 ## 4. What the literature says
@@ -330,4 +342,8 @@ Google Scholar blocks automated access from this network with a "not a robot" ch
 | 8 | Budget for GECCO (publication charge, registration, travel to Kraków) | Check before committing to the full-paper route |
 | 9 | Affiliation line | Independent Researcher |
 
-**Decided on 21 November 2026:** 1 yes. 2 yes, as new options with defaults unchanged, together with the 2013 cost penalty, a switch for the 2013 CPPN-NEAT settings and a run manifest. 3 yes. 4 yes. 6 yes: branch `paper/reproduction`, small commits, pushed. 7: scipy, pandas and pytest. Still open: 5, 8, 9.
+| 10 | Use the rebuilt 2013 simulator as the evaluation back end for the re-evolution experiments (section 3.7), keeping the MuJoCo engine as the independent second implementation | Yes |
+
+**Decided on 21 November 2026:** 1 yes. 2 yes, as new options with defaults unchanged, together with the 2013 cost penalty, a switch for the 2013 CPPN-NEAT settings and a run manifest. 3 yes. 4 yes. 6 yes: branch `paper/reproduction`, small commits, pushed. 7: scipy, pandas and pytest. Still open: 5, 8, 9, 10.
+
+**Done on 21 November 2026:** scripts rescued into `analysis/archive_2026/`; packages installed and pinned in `requirements.txt`; the 2013 simulator built and checked (section 3.7); `--damping-global`, `--preset cheney2013` and the run manifest added with tests. Not yet done from decision 2: the 2013 cost penalty and the switch for the 2013 CPPN-NEAT settings.
