@@ -1,0 +1,35 @@
+--- a/HyperNEAT/Hypercube_NEAT/src/main.cpp	2026-11-21 22:14:34.231064493 -0500
++++ b/HyperNEAT/Hypercube_NEAT/src/main.cpp	2026-11-21 22:14:34.231064493 -0500
+@@ -106,8 +106,8 @@
+ 						continue;
+ 					}
+ 					
+-					shared_ptr<NEAT::GeneticIndividual> indiv =
+-					shared_ptr<NEAT::GeneticIndividual>(
++					boost::shared_ptr<NEAT::GeneticIndividual> indiv =
++					boost::shared_ptr<NEAT::GeneticIndividual>(
+ 																							new NEAT::GeneticIndividual(
+ 																																					*(experimentRun.getIndividual(generation,0).get())
+ 																																					)
+@@ -157,8 +157,8 @@
+ 			//                    int generation = 0; // jmc: interested in first generation
+ 			cout << "Beginning post-hoc evaluation " << (generation) << "/" << numGenerations-1 << "...\n";
+ 			
+-			shared_ptr<NEAT::GeneticIndividual> indiv =
+-			shared_ptr<NEAT::GeneticIndividual>(new NEAT::GeneticIndividual(*(experimentRun.getIndividual(generation,0).get())));
++			boost::shared_ptr<NEAT::GeneticIndividual> indiv =
++			boost::shared_ptr<NEAT::GeneticIndividual>(new NEAT::GeneticIndividual(*(experimentRun.getIndividual(generation,0).get())));
+ 			
+ 			
+ 			
+@@ -226,8 +226,8 @@
+ 	 continue;
+ 	 }
+ 	 
+-	 shared_ptr<NEAT::GeneticIndividual> indiv =
+-	 shared_ptr<NEAT::GeneticIndividual>(
++	 boost::shared_ptr<NEAT::GeneticIndividual> indiv =
++	 boost::shared_ptr<NEAT::GeneticIndividual>(
+ 	 new NEAT::GeneticIndividual(
+ 	 *(experimentRun.getIndividual(generation,0).get())
+ 	 )

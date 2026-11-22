@@ -58,10 +58,42 @@ python run_tendon_evolution.py --simulator voxelyze2013 --no-age-pareto --pop 30
 - `src/evolution/cheney2013.py` holds the rules read from the 2013 source: how a body is written, the score, what happens to missing, NaN and absurd results, the "fewer than 2 voxels is not simulated" rule, and the cost penalties. `--penalty actuated` reproduces the adjusted-to-original score ratio of the deposited cost-condition robots.
 - With this simulator the physics options of the script are refused rather than ignored, because they could not take effect.
 
+## 5. Re-running the original experiment itself
+
+The archive also contains the search program that drove the 2013 runs (HyperNEAT v2.5 with the Softbots experiment). `build_2013_search.sh` builds it in WSL and `run_2013_search.sh` launches it the way the 2013 launch script did: a run folder with the two programs and the deposited settings file (`softbots2013Config`), then `./Hypercube_NEAT -I softbotTest.dat -O <name> -R <seed>`. It writes the same learning-curve file as the deposit. Each run uses one core, about 50 seconds per generation at the start.
+
+Getting 2013 code to run on a 2026 system took four things, none of which changes what the program computes:
+
+| What | Why |
+|---|---|
+| Compiler flags: C89 for the bundled zlib, C++14 with `-fpermissive` for the rest | The Boost that Ubuntu 26.04 ships (1.90) needs C++11 or later; the 2013 build used Boost 1.51 |
+| `-D_GLIBCXX_USE_CXX11_ABI=0` | The program's own map class inserts by `memmove` on arrays holding `std::string`. That is valid only for the reference-counted string of the 2013 standard library. With today's string the keys are corrupted and settings are "not found". The switch selects the old string layout |
+| `compat_2013_search.h`, force-included | The sources write `shared_ptr`, `mutex`, `thread`, `bind` unqualified after `using namespace boost` and `std`. In 2013 only Boost had those names. The header says, inside the program's namespaces, that the Boost ones are meant. It also includes `<iomanip>` early, because one source file includes it in the middle of a namespace |
+| One patch, six lines of `main.cpp` (`patches_2013_search/`) | The same `shared_ptr` ambiguity at global scope, where the header cannot reach: the name is written `boost::shared_ptr` |
+
+Two build-file adjustments as well: a `cmake_minimum_required` line prepended to two bundled CMake files, and absolute include paths. The authors' own build caches and binaries in the archive are deleted, not used. `-DBOOST_TIMER_ENABLE_DEPRECATED` re-enables two Boost headers the code includes.
+
+`collect_2013_runs.sh` copies finished or running re-runs to `results/rerun2013/`, and `summarise_reruns.py` compares them with the deposited runs generation by generation.
+
+**Pilot, 21 November: 12 seeds, 10 generations each** (`pilot10_P0_s1` to `s12`; a pilot, not part of any arm). Champion score, best so far:
+
+| Generation | Re-run median (25th–75th percentile) | Deposited median (25th–75th percentile) | Ratio | A12 | p (Mann-Whitney) |
+|---|---|---|---|---|---|
+| 1 | 0.97 (0.81–1.27) | 0.85 (0.81–0.99) | 1.14 | 0.63 | 0.20 |
+| 2 | 0.97 (0.93–1.39) | 0.96 (0.87–1.07) | 1.02 | 0.58 | 0.40 |
+| 5 | 1.27 (1.02–1.53) | 1.25 (1.09–1.48) | 1.02 | 0.51 | 0.89 |
+| 10 | 1.71 (1.34–2.10) | 1.50 (1.32–1.81) | 1.14 | 0.59 | 0.36 |
+
+At generation 10 the ratio of medians is 1.14 with a bootstrapped 95% interval of 0.86 to 1.50. Over these first ten generations the rebuilt original experiment is statistically indistinguishable from the deposited runs. Ten generations and twelve seeds cannot say more than that.
+
+Cost: with 12 runs side by side, a generation took a median of 91 seconds (121 in the slowest run), so 1000 generations is at least 25 to 34 hours per run, and more once bodies grow.
+
 ## Files
 
 | File | Purpose |
 |---|---|
+| `build_2013_search.sh`, `compat_2013_search.h`, `patches_2013_search/` | Build the original search program |
+| `run_2013_search.sh`, `collect_2013_runs.sh`, `summarise_reruns.py` | Re-run the original experiment and compare it with the deposit |
 | `make_template.py` | Writes the settings template from a deposited robot file, after checking the files agree |
 | `build_2013_simulator.sh` | Builds the simulator in WSL from `research_reference/repositories/softbots2013Code.tgz` |
 | `replay_in_2013_simulator.sh` | Runs a folder of robot files in it, in parallel, and writes a CSV |

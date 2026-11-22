@@ -167,6 +167,15 @@ Details and scripts in [reference_2013/](reference_2013/README.md).
 - **Shape.** The pilot champion is squat: 482 voxels, the whole 100-cell footprint on the floor, 98% muscle. Deposited champions perch on a median of 26 cells. So that difference survives the change of simulator.
 - **Transfer.** The pilot champion scores 2.73 in the MuJoCo engine with the 2013 preset, a third more than in the simulator it evolved in. The deposited champions lose a third going the same way. The two simulators differ in both directions depending on the body.
 
+### 3.9 21 November: the original experiment itself, re-run
+
+Details in [reference_2013/README.md](reference_2013/README.md), section 5.
+
+- **The original search program builds and runs.** HyperNEAT v2.5 with the Softbots experiment, from the same archive, built in WSL with CMake 4.2 and Boost 1.90 (installed for this). It needed compiler switches, a force-included compatibility header and a six-line patch to `main.cpp`; none changes what the program computes. The decisive switch restores the 2013 text-string layout, without which the program corrupts its own settings table.
+- **It behaves like the deposited runs so far.** Twelve seeds for ten generations: the champion score has a median of 1.71 at generation 10 against 1.50 for the 35 deposited runs (ratio 1.14, bootstrapped 95% interval 0.86 to 1.50, p = 0.36). Generations 1, 2 and 5 agree as closely.
+- **It is slow per run, cheap in total.** Each run uses one core: about 90 seconds per generation at the start, so 1000 generations is more than a day per run, but all 35 runs of an arm can run side by side.
+- **What this gives the paper.** A ladder of three steps, each with its own arm in [PROTOCOL.md](PROTOCOL.md): the original code re-run with new seeds (does the experiment repeat?), an independent search in the original simulator (arm A), and an independent search in an independent simulator (arm D). The single-seed pilot of section 3.8 suggests the second step is where the gap opens.
+
 ---
 
 ## 4. What the literature says
@@ -363,6 +372,6 @@ Google Scholar blocks automated access from this network with a "not a robot" ch
 
 | 10 | Use the rebuilt 2013 simulator as the evaluation back end for the re-evolution experiments (section 3.7), keeping the MuJoCo engine as the independent second implementation | Yes |
 
-**Decided on 21 November 2026:** 1 yes. 2 yes, as new options with defaults unchanged, together with the 2013 cost penalty, a switch for the 2013 CPPN-NEAT settings and a run manifest. 3 yes. 4 yes. 6 yes: branch `paper/reproduction`, small commits, pushed. 7: scipy, pandas and pytest. 10 yes. Still open: 5, 8, 9, and how to realise the 2013 search for arm B (re-run the original search code, or port its settings).
+**Decided on 21 November 2026:** 1 yes. 2 yes, as new options with defaults unchanged, together with the 2013 cost penalty, a switch for the 2013 CPPN-NEAT settings and a run manifest. 3 yes. 4 yes. 6 yes: branch `paper/reproduction`, small commits, pushed. 7: scipy, pandas and pytest. 10 yes. The 2013 search is realised by re-running the original search code (yes; built and piloted, section 3.9). Still open: 5, 8, 9, approval of the protocol, and the go-ahead for the campaign.
 
-**Done on 21 November 2026:** scripts rescued into `analysis/archive_2026/`; packages installed and pinned in `requirements.txt`; the 2013 simulator built and checked (section 3.7); `--damping-global`, `--preset cheney2013` and the run manifest; `--simulator voxelyze2013` and `--penalty` (section 3.8); a 100-generation pilot; the protocol drafted. Not yet done: the 2013 search settings (arm B), storing the original score per generation for cost runs, the render and verify tools reading the manifest, and freezing the protocol.
+**Done on 21 November 2026:** scripts rescued into `analysis/archive_2026/`; packages installed and pinned in `requirements.txt`; the 2013 simulator built and checked (section 3.7); `--damping-global`, `--preset cheney2013` and the run manifest; `--simulator voxelyze2013` and `--penalty` (section 3.8); a 100-generation pilot; the protocol drafted; the original search program built and piloted on 12 seeds (section 3.9). Not yet done: freezing the protocol; a launcher that keeps multi-day runs alive outside this app and keeps the machine awake; storing the original score per generation for cost runs with this project's search; the render and verify tools reading the manifest.
