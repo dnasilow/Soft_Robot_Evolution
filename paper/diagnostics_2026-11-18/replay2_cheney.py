@@ -10,12 +10,11 @@ import os, re, sys, glob, json, time, pickle
 import numpy as np
 from multiprocessing import Pool
 
-ROOT = r'C:\SoftRobotEvolution'
 OUT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(OUT, '..', '..'))
 sys.path.insert(0, ROOT)
 os.chdir(OUT)
-CH = (r'C:\Users\dnasilowski\AppData\Local\Temp\claude\c--SoftRobotEvolution'
-      r'\5cc73d86-944b-40cc-9802-a2f3f18f9a8b\scratchpad\cheney')
+CH = os.path.join(ROOT, 'research_reference', 'extracted', 'dryad_gen1000')
 REMAP = {0: 0, 1: 1, 2: 3, 3: 2, 4: 4, 5: 2}
 SS = {'mode': 'stickslip', 'mu_s': 1.0, 'mu_k': 0.5, 'v_on': 0.02, 'v_off': 0.01}
 CHENEY = dict(direction='any', divide_by='workspace', workspace_voxels=10)

@@ -6,8 +6,8 @@ Test with his own data: do his low-scoring robots sit exactly at their own |star
 import os, re, sys, glob, io
 import numpy as np
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-CH = (r'C:\Users\dnasilowski\AppData\Local\Temp\claude\c--SoftRobotEvolution'
-      r'\5cc73d86-944b-40cc-9802-a2f3f18f9a8b\scratchpad\cheney')
+CH = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..',
+                                  'research_reference', 'extracted', 'dryad_gen1000'))
 
 def load(path):
     s = open(path, encoding='utf-8', errors='replace').read()

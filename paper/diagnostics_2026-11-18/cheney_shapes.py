@@ -3,14 +3,13 @@ conditions), using the project's own scorecard. Read-only."""
 import os, re, sys, glob, json
 import numpy as np
 
-ROOT = r'C:\SoftRobotEvolution'
 OUT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(OUT, '..', '..'))
 sys.path.insert(0, ROOT)
 os.chdir(OUT)
 from morphology_scorecard import body_metrics
 
-CH = (r'C:\Users\dnasilowski\AppData\Local\Temp\claude\c--SoftRobotEvolution'
-      r'\5cc73d86-944b-40cc-9802-a2f3f18f9a8b\scratchpad\cheney')
+CH = os.path.join(ROOT, 'research_reference', 'extracted', 'dryad_gen1000')
 REMAP = {0: 0, 1: 1, 2: 3, 3: 2, 4: 4, 5: 2}
 
 

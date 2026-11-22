@@ -2,7 +2,7 @@
 
 Read-only checks behind section 3 of [../PLAN.md](../PLAN.md). Nothing in the project was modified by them. Each script was run with `python -I -u <script>` from a scratch folder, with the project root added to the import path.
 
-**Path dependency.** The scripts read Cheney's extracted robot files from an earlier session's temp folder (`%TEMP%\claude\c--SoftRobotEvolution\5cc73d86-…\scratchpad\cheney`). That folder can disappear. The same files are inside `research_reference/softbots2013Gen1000.tgz`; pointing the loader at the archive is on the to-do list in the plan (section 7, item 6). The paths in the scripts and logs contain a Windows user name: review before committing to the public repository.
+**Where the robot files are.** The scripts read Cheney's extracted generation-1000 robot files from `research_reference/extracted/dryad_gen1000/` (kept out of git; the same files are inside `research_reference/softbots2013Gen1000.tgz`). On 18 November they were read from a temporary folder; the paths were changed on 21 November, the results were not rerun. The `.log` files named below stay local (git ignores `*.log`).
 
 | File | What it does | Result |
 |---|---|---|
