@@ -1,0 +1,59 @@
+# The 2013 simulator as reference
+
+21 November 2026. The original headless simulator of Cheney et al. 2013 (`Voxel_Sim_NoGui`), built unmodified from the authors' source archive and used as the measuring stick for this project's own engine.
+
+## How it was built
+
+`build_2013_simulator.sh`, run inside WSL Ubuntu 26.04 with g++ 15.2. No source file is edited; only compiler flags are set for the age of the code (C89 for the bundled zlib, C++98 with `-fpermissive` and three headers force-included). The archive's default Makefile targets the Intel compiler (`icpc -xhost -O3`), which the 2013 runs presumably used; this build uses the archive's own `MakefileG++` (`g++ -O3`). The prebuilt binary shipped in the archive is deleted, not run.
+
+## 1. It reproduces its own recorded scores
+
+`replay_in_2013_simulator.sh` runs every deposited generation-1000 robot file exactly as deposited (its own settings, 0.25 s) and `analyse_replay_2013.py` compares the result with the score in the file name. Raw output: `replay_2013_simulator.csv`.
+
+| | Robots | Recorded median | Reproduced median | Median ratio | Within 1% | Within 5% | Within 20% | Rank agreement |
+|---|---|---|---|---|---|---|---|---|
+| No-cost, all robots | 1026 | 4.049 | 3.748 | 0.997 | 55% | 76% | 96% | +0.973 |
+| No-cost, run champions | 35 | 4.393 | 4.320 | 0.988 | 43% | 66% | 97% | +0.881 |
+| Actuated-cost, all robots | 1011 | 3.128 | 3.097 | 0.999 | 73% | 86% | 95% | +0.975 |
+| Actuated-cost, run champions | 35 | 3.412 | 3.339 | 0.996 | 71% | 86% | 94% | +0.907 |
+| Both conditions | 2037 | 3.232 | 3.222 | 0.998 | 64% | 81% | 95% | +0.984 |
+
+- The simulator is deterministic: 151 groups of identical robots give identical results.
+- 58 robots give no result. All 58 are recorded as failed (0.001) in 2013 as well.
+- The typical robot is reproduced to a fraction of a percent, but about one in five differs by more than 5%. Same source, different compiler and thirteen years: the dynamics amplify small numerical differences. This is the floor for any reproduction of these numbers.
+- One robot takes a median of 3.1 s on one core (10.6 s at most). The MuJoCo beam engine needs about 40 to 50 s for the same robots.
+
+## 2. This project's robots in the 2013 simulator
+
+`export_to_vxa.py` writes our robots as 2013 robot files, using a deposited file as the template so that every simulation setting is the original one. The writer reproduces all 35 deposited champions character for character, and re-exported deposited robots score exactly as the originals do. Raw output: `reverse_transplant.csv`.
+
+| Robot | Score in our engine, as evolved | Score in the 2013 simulator |
+|---|---|---|
+| `cheney_score_s1` champion | 2.717 | 1.861 |
+| `cheney_score_s1` final population, median of 30 | 0.903 | 0.883 |
+| `cheney_score_s1` final population, best | 2.717 | 2.099 |
+| `cheney_fix600_s1` champion | 2.612 (own-length score) | 1.823 |
+| `cheney_corr_s1` champion (the soft-floor artefact) | 4.120 (own-length score) | 1.030 |
+
+Across the 30 robots of the final population the two simulators rank them alike (rank agreement +0.89), and the median robot keeps 85% of its score. The fastest ones lose a quarter to a third.
+
+For comparison, the deposited no-cost run champions score a median of 4.32 in the same simulator. So measured in one place, this project's best body is at about 45% of a typical 2013 champion. Those bodies were evolved under ±20% actuation, the volumetric law and ten times the damping, so this is a statement about that configuration, not yet about the search.
+
+## 3. The engine against the reference
+
+With the recorded scores now confirmed, the transplant test of 18 November (`../diagnostics_2026-11-18/`) measures a real difference between the two simulators: the deposited no-cost champions keep 0.34 of their score in the engine as it was configured, and 0.68 with the 2013 amplitude, Poisson and damping settings (0.77 for the actuated-cost champions). `check_option_matches_diagnostic.py` confirms that the engine's new `global_damping` option gives exactly the numbers that diagnostic measured.
+
+Transfer is not symmetric. Bodies evolved under heavy damping move slowly and survive the move to the 2013 physics; bodies evolved under the 2013 physics rely on lightly damped dynamics that the heavier damping removes.
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `build_2013_simulator.sh` | Builds the simulator in WSL from `research_reference/repositories/softbots2013Code.tgz` |
+| `replay_in_2013_simulator.sh` | Runs a folder of robot files in it, in parallel, and writes a CSV |
+| `analyse_replay_2013.py` | Table 1 above |
+| `export_to_vxa.py` | Writes this project's robots as 2013 robot files |
+| `check_option_matches_diagnostic.py` | Consistency check of the engine's damping option |
+| `replay_2013_simulator.csv`, `reverse_transplant.csv` | Raw results |
+
+The robot files themselves are in `research_reference/extracted/` (`dryad_gen1000/`, `reverse_transplant_vxa/`), which is kept out of git.
