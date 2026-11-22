@@ -113,7 +113,7 @@ python paper\reference_2013\start_arm.py --arm R --restart-incomplete   after an
 | Seeds 1 and 2 cut short and started again, once by killing the launcher (`dryB`), once by Ctrl+C twice (`dryC`) | The same scores as the pilot, to the last digit |
 | Both programs rebuilt from the scripts in this folder | Byte for byte the programs the pilot ran with (SHA-256 of the two programs and three libraries) |
 
-Run alone, a run takes about 55 seconds per generation at the start. With all 35 side by side on this machine (i9-13900, 32 logical processors) every core is busy and the processor holds about half its peak clock speed, so a generation takes about 215 seconds (144 to 324 across the runs, first 20 minutes of arm R). All runs together then complete 0.17 generations per second, which puts the 35,000 generations of an arm at about 57 hours if the pace holds.
+Run alone, a run takes about 55 seconds per generation at the start. With all 35 side by side on this machine (i9-13900, 32 logical processors) every core is busy and the processor holds about half its peak clock speed, so a generation takes about 215 seconds (144 to 324 across the runs, first 20 minutes of arm R). That pace does not hold: later generations are much quicker. After 15 hours the median run of arm R was at generation 684, an average of 80 seconds per generation, and the slowest at 527, which puts an arm at about 30 hours.
 
 `build_2013_simulator.sh` used to clear the whole reference folder, which also holds the run folders. It now replaces only the simulator's own folder, and both build scripts refuse to run while runs are in progress.
 
