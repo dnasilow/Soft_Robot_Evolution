@@ -148,7 +148,7 @@ Details and scripts in [reference_2013/](reference_2013/README.md).
 - **Your robots in it.** The `cheney_score_s1` champion scores 1.86 there (2.72 in your engine as configured), the best of its final population 2.10, and the two simulators rank that population alike (+0.89). Measured in one simulator, your best body is at about 45% of a typical 2013 champion. Those bodies were evolved under the other settings, so this says nothing yet about the search.
 - **Engine options are in.** `--damping-global` and `--preset cheney2013` exist with tests, defaults unchanged, and every run now writes a `manifest.json`.
 
-**Decided on 21 November (decision 10): the re-evolution experiments run in the 2013 simulator itself**, driven by your search code. The physics is then the 2013 physics by construction. The MuJoCo engine stays in the paper as the independent second implementation: transplants in both directions, the settings audit, the sensitivity study, and a smaller matched set of runs. The design is in [PROTOCOL.md](PROTOCOL.md), still a draft.
+**Decided on 21 November (decision 10): the re-evolution experiments run in the 2013 simulator itself**, driven by your search code. The physics is then the 2013 physics by construction. The MuJoCo engine stays in the paper as the independent second implementation: transplants in both directions, the settings audit, the sensitivity study, and a smaller matched set of runs. The design is in [PROTOCOL.md](PROTOCOL.md), frozen on 21 November.
 
 ### 3.8 21 November: evolving in the 2013 simulator, and a first pilot
 
@@ -175,6 +175,14 @@ Details in [reference_2013/README.md](reference_2013/README.md), section 5.
 - **It behaves like the deposited runs so far.** Twelve seeds for ten generations: the champion score has a median of 1.71 at generation 10 against 1.50 for the 35 deposited runs (ratio 1.14, bootstrapped 95% interval 0.86 to 1.50, p = 0.36). Generations 1, 2 and 5 agree as closely.
 - **It is slow per run, cheap in total.** Each run uses one core: about 90 seconds per generation at the start, so 1000 generations is more than a day per run, but all 35 runs of an arm can run side by side.
 - **What this gives the paper.** A ladder of three steps, each with its own arm in [PROTOCOL.md](PROTOCOL.md): the original code re-run with new seeds (does the experiment repeat?), an independent search in the original simulator (arm A), and an independent search in an independent simulator (arm D). The single-seed pilot of section 3.8 suggests the second step is where the gap opens.
+
+### 3.10 21 November: protocol frozen, launcher for the re-execution arms
+
+- **The protocol is frozen** (your approval of 21 November) and the campaign code is tagged `campaign-v1`. How its open points were settled is in its section 8. One rule changed in wording against the draft you approved: a run of the original program that dies is started again from the beginning with the same seed, instead of "resumed from its checkpoint". No seed is ever replaced.
+- **That is safe because the original program is deterministic.** Seeds 1 to 3 over ten generations gave the pilot's scores to the last digit, whether three or twelve runs shared the machine, and so did seeds that were cut short and started again.
+- **The build recipe is confirmed.** Both programs rebuilt from the scripts in the repository are byte for byte the ones the pilot ran with.
+- **`paper/reference_2013/start_arm.py`** starts an arm in a console window of its own, keeps Windows awake, refuses a second launcher, reports progress without showing scores, and checks at the end that every seed has its 1000 generations. Details in [reference_2013/README.md](reference_2013/README.md), section 6.
+- **A hazard removed.** The simulator build script cleared the whole reference folder, which also holds the run folders. It no longer does, and neither build script runs while runs are in progress.
 
 ---
 
@@ -238,7 +246,7 @@ The honest position: on flat ground with distance as the only objective, limbs a
 
 ### Experiments
 
-**Superseded on 21 November by [PROTOCOL.md](PROTOCOL.md).** Evolution now runs in the original 2013 simulator (arms A to C, 35 seeds of 1000 generations each), with the MuJoCo engine as the independent second implementation (arms D and E). The table below is the earlier design, kept for the record; E0 and E1 are done (sections 3.3 and 3.7).
+**Superseded on 21 November by [PROTOCOL.md](PROTOCOL.md).** Evolution now runs in the original 2013 simulator (arms R, Rc and A, 35 seeds of 1000 generations each), with the MuJoCo engine as the independent second implementation (arms D and E). The table below is the earlier design, kept for the record; E0 and E1 are done (sections 3.3 and 3.7).
 
 | | What | Runs | Purpose |
 |---|---|---|---|
@@ -372,6 +380,6 @@ Google Scholar blocks automated access from this network with a "not a robot" ch
 
 | 10 | Use the rebuilt 2013 simulator as the evaluation back end for the re-evolution experiments (section 3.7), keeping the MuJoCo engine as the independent second implementation | Yes |
 
-**Decided on 21 November 2026:** 1 yes. 2 yes, as new options with defaults unchanged, together with the 2013 cost penalty, a switch for the 2013 CPPN-NEAT settings and a run manifest. 3 yes. 4 yes. 6 yes: branch `paper/reproduction`, small commits, pushed. 7: scipy, pandas and pytest. 10 yes. The 2013 search is realised by re-running the original search code (yes; built and piloted, section 3.9). Still open: 5, 8, 9, approval of the protocol, and the go-ahead for the campaign.
+**Decided on 21 November 2026:** 1 yes. 2 yes, as new options with defaults unchanged, together with the 2013 cost penalty, a switch for the 2013 CPPN-NEAT settings and a run manifest. 3 yes. 4 yes. 6 yes: branch `paper/reproduction`, small commits, pushed. 7: scipy, pandas and pytest. 10 yes. The 2013 search is realised by re-running the original search code (yes; built and piloted, section 3.9). The protocol is approved and frozen, and arm R (35 re-runs of the original code) has your go-ahead (section 3.10). Still open: 5, 8, 9, and the go-ahead for each later arm (Rc, A, D, E), which each cost days of machine time.
 
-**Done on 21 November 2026:** scripts rescued into `analysis/archive_2026/`; packages installed and pinned in `requirements.txt`; the 2013 simulator built and checked (section 3.7); `--damping-global`, `--preset cheney2013` and the run manifest; `--simulator voxelyze2013` and `--penalty` (section 3.8); a 100-generation pilot; the protocol drafted; the original search program built and piloted on 12 seeds (section 3.9). Not yet done: freezing the protocol; a launcher that keeps multi-day runs alive outside this app and keeps the machine awake; storing the original score per generation for cost runs with this project's search; the render and verify tools reading the manifest.
+**Done on 21 November 2026:** scripts rescued into `analysis/archive_2026/`; packages installed and pinned in `requirements.txt`; the 2013 simulator built and checked (section 3.7); `--damping-global`, `--preset cheney2013` and the run manifest; `--simulator voxelyze2013` and `--penalty` (section 3.8); a 100-generation pilot; the protocol drafted; the original search program built and piloted on 12 seeds (section 3.9); the protocol frozen and the launcher for arms R and Rc built and tried (section 3.10). Not yet done: storing the original score per generation for cost runs with this project's search; the render and verify tools reading the manifest; a queue for the arms that use this project's own search (A, D, E).
