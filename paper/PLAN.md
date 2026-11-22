@@ -183,6 +183,7 @@ Details in [reference_2013/README.md](reference_2013/README.md), section 5.
 - **The build recipe is confirmed.** Both programs rebuilt from the scripts in the repository are byte for byte the ones the pilot ran with.
 - **`paper/reference_2013/start_arm.py`** starts an arm in a console window of its own, keeps Windows awake, refuses a second launcher, reports progress without showing scores, and checks at the end that every seed has its 1000 generations. Details in [reference_2013/README.md](reference_2013/README.md), section 6.
 - **A hazard removed.** The simulator build script cleared the whole reference folder, which also holds the run folders. It no longer does, and neither build script runs while runs are in progress.
+- **Arm R is running.** Started on 21 November at 23:27: seeds 1 to 35, 1000 generations each, no cost, all 35 side by side, in a console window titled "Soft robot campaign, arm R". That window must stay open, and Windows must not be restarted or logged off, until it reports the runs complete. `python paper\reference_2013\start_arm.py --arm R --status` shows where every run is. If the runs are interrupted, `--restart-incomplete` starts the unfinished seeds again from the beginning. At the pace of its first 20 minutes (about 215 seconds per generation with every core busy) the arm needs about 57 hours, so it should finish around 24 November; the slowest runs may need a day more.
 
 ---
 

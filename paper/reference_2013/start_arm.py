@@ -132,9 +132,9 @@ def progress_line(st, generations, started=None, now=None):
     if going:
         line += (f" Generation of {generations}: slowest {min(going)}, median "
                  f"{int(statistics.median(going))}, fastest {max(going)}.")
-        if started and now:
+        if started and now and min(going) >= 5:              # earlier than that the pace says nothing
             left = [(generations - g) * (now - started[s]) / g
-                    for s, (g, state) in st.items() if state == 'running' and g > 0 and s in started]
+                    for s, (g, state) in st.items() if state == 'running' and s in started]
             if left:
                 line += f" At its pace so far the slowest run needs about {hours(max(left))} more."
     short = [s for s, (g, state) in st.items() if state == 'finished' and g != generations]

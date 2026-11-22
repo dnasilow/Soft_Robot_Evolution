@@ -89,6 +89,12 @@ class TestStatus(unittest.TestCase):
         for word in ('score', 'fitness'):                       # progress only, never results
             self.assertNotIn(word, line.lower())
 
+    def test_no_time_estimate_before_every_run_has_a_few_generations(self):
+        st = {1: (0, 'running'), 2: (40, 'running')}
+        line = start_arm.progress_line(st, 1000, started={1: 0, 2: 0}, now=4000)
+        self.assertIn('slowest 0, median 20, fastest 40', line)
+        self.assertNotIn('more', line)
+
     def test_progress_line_with_nothing_running(self):
         st = {1: (1000, 'finished'), 2: (1000, 'finished')}
         self.assertEqual(start_arm.progress_line(st, 1000), '2 runs: 2 finished.')
