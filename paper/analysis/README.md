@@ -29,7 +29,7 @@ An arm is analysed only as a whole: while one of its seeds is unfinished the scr
 | The deposited cost runs dressed up as an arm, against the no-cost runs | Ratio 0.78 (0.72 to 0.90), "differs"; smaller bodies with less muscle |
 | An arm with a seed short of its generations, unfinished, failed, or missing | Refused, nothing computed |
 
-The rehearsals are in `tests/test_protocol_analysis.py` (24 tests). They need the deposited data, which is kept out of git.
+The rehearsals are in `tests/test_protocol_analysis.py` (31 tests with those for arm A). They need the deposited data, which is kept out of git.
 
 The interval of the pilot is 0.86 to 1.48 here. The summary of 21 November gave 0.86 to 1.50: it took the runs in folder-name order, this analysis takes them in seed order, and with 12 runs the resampling differs that much. `summarise_reruns.py` now uses seed order too, so the launcher's closing summary and this analysis give the same interval.
 
@@ -40,8 +40,18 @@ The interval of the pilot is 0.86 to 1.48 here. The summary of 21 November gave 
 | `protocol_stats.py` | The statistics, as pure functions: comparison of two sets of runs, the criterion, Holm, Fisher's exact test, and what the criterion can show |
 | `analyse_arm.py` | Reads an arm's collected runs and the deposited data and writes the report |
 
+## Arm A
+
+Added on 23 November 2026, before any run of arm A existed. `--arm A` reads the run folders of `run_tendon_evolution.py`:
+
+- **Scores** come from the numbered generation files (`gen_001.json` is the first population evaluated, as in the 2013 program). `history.json` is not used: it repeats a generation for every time a run was continued.
+- **The champion** is the individual with the highest fitness in the stored final population (ties: the first), measured like every other champion.
+- **Against arm R.** The report also sets arm A against arm R, the fifth primary comparison of the protocol, taking arm R's scores from its committed report in `../outcomes/`, and repeats arm R's own result: the floor measured for the original code.
+
+Checked on made-up runs (the deposited cost curves standing in for arm A's scores): the report against the deposit, the comparison with arm R and the floor come out as they must, and an arm with one unfinished run is refused.
+
 ## Not yet here
 
-- Arms run with this project's own search (A, D, E): they store their runs differently and need a reader of their own.
+- Arms D and E.
 - The transfer scores: every champion scored in the other simulator. It needs the finished champions and some processor time.
 - Figures.

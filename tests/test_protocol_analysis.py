@@ -272,6 +272,133 @@ class TestArmIsAnalysedOnlyAsAWhole(unittest.TestCase):
             run_main(self.argv + ['--failed-seeds', '9'])
 
 
+def make_search_run(root, name, scores, population=None, finished=True, checkpoint=False):
+    """A run folder as run_tendon_evolution.py leaves it. population: [(grid, fitness), ...]."""
+    import pickle
+    d = os.path.join(root, name)
+    os.makedirs(d)
+    for g, v in enumerate(scores, start=1):
+        with open(os.path.join(d, f'gen_{g:03d}.json'), 'w') as f:
+            json.dump({'generation': g, 'best_fitness': v, 'fitnesses': [v]}, f)
+    if finished:
+        population = population or [(np.ones((10, 10, 10), np.int8), max(scores))]
+        with open(os.path.join(d, 'final_population.pkl'), 'wb') as f:
+            pickle.dump({'genomes': [g for g, _ in population], 'fitnesses': [v for _, v in population]}, f)
+        with open(os.path.join(d, 'best_robot.pkl'), 'wb') as f:
+            pickle.dump({'fitness': max(v for _, v in population)}, f)
+    if checkpoint:
+        with open(os.path.join(d, 'checkpoint.pkl'), 'wb') as f:
+            f.write(b'x')
+    return d
+
+
+class TestReadingRunsOfThisProjectsSearch(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def test_scores_come_from_the_numbered_generation_files(self):
+        d = make_search_run(self.tmp, 'armA_s1', [0.5, 0.9, 0.8, 1.25])
+        with open(os.path.join(d, 'history.json'), 'w') as f:        # a resumed run repeats a generation here
+            json.dump({'best_fitness': [0.5, 0.9, 0.9, 0.8, 1.25]}, f)
+        run = aa.load_search_run(d, 1)
+        self.assertEqual(run['raw'].tolist(), [0.5, 0.9, 0.8, 1.25])
+        self.assertEqual(run['best'].tolist(), [0.5, 0.9, 0.9, 1.25])
+        self.assertEqual((run['generations'], run['finished']), (4, True))
+        self.assertTrue(aa.is_complete(run, 4))
+        self.assertFalse(aa.is_complete(run, 5))
+
+    def test_a_gap_or_a_checkpoint_means_not_complete(self):
+        d = make_search_run(self.tmp, 'armA_s2', [1.0] * 6)
+        os.remove(os.path.join(d, 'gen_004.json'))
+        self.assertEqual(aa.load_search_run(d, 2)['generations'], 3)
+        d = make_search_run(self.tmp, 'armA_s3', [1.0] * 6, checkpoint=True)
+        run = aa.load_search_run(d, 3)
+        self.assertFalse(run['finished'])
+        self.assertFalse(aa.is_complete(run, 6))
+        d = make_search_run(self.tmp, 'armA_s4', [1.0] * 6, finished=False)
+        self.assertFalse(aa.is_complete(aa.load_search_run(d, 4), 6))
+
+    def test_champion_is_the_best_of_the_final_population(self):
+        slab = np.zeros((10, 10, 10), np.int8)
+        slab[2:6, 2:6, 0:2] = 1
+        legs = np.zeros((10, 10, 10), np.int8)
+        legs[2:6, 2:6, 1] = 3
+        legs[2, 2, 0] = legs[5, 5, 0] = 2
+        d = make_search_run(self.tmp, 'armA_s5', [1.0, 2.5], [(slab, 1.5), (legs, 2.5), (slab, 2.5)])
+        run = aa.load_search_run(d, 5)
+        aa.load_search_champion(run)
+        c = run['champion']
+        self.assertEqual((c['adjusted'], c['original'], c['population']), (2.5, 2.5, 3))
+        self.assertIn('individual 1', c['file'])                       # the first of the two that tie
+        self.assertEqual((c['body']['voxels'], c['body']['feet'], c['body']['two_feet']), (18, 2, True))
+        self.assertAlmostEqual(c['body']['muscle'], 2 / 18)
+
+    def test_an_unfinished_arm_a_is_refused(self):
+        for s in range(1, 36):
+            make_search_run(os.path.join(self.tmp, 'runs'), f'armA_s{s}', [1.0] * 1000, checkpoint=(s == 11))
+        code, text = run_main(['--arm', 'A', '--results-dir', os.path.join(self.tmp, 'runs'),
+                               '--out-dir', os.path.join(self.tmp, 'out')])
+        self.assertEqual(code, 2)
+        self.assertIn('seeds [11] have not finished', text)
+        self.assertNotIn('SCORES', text)
+
+
+@unittest.skipUnless(HAVE_DEPOSIT and os.path.isfile(os.path.join(aa.OUTCOMES, 'arm_R.json')),
+                     'deposited 2013 data or the report of arm R not present')
+class TestArmAReport(unittest.TestCase):
+    """Arm A's report on made-up runs: the deposited COST curves stand in for its scores."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp()
+        body = np.zeros((10, 10, 10), np.int8)
+        body[1:9, 1:9, 0:5] = 1
+        for seed, curve in enumerate(aa.reference_scores('costNumActuated'), start=1):
+            make_search_run(os.path.join(cls.tmp, 'runs'), f'armA_s{seed}', [float(v) for v in curve],
+                            [(body, float(curve[-1])), (body, 0.5)])
+        with mock.patch.object(ps, 'N_BOOT', 600), mock.patch.object(ps, 'ATTAIN_TRIALS', 50), \
+                mock.patch.object(ps, 'ATTAIN_BOOT', 300):
+            cls.code, cls.text = run_main(['--arm', 'A', '--results-dir', os.path.join(cls.tmp, 'runs'),
+                                           '--out-dir', os.path.join(cls.tmp, 'out')])
+            cls.code2, cls.text2 = run_main(['--arm', 'A', '--results-dir', os.path.join(cls.tmp, 'runs'),
+                                             '--out-dir', os.path.join(cls.tmp, 'out2'),
+                                             '--outcomes-dir', os.path.join(cls.tmp, 'no_outcomes')])
+        cls.report = load_json(os.path.join(cls.tmp, 'out', 'arm_A.json'))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, True)
+
+    def test_against_the_deposit(self):
+        self.assertEqual(self.code, 0, self.text)
+        s = self.report['scores']['1000']
+        self.assertEqual(s['n_arm'], 35)
+        self.assertAlmostEqual(s['arm_median'], 3.41, places=2)
+        self.assertEqual(self.report['primary']['verdict'], 'differs')
+        self.assertEqual(len(self.report['per_seed']), 35)
+        self.assertTrue(all(r['champion']['curve_agrees'] for r in self.report['per_seed']))
+        self.assertEqual(self.report['body']['measures']['voxels']['arm_median'], 320)
+
+    def test_against_arm_r_and_the_floor(self):
+        block = self.report['against']
+        self.assertEqual((block['arm'], block['n_other'], block['generation']), ('R', 35, 1000))
+        s = block['scores']['1000']
+        self.assertAlmostEqual(s['reference_median'], 4.41, places=2)        # arm R's own median
+        self.assertLess(s['ratio_of_medians'], 0.85)
+        self.assertLess(s['p'], 1e-4)
+        self.assertEqual(sorted(block['scores']), ['100', '1000', '300'])
+        self.assertEqual(block['floor']['verdict'], 'reproduces')
+        self.assertAlmostEqual(block['floor']['ratio_of_medians'], 1.004, places=3)
+        self.assertIn('AGAINST ARM R', self.text)
+        self.assertIn('The floor, measured for the original code itself', self.text)
+
+    def test_without_the_report_of_arm_r_it_says_so(self):
+        self.assertEqual(self.code2, 0, self.text2)
+        self.assertIn('The report of arm R is not in', self.text2)
+        self.assertNotIn('AGAINST ARM R', self.text2)
+
+
 @unittest.skipUnless(HAVE_DEPOSIT, 'deposited 2013 data not present')
 class TestDressRehearsalOnTheDeposit(unittest.TestCase):
     """Arms built from the deposited runs themselves: the whole path, with answers known in advance."""
