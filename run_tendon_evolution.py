@@ -806,6 +806,15 @@ def run_evolution(
         start_gen       = ck['next_gen']
         np.random.set_state(ck['np_state'])
         rng.bit_generator.state = ck['rng_state']
+        # The loop and the genomes share ONE generator object while a run is alive (the first
+        # population and every crossover child are handed `rng` itself). A checkpoint that
+        # holds only its state brings the genomes back with a generator of their own, the two
+        # then draw independently, and the continued run is no longer the run it would have
+        # been. Since 23 Nov 2026 the checkpoint holds the generator itself, in the same
+        # pickle as the genomes, so they come back still sharing it. Older checkpoints
+        # (no 'rng') continue as before.
+        if 'rng' in ck:
+            rng = ck['rng']
         t_gen_start     = time.perf_counter()
         print(f"  Resumed at generation {start_gen + 1}/{generations}  |  best so far {best_fitness:.4f}m")
     elif seed_from:
@@ -921,6 +930,7 @@ def run_evolution(
             'best_cppn': best_cppn, 'best_fitness': best_fitness,
             'history': history,
             'np_state': np.random.get_state(), 'rng_state': rng.bit_generator.state,
+            'rng': rng,     # the object itself: the genomes above share it (see the resume code)
             'physics': physics,
         }
         _tmp = out / 'checkpoint.pkl.tmp'
