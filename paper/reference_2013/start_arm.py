@@ -56,6 +56,7 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 OUT = os.path.join(ROOT, 'results', 'rerun2013')
+RERUN_OUT = OUT     # where arms R and Rc keep their launcher files, whatever OUT is set to later
 PROTOCOL = os.path.join(ROOT, 'paper', 'PROTOCOL.md')
 SETTINGS = os.path.join(ROOT, 'research_reference', 'extracted', 'dryad', 'softbots2013Config',
                         'config', 'softbotTest.dat')
@@ -224,16 +225,21 @@ def take_lock(path):
     return f
 
 
-def launcher_alive(stem):
-    """Is a launcher looking after this arm right now?"""
+def lock_held(path):
+    """Does some process hold this launcher lock right now? (Takes it for an instant to find out.)"""
     import msvcrt
-    f = take_lock(os.path.join(OUT, f'{stem}_host.lock'))
+    f = take_lock(path)
     if f is None:
         return True
     f.seek(0)
     msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
     f.close()
     return False
+
+
+def launcher_alive(stem):
+    """Is a launcher looking after this arm right now?"""
+    return lock_held(os.path.join(OUT, f'{stem}_host.lock'))
 
 
 # --------------------------------------------------------------------------------------------
@@ -377,6 +383,8 @@ def passthrough(a, for_launcher):
             args += ['--jobs', str(a.jobs)]
         if getattr(a, 'workers', None) is not None:
             args += ['--workers', str(a.workers)]
+        if getattr(a, 'after', None):
+            args += ['--after', a.after]
         if a.restart_incomplete:
             args.append('--restart-incomplete')
     return args
@@ -417,6 +425,9 @@ def launch_through_shell(a, stem):
             if STARTED_LINE in new:
                 here = f'python paper\\reference_2013\\start_arm.py --arm {a.arm}{trial_args(a)}'
                 print(f'Arm {a.arm} is starting. Its launcher has no window; the window that opened only shows progress.')
+                if getattr(a, 'after', None):
+                    print(f'  It starts nothing until arm {a.after} has finished completely, and nothing at all if '
+                          f'that arm ends unfinished.')
                 print('  Closing that window stops nothing. Logging off or restarting Windows does.')
                 print(f'  Where every run is:  {here} --status')
                 print(f'  Progress view:       {here} --watch')
@@ -665,6 +676,8 @@ def main(argv=None):
                     help='start unfinished seeds again from the beginning (their folders are moved aside)')
     ap.add_argument('--jobs', type=int, help='runs side by side (default: all seeds at once; each uses one core)')
     ap.add_argument('--workers', type=int, help='arm A only: simulations at a time within one run (default 1)')
+    ap.add_argument('--after', choices=sorted(ARMS), help='arm A only: wait until that arm has finished completely, '
+                                                          'then start; if it ends unfinished, start nothing')
     ap.add_argument('--interval', type=float, default=10.0, help='minutes between progress lines (default 10)')
     ap.add_argument('--seeds', help=f'trial only: seeds, e.g. 1-2 (the arm uses {PROTOCOL_SEEDS})')
     ap.add_argument('--gens', type=int, help='trial only: generations (the arm uses the settings file, 1000)')
@@ -689,6 +702,8 @@ def main(argv=None):
         return search_arm.main(sys.modules[__name__], a, ap, seeds)
     if a.workers is not None:
         ap.error('--workers is for arm A; a run of arms R and Rc uses one core')
+    if a.after:
+        ap.error('--after is for arm A')
     arm = ARMS[a.arm]
     with open(SETTINGS, encoding='utf-8', errors='replace') as f:
         generations = a.gens or settings_generations(f.read())

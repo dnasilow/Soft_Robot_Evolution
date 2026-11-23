@@ -120,6 +120,59 @@ def code_differs_from_tag(creationflags=0, tag=None, root=None):
     return None
 
 
+def wait_until_free(held, stop_requested, say, what, poll=5.0, remind=1800.0, sleep=time.sleep, clock=time.time):
+    """Wait for as long as held() is true. Returns 'free', or 'stopped' if a stop was asked for
+    meanwhile. Says every half hour that it is still waiting."""
+    last = clock()
+    while held():
+        if stop_requested():
+            return 'stopped'
+        if clock() - last >= remind:
+            say(f'(still waiting for {what})')
+            last = clock()
+        sleep(poll)
+    return 'free'
+
+
+def wait_for_other_arm(core, name, stop_requested, poll=5.0):
+    """Wait until the re-run arm `name` (R or Rc) has ended, then say how it ended:
+    'complete' (every seed finished with all its generations), 'incomplete', or 'stopped' if a
+    stop of THIS launcher was asked for while it waited.
+
+    That arm's runs are looked at only once its launcher has ended (two programs must not copy
+    its results out at the same time). If its launcher is gone but runs of it are still alive,
+    the wait goes on until they have ended."""
+    say = core.say
+    other = core.ARMS[name]
+    stem = f"{other['tag']}_P{other['penalty']}"
+    lock = os.path.join(core.RERUN_OUT, f'{stem}_host.lock')
+    seeds = core.parse_seeds(core.PROTOCOL_SEEDS)
+    with open(core.SETTINGS, encoding='utf-8', errors='replace') as f:
+        generations = core.settings_generations(f.read())
+    if core.lock_held(lock):
+        say(f'Arm {name} is running. Waiting for it to finish; nothing is started before that.')
+    while True:
+        if wait_until_free(lambda: core.lock_held(lock), stop_requested, say, f'arm {name}', poll) == 'stopped':
+            return 'stopped'
+        st = core.read_status(stem + '_s', seeds)
+        alive = core.running_seeds(st)
+        if not alive:
+            break
+        say(f'Arm {name} has no launcher, but {len(alive)} of its runs are alive. Waiting for them to end.')
+        waited = 0.0
+        while waited < 600 and not core.lock_held(lock):
+            if stop_requested():
+                return 'stopped'
+            time.sleep(poll)
+            waited += poll
+    done = core.complete_seeds(st, generations)
+    if len(done) == len(seeds):
+        say(f'Arm {name} is complete: {len(done)} of {len(seeds)} runs with {generations} generations.')
+        return 'complete'
+    say(f'Arm {name} has ended without being complete. ' + core.progress_line(st, generations))
+    return 'incomplete'
+
+
 # --------------------------------------------------------------------------------------------
 # Windows: every process this launcher starts ends when the launcher ends
 # --------------------------------------------------------------------------------------------
@@ -190,7 +243,9 @@ def show_status(core, a, stem, seeds, generations):
         print(f"  {state}, seed (generations): {', '.join(members)}")
     done = core.complete_seeds(st, generations)
     print(f'  complete: {len(done)} of {len(seeds)}')
-    print(f"  launcher: {'running' if alive else 'not running'}")
+    waiting_for = read_state_file(stem).get('waiting_for') if alive else None
+    print(f"  launcher: {'running' if alive else 'not running'}"
+          + (f', waiting for arm {waiting_for} to finish before it starts anything' if waiting_for else ''))
     if not alive and len(done) < len(seeds):
         print('  Unfinished runs are continued from their checkpoints when the arm is started again.')
     return 0 if len(done) == len(seeds) else 1
@@ -263,7 +318,7 @@ def run_launcher(core, a, arm, stem, seeds, generations):
         record = {
             'time': datetime.datetime.now().isoformat(timespec='seconds'),
             'arm': a.arm, 'stem': stem, 'seeds': seeds, 'generations': generations, 'jobs': jobs,
-            'workers': workers, 'runner_arguments': arm['runner'], 'command': sys.argv,
+            'workers': workers, 'after': a.after, 'runner_arguments': arm['runner'], 'command': sys.argv,
             'launcher_pid': os.getpid(), 'git': git,
             'simulator_sha256': info['sha256']['voxelize'], 'template_sha256': sha256(TEMPLATE),
             'python': platform.python_version(), 'windows': platform.platform(), 'keep_awake': awake,
@@ -284,10 +339,28 @@ def run_launcher(core, a, arm, stem, seeds, generations):
             + (f", modified tracked files: {git['modified']}" if git.get('modified') else '')
             + f"; simulator {record['simulator_sha256'][:12]}, settings template {record['template_sha256'][:12]}")
 
-        own_children()          # from here on, whatever this launcher starts ends with it
         stop_request = os.path.join(OUT, f'{stem}_stop.request')
         if os.path.exists(stop_request):
             os.remove(stop_request)
+        here = f'python paper\\reference_2013\\start_arm.py --arm {a.arm}{core.trial_args(a)}'
+        if a.after:
+            with open(os.path.join(OUT, f'{stem}_state.json'), 'w', encoding='utf-8') as f:
+                json.dump({'time': time.time(), 'running': [], 'waiting': [], 'failed': {}, 'waiting_for': a.after}, f)
+            outcome = wait_for_other_arm(core, a.after, lambda: os.path.exists(stop_request))
+            if outcome == 'stopped':
+                os.remove(stop_request)
+                say(f'Stop requested while waiting. Nothing of arm {a.arm} was started.')
+                return 130
+            if outcome == 'incomplete':
+                say(f'Arm {a.arm} is therefore not started. When you want it started:  {here}')
+                return 3
+            problem = None if a.tag else code_differs_from_tag(core.HIDDEN)     # hours may have passed
+            if problem:
+                say(f'{problem} An arm of the campaign runs from that code; nothing started.')
+                return 2
+            say(f'Starting arm {a.arm} now.')
+
+        own_children()          # from here on, whatever this launcher starts ends with it
         logs = os.path.join(OUT, f'{stem}_logs')
         os.makedirs(logs, exist_ok=True)
         python = os.path.join(os.path.dirname(sys.executable), 'python.exe')
@@ -388,7 +461,6 @@ def run_launcher(core, a, arm, stem, seeds, generations):
         done = core.complete_seeds(st, generations)
         say(core.progress_line(st, generations))
         say(f'{len(done)} of {len(seeds)} runs are complete with {generations} generations.')
-        here = f'python paper\\reference_2013\\start_arm.py --arm {a.arm}{core.trial_args(a)}'
         if len(done) < len(seeds):
             say(f'To continue the unfinished runs from their checkpoints:  {here}')
             return 130 if stopped else 1

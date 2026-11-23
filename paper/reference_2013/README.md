@@ -130,6 +130,7 @@ The same commands with `--arm A` (`search_arm.py`). Its runs are of another kind
 - **A run can be stopped and continued without loss.** It saves a checkpoint after every generation, and the same command goes on from it. Since the correction of 23 November (protocol, section 9.3) the continued run is exactly the run it would have been. So there is no `--restart-incomplete` here: starting the arm again continues what is unfinished.
 - **The launcher owns its runs.** If it ends, however it ends, Windows ends its runs with it, and nothing is lost. A run that ends without finishing is continued by the launcher, six starts at most.
 - **The code must be the tagged one.** The launcher starts the arm only if `run_tendon_evolution.py` and `src/` are identical to the tag `campaign-v2`.
+- **It can wait for another arm.** With `--after Rc` the launcher makes its checks at once, then waits until arm Rc's launcher has ended. It starts arm A only if arm Rc is complete; if that arm ended unfinished it starts nothing and says so. `--stop` ends the wait.
 - **Its files** are in `results/campaign/`: the launcher's log, its launch records and each run's console output.
 
 Tried on 23 November with short trial runs (`dryQ`, `dryS`, `dryT`, `dryU`): three runs side by side to the end; the launcher ended alone, and its runs ended with it; a stop on request; continuation after both; seed 1 identical to the pilot of 21 November in every case with the corrected code.
