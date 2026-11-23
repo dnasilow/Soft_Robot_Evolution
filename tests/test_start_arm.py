@@ -123,14 +123,63 @@ class TestRules(unittest.TestCase):
         self.assertEqual(start_arm.ARMS['R'], {'tag': 'armR', 'penalty': 0, 'condition': 'noCost'})
         self.assertEqual(start_arm.ARMS['Rc'], {'tag': 'armRc', 'penalty': 2, 'condition': 'costNumActuated'})
 
-    def test_window_file_runs_this_launcher_here(self):
-        text = start_arm.window_command_text('R', ['--arm', 'R', '--here'], python=r'C:\Py 100%\python.exe',
-                                             script=r'C:\x\start_arm.py')
+    def test_window_file_starts_a_launcher_without_a_window_and_only_shows_progress(self):
+        text = start_arm.window_command_text('Rc', ['--arm', 'Rc', '--host'], ['--arm', 'Rc', '--watch', '--from-byte', '12'],
+                                             python=r'C:\Py 100%\python.exe', script=r'C:\x\start_arm.py')
         lines = text.splitlines()
         self.assertEqual(lines[0], '@echo off')
-        self.assertIn('keep this window open', lines[1])
-        self.assertEqual(lines[3], r'"C:\Py 100%%\python.exe" C:\x\start_arm.py --arm R --here')
+        self.assertIn('closing this window does NOT stop the runs', lines[1])
+        # the launcher: pythonw (no console), through `start` (not tied to this window)
+        self.assertEqual(lines[3], r'start "" "C:\Py 100%%\pythonw.exe" C:\x\start_arm.py --arm Rc --host')
+        # what stays in the window: the progress view
+        self.assertEqual(lines[4], r'"C:\Py 100%%\python.exe" C:\x\start_arm.py --arm Rc --watch --from-byte 12')
         self.assertEqual(lines[-1], 'pause > nul')
+        self.assertNotIn('--here', text)
+
+    def test_only_one_mode_at_a_time(self):
+        import contextlib
+        for argv in (['--arm', 'R', '--status', '--stop'], ['--arm', 'R', '--watch', '--here'],
+                     ['--arm', 'R', '--stop', '--host']):
+            with self.assertRaises(SystemExit, msg=argv), open(os.devnull, 'w') as null:
+                with contextlib.redirect_stderr(null):
+                    start_arm.main(argv)
+
+    def test_arguments_passed_on_to_the_launcher_and_to_the_view(self):
+        import argparse
+        a = argparse.Namespace(seeds='3,5', gens=2, tag='dry', interval=1.0, jobs=None, restart_incomplete=True)
+        self.assertEqual(start_arm.passthrough(a, True),
+                         ['--seeds', '3,5', '--gens', '2', '--tag', 'dry', '--interval', '1.0', '--restart-incomplete'])
+        self.assertEqual(start_arm.passthrough(a, False), ['--seeds', '3,5', '--gens', '2', '--tag', 'dry'])
+        arm = argparse.Namespace(seeds=None, gens=None, tag=None, interval=10.0, jobs=None, restart_incomplete=False)
+        self.assertEqual(start_arm.passthrough(arm, True), ['--interval', '10.0'])
+        self.assertEqual(start_arm.passthrough(arm, False), [])
+
+
+class TestLauncherLockAndLog(unittest.TestCase):
+    def test_the_view_begins_at_the_latest_launch(self):
+        log = (b'[21 Nov 23:27] launcher started (process 1): arm R\n[21 Nov 23:28] 35 runs: 35 running.\n'
+               b'[22 Nov 21:40] launcher ended\n[23 Nov 09:30] launcher started (process 2): arm R\n[23 Nov 09:31] x\n')
+        at = start_arm.latest_launch_offset(log)
+        self.assertTrue(log[at:].startswith(b'[23 Nov 09:30] launcher started (process 2)'))
+        self.assertEqual(start_arm.latest_launch_offset(b'no launch yet\n'), 0)
+        self.assertEqual(start_arm.latest_launch_offset(b''), 0)
+
+    @unittest.skipUnless(os.name == 'nt', 'the lock is a Windows file lock')
+    def test_one_launcher_per_arm(self):
+        import tempfile
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(start_arm, 'OUT', d):
+            self.assertFalse(start_arm.launcher_alive('armX_P0'))
+            mine = start_arm.take_lock(os.path.join(d, 'armX_P0_host.lock'))
+            self.assertIsNotNone(mine)
+            self.assertTrue(start_arm.launcher_alive('armX_P0'))                       # seen by anyone who looks
+            self.assertIsNone(start_arm.take_lock(os.path.join(d, 'armX_P0_host.lock')))  # a second launcher is refused
+            self.assertFalse(start_arm.launcher_alive('armY_P2'))                      # another arm is not affected
+            mine.close()                                                               # the launcher ends ...
+            self.assertFalse(start_arm.launcher_alive('armX_P0'))                      # ... and the arm is free again
+            again = start_arm.take_lock(os.path.join(d, 'armX_P0_host.lock'))
+            self.assertIsNotNone(again)
+            again.close()
 
 
 if __name__ == '__main__':

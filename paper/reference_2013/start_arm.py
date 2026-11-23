@@ -1,4 +1,4 @@
-"""Start, or check, one arm of the campaign that re-executes the ORIGINAL 2013 experiment.
+"""Start, watch, stop or check one arm of the campaign that re-executes the ORIGINAL 2013 experiment.
 
 The arms are those of paper/PROTOCOL.md: the authors' search program driving the authors'
 simulator (both built here from their source), seeds 1 to 35, 1000 generations each.
@@ -6,30 +6,36 @@ simulator (both built here from their source), seeds 1 to 35, 1000 generations e
     Rc   actuated-voxel cost (the program's -P 2)
 
 usage, from the project folder:
-    python paper/reference_2013/start_arm.py --arm R                        start it, in a window of its own
+    python paper/reference_2013/start_arm.py --arm R                        start it
     python paper/reference_2013/start_arm.py --arm R --status               where every run is; starts nothing
-    python paper/reference_2013/start_arm.py --arm R --restart-incomplete   after an interruption
+    python paper/reference_2013/start_arm.py --arm R --watch                follow its progress in this window
+    python paper/reference_2013/start_arm.py --arm R --stop                 stop its runs
+    python paper/reference_2013/start_arm.py --arm R --restart-incomplete   start it again after an interruption
 
-What it does
-  - Opens a console window of its own, through the Windows shell, so that it does not depend on
-    the program the command was typed in, and runs there (--here runs in the current console
-    instead). That window IS the campaign: the runs live in a WSL session that this program
-    holds open, and closing the window stops them.
-  - Keeps Windows awake for as long as it runs (the keep-awake of run_tendon_evolution.py).
-  - Starts the runs through run_2013_search.sh. Finished runs are skipped, runs in progress are
-    left alone, and a second launcher for the same arm is refused.
-  - Every few minutes copies the learning curves to results/rerun2013/ and prints one line of
+How it runs
+  - The runs are looked after by a launcher WITHOUT a window, started through the Windows shell,
+    so it depends neither on the program the command was typed in nor on any console window.
+    The window that opens only shows the progress. Closing it stops nothing; --watch opens the
+    view again and --stop is the way to stop the runs. (Until 23 November 2026 the window WAS
+    the campaign, and a closed window cost arm Rc nine hours.)
+  - Logging off, restarting Windows or shutting WSL down still ends the runs.
+  - The launcher keeps Windows awake for as long as it runs (the keep-awake of
+    run_tendon_evolution.py).
+  - It starts the runs through run_2013_search.sh. Finished runs are skipped, runs in progress
+    are left alone, and a second launcher for the same arm is refused. If runs are in progress
+    without a launcher (it was ended, the runs were not), starting again adopts them.
+  - Every few minutes it copies the learning curves to results/rerun2013/ and writes one line of
     progress: generations and time, not scores.
-  - At the end checks that every seed finished with the expected number of generations and
-    prints the comparison with the deposited runs (summarise_reruns.py).
+  - At the end it checks that every seed finished with the expected number of generations and
+    writes the comparison with the deposited runs (summarise_reruns.py).
 
-After an interruption (a restart of Windows, a power cut, a closed window) the unfinished runs
-cannot be continued. --restart-incomplete moves their folders to runs/_interrupted/ on the WSL
-side and starts those seeds again from the beginning. The program is deterministic for a given
-seed, so the repeat is the same run.
+After an interruption the unfinished runs cannot be continued. --restart-incomplete moves their
+folders to runs/_interrupted/ on the WSL side and starts those seeds again from the beginning.
+The program is deterministic for a given seed, so the repeat is the same run.
 
---seeds, --gens and --tag are for trials of the launcher itself. They need a --tag of their own,
-so a trial can never be written into, or mistaken for, an arm of the campaign.
+--here runs the launcher in the current console instead (for trials). --seeds, --gens and --tag
+are for trials of the launcher itself. They need a --tag of their own, so a trial can never be
+written into, or mistaken for, an arm of the campaign.
 """
 import argparse
 import contextlib
@@ -43,6 +49,7 @@ import statistics
 import subprocess
 import sys
 import time
+import traceback
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
@@ -58,9 +65,10 @@ ARMS = {
 }
 PROTOCOL_SEEDS = '1-35'
 STARTED_LINE = 'launcher started'
-# The WSL child gets its own process group, so a Ctrl+C typed in the console reaches this
-# program only and the runs are not stopped by a stray key press.
-NEW_GROUP = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0)
+ENDED_LINE = 'launcher ended'
+# Every child process is started without a console window and in a process group of its own:
+# nothing typed or closed in any window reaches the runs.
+HIDDEN = getattr(subprocess, 'CREATE_NO_WINDOW', 0) | getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0)
 
 LOG = None          # the launcher's own log file, set once the arm is known
 
@@ -115,6 +123,10 @@ def complete_seeds(st, generations):
     return [s for s, (g, state) in st.items() if state == 'finished' and g == generations]
 
 
+def running_seeds(st):
+    return [s for s, (g, state) in st.items() if state == 'running']
+
+
 def hours(seconds):
     return f'{seconds / 3600:.1f} h' if seconds >= 5400 else f'{max(1, round(seconds / 60))} min'
 
@@ -166,18 +178,60 @@ def trial_args(a):
     return f' --tag {a.tag} --seeds {a.seeds or PROTOCOL_SEEDS}' + (f' --gens {a.gens}' if a.gens else '')
 
 
-def window_command_text(arm_name, child_args, python=None, script=None):
-    """Text of the .cmd file that runs this launcher in a console window of its own."""
-    command = subprocess.list2cmdline([python or sys.executable, script or os.path.abspath(__file__)] + child_args)
+def window_command_text(arm_name, host_args, watch_args, python=None, pythonw=None, script=None):
+    """Text of the .cmd file the Windows shell opens: it starts the launcher without a window
+    (pythonw has none, and `start` does not tie it to this console) and then shows its progress.
+    Only the progress view lives in the window."""
+    script = script or os.path.abspath(__file__)
+    python = python or sys.executable
+    pythonw = pythonw or os.path.join(os.path.dirname(python), 'pythonw.exe')
+    line = lambda exe, args: subprocess.list2cmdline([exe, script] + args).replace('%', '%%')   # noqa: E731
     return '\n'.join([
         '@echo off',
-        f'title Soft robot campaign, arm {arm_name} - keep this window open',
+        f'title Soft robot campaign, arm {arm_name} - progress only, closing this window does NOT stop the runs',
         f'cd /d "{ROOT}"',
-        command.replace('%', '%%'),
+        'start "" ' + line(pythonw, host_args),
+        line(python, watch_args),
         'echo.',
-        'echo The launcher has ended. Press a key to close this window.',
+        'echo This window only showed the progress. It can be closed.',
         'pause > nul',
     ]) + '\n'
+
+
+def latest_launch_offset(log_bytes):
+    """Where the latest launch begins in the launcher's log (byte offset of its first line)."""
+    at = log_bytes.rfind(STARTED_LINE.encode())
+    return log_bytes.rfind(b'\n', 0, at) + 1 if at >= 0 else 0
+
+
+# --------------------------------------------------------------------------------------------
+# the launcher's lock: who is looking after this arm
+# --------------------------------------------------------------------------------------------
+def take_lock(path):
+    """Take the launcher's lock for an arm. Returns the open file to keep for as long as the
+    lock is wanted, or None if another process holds it. Windows releases it when the holder
+    ends, however it ends."""
+    import msvcrt
+    f = open(path, 'a+b')
+    try:
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+    except OSError:
+        f.close()
+        return None
+    return f
+
+
+def launcher_alive(stem):
+    """Is a launcher looking after this arm right now?"""
+    import msvcrt
+    f = take_lock(os.path.join(OUT, f'{stem}_host.lock'))
+    if f is None:
+        return True
+    f.seek(0)
+    msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+    f.close()
+    return False
 
 
 # --------------------------------------------------------------------------------------------
@@ -187,7 +241,7 @@ def say(text=''):
     stamp = datetime.datetime.now().strftime('%d %b %H:%M')
     for line in (str(text).splitlines() or ['']):
         out = f'[{stamp}] {line}'
-        print(out, flush=True)
+        print(out, flush=True)                  # goes nowhere when there is no console
         if LOG:
             with open(LOG, 'a', encoding='utf-8') as f:
                 f.write(out + '\n')
@@ -197,7 +251,7 @@ def run_bash(script, timeout=900):
     """Run a bash script inside WSL (fed on standard input); returns (exit code, output)."""
     p = subprocess.run(['wsl', '-d', DISTRO, '--', 'bash', '-s'], input=script.encode('utf-8'),
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout,
-                       creationflags=NEW_GROUP)
+                       creationflags=HIDDEN)
     return p.returncode, p.stdout.decode('utf-8', errors='replace')
 
 
@@ -221,8 +275,8 @@ def start_times(prefix, seeds):
 
 def git_state():
     def git(*a):
-        return subprocess.run(['git', '-C', ROOT] + list(a), capture_output=True, text=True,
-                              timeout=60, creationflags=NEW_GROUP).stdout.rstrip('\n')
+        return subprocess.run(['git', '-C', ROOT] + list(a), stdin=subprocess.DEVNULL, capture_output=True,
+                              text=True, timeout=60, creationflags=HIDDEN).stdout.rstrip('\n')
     try:
         return {'commit': git('rev-parse', 'HEAD'),
                 'describe': git('describe', '--tags', '--always'),
@@ -280,8 +334,16 @@ def keep_awake():
     return stop, ' '.join(buffer.getvalue().replace('—', '-').split())
 
 
+def has_console_window():
+    try:
+        import ctypes
+        return bool(ctypes.windll.kernel32.GetConsoleWindow())
+    except Exception:                                        # noqa: BLE001
+        return True
+
+
 # --------------------------------------------------------------------------------------------
-# the three modes
+# the modes
 # --------------------------------------------------------------------------------------------
 def show_status(prefix, seeds, generations):
     st = read_status(prefix, seeds)
@@ -293,29 +355,47 @@ def show_status(prefix, seeds, generations):
         print(f"  {state}, seed (generations): {', '.join(members)}")
     done = complete_seeds(st, generations)
     print(f'  complete: {len(done)} of {len(seeds)}')
+    alive = launcher_alive(prefix[:-2])
+    print(f"  launcher: {'running' if alive else 'not running'}")
+    if running_seeds(st) and not alive:
+        print('  NOTE: runs are in progress but nothing looks after them, so Windows may go to sleep.')
+        print('        Starting the arm again adopts them.')
     return 0 if len(done) == len(seeds) else 1
 
 
-def open_own_window(a, prefix, seeds, generations):
-    st = read_status(prefix, seeds)
-    going = [s for s, (g, state) in st.items() if state == 'running']
-    if going:
-        print(f'Runs of this arm are in progress already ({len(going)} running); not opening another '
-              f'window. --status shows them.')
-        return 3
-    child = ['--arm', a.arm, '--here', '--interval', str(a.interval)]
-    for flag, value in (('--seeds', a.seeds), ('--gens', a.gens), ('--tag', a.tag), ('--jobs', a.jobs)):
+def passthrough(a, for_launcher):
+    """The arguments a second copy of this program needs to mean the same arm or trial."""
+    args = []
+    for flag, value in (('--seeds', a.seeds), ('--gens', a.gens), ('--tag', a.tag)):
         if value is not None:
-            child += [flag, str(value)]
-    if a.restart_incomplete:
-        child.append('--restart-incomplete')
+            args += [flag, str(value)]
+    if for_launcher:
+        args += ['--interval', str(a.interval)]
+        if a.jobs is not None:
+            args += ['--jobs', str(a.jobs)]
+        if a.restart_incomplete:
+            args.append('--restart-incomplete')
+    return args
+
+
+def start(a, prefix, seeds, generations):
+    """Start the windowless launcher through the Windows shell, with a window that shows its progress."""
+    stem = prefix[:-2]
+    if launcher_alive(stem):
+        print(f"This arm's launcher is running already. Its progress:\n"
+              f"  python paper\\reference_2013\\start_arm.py --arm {a.arm}{trial_args(a)} --watch")
+        return 3
+    going = running_seeds(read_status(prefix, seeds))
+    if going:
+        print(f'{len(going)} runs of this arm are in progress without a launcher. Starting one to look after them.')
     os.makedirs(OUT, exist_ok=True)
-    cmd_file = os.path.join(OUT, f'{prefix[:-2]}_window.cmd')
-    with open(cmd_file, 'w', encoding='mbcs', newline='\r\n') as f:
-        f.write(window_command_text(a.arm, child))
     before = os.path.getsize(LOG) if os.path.exists(LOG) else 0
+    cmd_file = os.path.join(OUT, f'{stem}_window.cmd')
+    with open(cmd_file, 'w', encoding='mbcs', newline='\r\n') as f:
+        f.write(window_command_text(a.arm, ['--arm', a.arm, '--host'] + passthrough(a, True),
+                                    ['--arm', a.arm, '--watch', '--from-byte', str(before)] + passthrough(a, False)))
     # explorer.exe hands the file to the Windows shell, which opens it as a double click would:
-    # the new window belongs to the shell, not to the program this command was typed in.
+    # what it starts belongs to the shell, not to the program this command was typed in.
     subprocess.Popen(['explorer.exe', cmd_file])
     deadline = time.time() + 180
     while time.time() < deadline:
@@ -325,32 +405,105 @@ def open_own_window(a, prefix, seeds, generations):
                 f.seek(before)
                 new = f.read()
             if STARTED_LINE in new:
-                print(f'Arm {a.arm} is starting in a window of its own.')
-                print('  That window is the campaign: keep it open, and do not log off or restart Windows.')
-                print(f'  Progress:  python paper\\reference_2013\\start_arm.py --arm {a.arm}{trial_args(a)} --status')
-                print(f'  Log:       {os.path.relpath(LOG, ROOT)}')
+                here = f'python paper\\reference_2013\\start_arm.py --arm {a.arm}{trial_args(a)}'
+                print(f'Arm {a.arm} is starting. Its launcher has no window; the window that opened only shows progress.')
+                print('  Closing that window stops nothing. Logging off or restarting Windows does.')
+                print(f'  Where every run is:  {here} --status')
+                print(f'  Progress view:       {here} --watch')
+                print(f'  Stop the runs:       {here} --stop')
+                print(f'  Log:                 {os.path.relpath(LOG, ROOT)}')
                 return 0
     print(f'No sign of the launcher after 3 minutes. Start it by double-clicking\n  {cmd_file}')
     return 1
 
 
-def run_here(a, arm, prefix, seeds, generations):
+def watch(a, prefix, from_byte=None):
+    """Follow the launcher's log in this console until the launcher has ended. Stops nothing."""
+    stem = prefix[:-2]
+    data = b''
+    if os.path.exists(LOG):
+        with open(LOG, 'rb') as f:
+            data = f.read()
+    pos = min(from_byte, len(data)) if from_byte is not None else latest_launch_offset(data)
+    started = from_byte is None and bool(data)
+    waited = quiet = 0
+    try:
+        while True:
+            chunk = b''
+            if os.path.exists(LOG):
+                with open(LOG, 'rb') as f:
+                    f.seek(pos)
+                    chunk = f.read()
+            cut = chunk.rfind(b'\n') + 1
+            if cut:
+                text = chunk[:cut].decode('utf-8', errors='replace')
+                sys.stdout.write(text)
+                sys.stdout.flush()
+                pos += cut
+                started = started or STARTED_LINE in text or ENDED_LINE in text
+                quiet = 0
+            elif started and not launcher_alive(stem):
+                quiet += 1
+                if quiet >= 3:
+                    print('\nThe launcher is not running (any more). Where every run is:')
+                    print(f'  python paper\\reference_2013\\start_arm.py --arm {a.arm}{trial_args(a)} --status')
+                    return 0
+            elif not started:
+                waited += 1
+                if waited > 90:
+                    print('The launcher did not start within 3 minutes.')
+                    return 1
+            time.sleep(2)
+    except KeyboardInterrupt:
+        print('\n(view closed; the runs are not affected)')
+        return 0
+
+
+def stop(a, prefix, seeds, generations):
+    """Stop the runs of this arm. Their launcher then ends by itself."""
+    stem = prefix[:-2]
+    code, text = run_bash(shell_script('stop_2013_runs.sh', PREFIX=prefix))
+    print(text.strip())
+    for _ in range(45):
+        if not launcher_alive(stem):
+            break
+        time.sleep(2)
+    else:
+        print('The launcher is still running; look at its log.')
+    show_status(prefix, seeds, generations)
+    return 0 if code == 0 else 1
+
+
+def run_launcher(a, arm, prefix, seeds, generations):
+    """The launcher itself: starts the runs, keeps Windows awake, reports, checks the end.
+    Runs without a window (--host) or in the current console (--here)."""
     tag = a.tag or arm['tag']       # the run folders are <tag>_P<penalty>_s<seed>
     stem = prefix[:-2]              # <tag>_P<penalty>, the start of this arm's file names
-    say(f"{STARTED_LINE} (process {os.getpid()}): arm {a.arm}, runs {prefix}{seeds[0]} to {prefix}{seeds[-1]} "
-        f"({len(seeds)} seeds), {generations} generations each")
-    if 'CLAUDECODE' in os.environ:
-        say('NOTE: this console belongs to the Claude app. Runs started here stop when the app closes. '
-            'Without --here the launcher opens a window of its own.')
-    if not a.tag:
-        with open(PROTOCOL, encoding='utf-8') as f:
-            if not protocol_is_frozen(f.read()):
-                say('paper/PROTOCOL.md is not frozen. An arm of the campaign starts only after the freeze.')
-                return 2
-
-    stop_awake, awake = keep_awake()
-    say(awake)
+    lock = None
+    for _ in range(10):             # a --status or --watch may hold the lock for an instant while it looks
+        lock = take_lock(os.path.join(OUT, f'{stem}_host.lock'))
+        if lock is not None:
+            break
+        time.sleep(0.3)
+    if lock is None:
+        say(f'A launcher is looking after arm {a.arm} already. Nothing started here.')
+        say(ENDED_LINE)
+        return 4
+    stop_awake = None
     try:
+        say(f"{STARTED_LINE} (process {os.getpid()}, {'in a console' if has_console_window() else 'no window'}): "
+            f"arm {a.arm}, runs {prefix}{seeds[0]} to {prefix}{seeds[-1]} ({len(seeds)} seeds), {generations} generations each")
+        if a.here and 'CLAUDECODE' in os.environ:
+            say('NOTE: this console belongs to the Claude app. A launcher started here ends when the app closes. '
+                'Without --here it is started through the Windows shell.')
+        if not a.tag:
+            with open(PROTOCOL, encoding='utf-8') as f:
+                if not protocol_is_frozen(f.read()):
+                    say('paper/PROTOCOL.md is not frozen. An arm of the campaign starts only after the freeze.')
+                    return 2
+
+        stop_awake, awake = keep_awake()
+        say(awake)
         info = programs()
         record = {
             'time': datetime.datetime.now().isoformat(timespec='seconds'),
@@ -383,7 +536,7 @@ def run_here(a, arm, prefix, seeds, generations):
             # Output goes to a file, not to a pipe into this program: the runs must not depend on
             # this program reading them. One file per launch; its lines are repeated in the log.
             proc = subprocess.Popen(['wsl', '-d', DISTRO, '--', 'bash', '-s'], stdin=subprocess.PIPE,
-                                    stdout=sink, stderr=subprocess.STDOUT, creationflags=NEW_GROUP)
+                                    stdout=sink, stderr=subprocess.STDOUT, creationflags=HIDDEN)
         proc.stdin.write(script.encode('utf-8'))
         proc.stdin.close()
 
@@ -397,23 +550,43 @@ def run_here(a, arm, prefix, seeds, generations):
                 seen += cut
                 say('\n'.join('  | ' + l for l in data[:cut].decode('utf-8', errors='replace').splitlines()))
 
+        def report():
+            try:
+                st = read_status(prefix, seeds)
+                say(progress_line(st, generations, start_times(prefix, seeds), time.time()))
+                return st
+            except Exception as e:                           # noqa: BLE001  the monitor must never stop the runs
+                say(f'(could not read the progress this time: {e})')
+                return None
+
         stopped = False
+        adopted = False
         last_ctrl_c = 0.0
         next_report = time.time() + 90
         while True:
             try:
                 echo_script_output()
-                if proc.poll() is not None:
-                    break
+                if not adopted and proc.poll() is not None:
+                    if proc.returncode != 4:
+                        break
+                    # Another launch script holds the arm inside WSL. No launcher is alive (this
+                    # one holds the lock), so those runs lost theirs: look after them from here.
+                    st = report()
+                    if st is None or not running_seeds(st):
+                        say('A launch of this arm is still open inside WSL but none of its runs is alive. '
+                            'Nothing started here.')
+                        return 4
+                    say('These runs are in progress without a launcher. Looking after them from here: '
+                        'keeping Windows awake and reporting until they end.')
+                    adopted = True
+                    next_report = time.time() + a.interval * 60
                 if time.time() >= next_report:
                     next_report = time.time() + a.interval * 60
-                    try:
-                        st = read_status(prefix, seeds)
-                        say(progress_line(st, generations, start_times(prefix, seeds), time.time()))
-                    except Exception as e:                   # noqa: BLE001  the monitor must never stop the runs
-                        say(f'(could not read the progress this time: {e})')
+                    st = report()
+                    if adopted and st is not None and not running_seeds(st):
+                        break
                 time.sleep(2)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:                        # only with --here: a launcher without a window has no keys
                 if time.time() - last_ctrl_c <= 5:
                     say('Stopping all runs of this arm ...')
                     proc.terminate()
@@ -432,10 +605,6 @@ def run_here(a, arm, prefix, seeds, generations):
                     'Stopped runs lose their work; finished runs are kept.')
         echo_script_output()
 
-        code = proc.returncode
-        if code == 4:
-            say('Another launcher is handling this arm. Nothing was started here.')
-            return 4
         try:
             st = read_status(prefix, seeds)
         except Exception as e:                               # noqa: BLE001
@@ -448,12 +617,26 @@ def run_here(a, arm, prefix, seeds, generations):
             say('To run the unfinished seeds again from the beginning:')
             say(f'  python paper\\reference_2013\\start_arm.py --arm {a.arm}{trial_args(a)} --restart-incomplete')
             return 1 if not stopped else 130
-        summary = subprocess.run([sys.executable, os.path.join(HERE, 'summarise_reruns.py'), prefix,
-                                  '--condition', arm['condition']], capture_output=True, creationflags=NEW_GROUP)
+        python = os.path.join(os.path.dirname(sys.executable), 'python.exe')      # not pythonw: this one prints
+        summary = subprocess.run([python if os.path.exists(python) else sys.executable,
+                                  os.path.join(HERE, 'summarise_reruns.py'), prefix,
+                                  '--condition', arm['condition']], stdin=subprocess.DEVNULL,
+                                 capture_output=True, creationflags=HIDDEN)
         say((summary.stdout + summary.stderr).decode('utf-8', errors='replace').rstrip())
         return 0
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            say(e.code)
+            return 2
+        raise
+    except BaseException:                                    # noqa: BLE001  a launcher without a window must leave a trace
+        say(traceback.format_exc())
+        raise
     finally:
-        stop_awake()
+        if stop_awake:
+            stop_awake()
+        say(ENDED_LINE)
+        lock.close()
 
 
 def main(argv=None):
@@ -461,8 +644,12 @@ def main(argv=None):
                                  formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split('\n\n', 1)[1])
     ap.add_argument('--arm', required=True, choices=sorted(ARMS))
-    ap.add_argument('--status', action='store_true', help='report where every run is and start nothing')
-    ap.add_argument('--here', action='store_true', help='run in this console instead of a window of its own')
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument('--status', action='store_true', help='report where every run is and start nothing')
+    mode.add_argument('--watch', action='store_true', help='follow the progress in this console; stops nothing')
+    mode.add_argument('--stop', action='store_true', help='stop the runs of this arm')
+    mode.add_argument('--here', action='store_true', help='run the launcher in this console (for trials)')
+    mode.add_argument('--host', action='store_true', help=argparse.SUPPRESS)      # the launcher without a window
     ap.add_argument('--restart-incomplete', action='store_true',
                     help='start unfinished seeds again from the beginning (their folders are moved aside)')
     ap.add_argument('--jobs', type=int, help='runs side by side (default: all seeds at once; each uses one core)')
@@ -470,6 +657,7 @@ def main(argv=None):
     ap.add_argument('--seeds', help=f'trial only: seeds, e.g. 1-2 (the arm uses {PROTOCOL_SEEDS})')
     ap.add_argument('--gens', type=int, help='trial only: generations (the arm uses the settings file, 1000)')
     ap.add_argument('--tag', help='trial only: name of the trial; required with --seeds or --gens')
+    ap.add_argument('--from-byte', type=int, help=argparse.SUPPRESS)              # --watch: where to begin in the log
     a = ap.parse_args(argv)
 
     if (a.seeds or a.gens) and not a.tag:
@@ -491,14 +679,18 @@ def main(argv=None):
 
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(errors='replace')
-    if a.status:
-        return show_status(prefix, seeds, generations)
     global LOG
     os.makedirs(OUT, exist_ok=True)
     LOG = os.path.join(OUT, f'{prefix[:-2]}_launcher.log')
-    if a.here:
-        return run_here(a, arm, prefix, seeds, generations)
-    return open_own_window(a, prefix, seeds, generations)
+    if a.status:
+        return show_status(prefix, seeds, generations)
+    if a.watch:
+        return watch(a, prefix, a.from_byte)
+    if a.stop:
+        return stop(a, prefix, seeds, generations)
+    if a.here or a.host:
+        return run_launcher(a, arm, prefix, seeds, generations)
+    return start(a, prefix, seeds, generations)
 
 
 if __name__ == '__main__':
