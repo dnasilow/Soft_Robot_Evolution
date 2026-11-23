@@ -121,6 +121,8 @@ Run alone, a run takes about 55 seconds per generation at the start. With all 35
 
 Arm R ran from 21 November 23:27 to 22 November 21:40. Its outcome is in [`../outcomes/README.md`](../outcomes/README.md).
 
+Arm Rc was started on 22 November at 23:19, on the same programs, libraries and settings file as arm R. The cost switch (`-P 2`) was tried first, on two seeds for ten generations (`dryRc_P2_s3`, `s5`): for all 50 simulated robots of the recorded generation the adjusted fitness is the original one times one minus actuated voxels over 1000, to seven digits. That is the rule read from the 2013 source, which the deposited cost robots follow as well. Under this switch the count in a robot's file name (`numFilled_`) is its number of actuated voxels, not of all voxels.
+
 ## Files
 
 | File | Purpose |

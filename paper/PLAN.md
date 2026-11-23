@@ -205,6 +205,12 @@ Details in [outcomes/README.md](outcomes/README.md). Analysed once, after your g
 - **What it gives the paper.** The first step of the ladder is solid: a different compiler, different libraries and thirteen years do not move the outcome of the 2013 experiment. That is also the floor against which the other arms are read. The one-seed pilot of your own search in the same simulator stood at 2.05 at generation 100, where arm R's median is 3.31; arm A will say whether that gap is real.
 - **Next.** Arm Rc (the cost condition, about 22 hours), arm A (needs a queue for the runs and a reader in the analysis), and the transfer scores of arm R's champions.
 
+### 3.13 22 November: arm Rc started
+
+- **The cost switch was tried first.** The rebuilt program had never been run with its `-P 2` switch. Two seeds for ten generations (`dryRc_P2_s3`, `s5`): on all 50 simulated robots of the recorded generation the adjusted fitness is the original one times one minus actuated voxels over 1000, to seven digits, which is the rule read from the 2013 source and checked on the deposited cost robots. Under this switch the count in a robot's file name is its actuated voxels, not all its voxels.
+- **Arm Rc is running.** Started on 22 November at 23:19 with your go-ahead: seeds 1 to 35, 1000 generations, actuated-voxel cost, all 35 side by side, in a window titled "Soft robot campaign, arm Rc". It runs on the same programs, libraries and settings file as arm R (identical checksums). `python paper\reference_2013\start_arm.py --arm Rc --status` shows where every run is. Arm R took 22 hours.
+- **What to expect of its criterion.** As section 9.2 of the protocol records, a perfect reproduction cannot meet the 0.90 to 1.10 window in this condition. The arm will read as "not distinguishable" or as "differs".
+
 ---
 
 ## 4. What the literature says

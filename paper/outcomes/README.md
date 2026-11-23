@@ -37,6 +37,8 @@ Checks made on the result:
 | Each champion's fitness in its file name against the last row of its run's curve | Agree in all 35 |
 | Audit: each champion re-simulated in the 2013 simulator (`arm_R_champion_audit.csv`) | All 35 reproduce their recorded score, to the six digits the simulator prints |
 
+The arm was launched once and no run was interrupted, so no seed was started more than once.
+
 Not yet done for this arm: the transfer scores, each champion scored in the MuJoCo engine (a secondary outcome of the protocol).
 
 | File | Content |

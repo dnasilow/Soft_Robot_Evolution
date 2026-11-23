@@ -86,7 +86,9 @@ def read_curve(path):
 
 
 def robot_info(name):
-    """What a robot file's name records: adjusted and original fitness, voxels filled."""
+    """What a robot file's name records: adjusted and original fitness, and the count the program
+    calls voxelPenalty ('filled'): all voxels without a cost, actuated voxels under the
+    actuated-voxel cost. The body measures do not use it; they count from the body itself."""
     m = ROBOT.search(name)
     if not m:
         return None
