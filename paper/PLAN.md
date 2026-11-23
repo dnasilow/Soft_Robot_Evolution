@@ -195,6 +195,16 @@ Details in [analysis/README.md](analysis/README.md) and in [PROTOCOL.md](PROTOCO
 - **What the 0.90 to 1.10 criterion can show**, computed from the 2013 runs alone (its section 9.2). A perfect reproduction would meet it in 66% of cases for arms R and A, in 17% for arm D with its 10 runs, and never for arm Rc: in the cost condition the median of 35 runs is too unsteady for a 10% window. The criterion is unchanged; a result that misses it while its interval contains 1 is reported as "not distinguishable", not as a failed reproduction.
 - **Not yet written**: the reader for the arms run with your own search (A, D, E), the transfer scores, the figures.
 
+### 3.12 22 November: arm R, the first result of the campaign
+
+Details in [outcomes/README.md](outcomes/README.md). Analysed once, after your go-ahead, with the analysis as committed.
+
+- **The original experiment repeats.** 35 re-runs of the authors' code with new seeds reach a median champion score of 4.41 at generation 1000, against 4.39 for the 35 deposited runs. Ratio of medians 1.00, 95% interval 0.94 to 1.05, inside the 0.90 to 1.10 fixed in advance. A12 0.48, p = 0.75. Generations 100 and 300 agree as well (ratios 1.02 and 1.06).
+- **The bodies repeat too.** Voxels 675 against 652, footprint 24 against 26, fill 0.68 against 0.65, muscle fraction 0.99 against 1.00. Three of 35 champions have two or more feet, against one of 35 in 2013: still no limbs.
+- **The result holds up to checking.** Recomputed by hand from the raw files it is the same; the arm's first ten generations are identical to the pilot's; every champion re-simulated in the 2013 simulator reproduces its recorded score.
+- **What it gives the paper.** The first step of the ladder is solid: a different compiler, different libraries and thirteen years do not move the outcome of the 2013 experiment. That is also the floor against which the other arms are read. The one-seed pilot of your own search in the same simulator stood at 2.05 at generation 100, where arm R's median is 3.31; arm A will say whether that gap is real.
+- **Next.** Arm Rc (the cost condition, about 22 hours), arm A (needs a queue for the runs and a reader in the analysis), and the transfer scores of arm R's champions.
+
 ---
 
 ## 4. What the literature says

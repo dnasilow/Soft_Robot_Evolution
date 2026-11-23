@@ -1,0 +1,1063 @@
+{
+ "reference": "the 35 deposited 2013 runs, condition noCost",
+ "scores": {
+  "1000": {
+   "n_arm": 35,
+   "n_reference": 35,
+   "arm_median": 4.41029,
+   "arm_q25": 4.26738,
+   "arm_q75": 4.71485,
+   "reference_median": 4.39313,
+   "reference_q25": 4.201275000000001,
+   "reference_q75": 5.0706050000000005,
+   "a12": 0.4775510204081633,
+   "a12_interval": [
+    0.3404081632653061,
+    0.6155102040816327
+   ],
+   "mann_whitney_u": 585.0,
+   "p": 0.7511339689166964,
+   "ratio_of_medians": 1.0039060988406898,
+   "ratio_interval": [
+    0.9424302771330099,
+    1.048061198907951
+   ]
+  },
+  "300": {
+   "n_arm": 35,
+   "n_reference": 35,
+   "arm_median": 3.90587,
+   "arm_q25": 3.4881450000000003,
+   "arm_q75": 4.191495,
+   "reference_median": 3.69618,
+   "reference_q25": 3.5247650000000004,
+   "reference_q75": 4.10581,
+   "a12": 0.5371428571428571,
+   "a12_interval": [
+    0.4008163265306122,
+    0.6718367346938775
+   ],
+   "mann_whitney_u": 658.0,
+   "p": 0.597100898107775,
+   "ratio_of_medians": 1.056731544459415,
+   "ratio_interval": [
+    0.961127434269976,
+    1.098911165929924
+   ]
+  },
+  "100": {
+   "n_arm": 35,
+   "n_reference": 35,
+   "arm_median": 3.31227,
+   "arm_q25": 2.805205,
+   "arm_q75": 3.782605,
+   "reference_median": 3.26171,
+   "reference_q25": 2.750145,
+   "reference_q75": 3.5927,
+   "a12": 0.516734693877551,
+   "a12_interval": [
+    0.3820408163265306,
+    0.6538775510204081
+   ],
+   "mann_whitney_u": 633.0,
+   "p": 0.8142693953878384,
+   "ratio_of_medians": 1.0155010715238326,
+   "ratio_interval": [
+    0.8979613833491517,
+    1.1732102202694277
+   ]
+  }
+ },
+ "primary": {
+  "generation": 1000,
+  "verdict": "reproduces",
+  "window": [
+   0.9,
+   1.1
+  ],
+  "attainability": 0.6615,
+  "holm_range": [
+   0.7511339689166964,
+   1.0
+  ],
+  "holm_family": 5
+ },
+ "body": {
+  "generation": 1000,
+  "reference_generation": 1000,
+  "n_arm": 35,
+  "n_reference": 35,
+  "measures": {
+   "voxels": {
+    "n_arm": 35,
+    "n_reference": 35,
+    "arm_median": 675.0,
+    "arm_q25": 598.0,
+    "arm_q75": 704.5,
+    "reference_median": 652.0,
+    "reference_q25": 594.0,
+    "reference_q75": 698.5,
+    "a12": 0.5208163265306123,
+    "a12_interval": [
+     0.3832551020408163,
+     0.6583673469387755
+    ],
+    "mann_whitney_u": 638.0,
+    "p": 0.7690137872334983,
+    "p_holm": 1.0
+   },
+   "footprint": {
+    "n_arm": 35,
+    "n_reference": 35,
+    "arm_median": 24.0,
+    "arm_q25": 15.5,
+    "arm_q75": 30.5,
+    "reference_median": 26.0,
+    "reference_q25": 14.5,
+    "reference_q75": 40.0,
+    "a12": 0.44040816326530613,
+    "a12_interval": [
+     0.3028571428571429,
+     0.5775510204081633
+    ],
+    "mann_whitney_u": 539.5,
+    "p": 0.39412201976534345,
+    "p_holm": 1.0
+   },
+   "fill": {
+    "n_arm": 35,
+    "n_reference": 35,
+    "arm_median": 0.675,
+    "arm_q25": 0.598,
+    "arm_q75": 0.7044999999999999,
+    "reference_median": 0.652,
+    "reference_q25": 0.594,
+    "reference_q75": 0.6984999999999999,
+    "a12": 0.5175510204081633,
+    "a12_interval": [
+     0.3795918367346939,
+     0.6559183673469388
+    ],
+    "mann_whitney_u": 634.0,
+    "p": 0.8051568723021583,
+    "p_holm": 1.0
+   },
+   "muscle": {
+    "n_arm": 35,
+    "n_reference": 35,
+    "arm_median": 0.9935275080906149,
+    "arm_q25": 0.9494455059101241,
+    "arm_q75": 1.0,
+    "reference_median": 1.0,
+    "reference_q25": 0.9585911836997221,
+    "reference_q75": 1.0,
+    "a12": 0.4514285714285714,
+    "a12_interval": [
+     0.32326530612244897,
+     0.5828673469387754
+    ],
+    "mann_whitney_u": 553.0,
+    "p": 0.463911860631692,
+    "p_holm": 1.0
+   },
+   "two_feet": {
+    "arm_yes": 3,
+    "n_arm": 35,
+    "reference_yes": 1,
+    "n_reference": 35,
+    "p": 0.6138870863075925,
+    "p_holm": 1.0
+   }
+  }
+ },
+ "per_seed": [
+  {
+   "seed": 1,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.41029,
+    "300": 3.90587,
+    "100": 3.80685
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s1--Gen_1000--Ind_0x63d57af2fd80--adjFit_4.41028976--numFilled_0573--origFit_4.41028976_genome.vxa",
+    "adjusted": 4.41028976,
+    "original": 4.41028976,
+    "filled": 573,
+    "population": 30,
+    "body": {
+     "voxels": 573,
+     "footprint": 18,
+     "fill": 0.573,
+     "muscle": 0.9965095986038395,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 2,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.27947,
+    "300": 4.05102,
+    "100": 2.9992
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s2--Gen_1000--Ind_0x5de4d077f200--adjFit_4.27946997--numFilled_0545--origFit_4.27946997_genome.vxa",
+    "adjusted": 4.27946997,
+    "original": 4.27946997,
+    "filled": 545,
+    "population": 30,
+    "body": {
+     "voxels": 545,
+     "footprint": 24,
+     "fill": 0.545,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 3,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.32127,
+    "300": 3.46425,
+    "100": 3.23623
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s3--Gen_1000--Ind_0x56e37c049520--adjFit_4.32126999--numFilled_0400--origFit_4.32126999_genome.vxa",
+    "adjusted": 4.32126999,
+    "original": 4.32126999,
+    "filled": 400,
+    "population": 30,
+    "body": {
+     "voxels": 400,
+     "footprint": 11,
+     "fill": 0.4,
+     "muscle": 0.92,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 4,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.2065,
+    "300": 3.17794,
+    "100": 2.88615
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s4--Gen_1000--Ind_0x5678d1a6c980--adjFit_4.20650005--numFilled_0681--origFit_4.20650005_genome.vxa",
+    "adjusted": 4.20650005,
+    "original": 4.20650005,
+    "filled": 681,
+    "population": 30,
+    "body": {
+     "voxels": 681,
+     "footprint": 16,
+     "fill": 0.681,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 5,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.8833,
+    "300": 4.8833,
+    "100": 1.8464
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s5--Gen_1000--Ind_0x60feeeae7dc0--adjFit_4.88329983--numFilled_0586--origFit_4.88329983_genome.vxa",
+    "adjusted": 4.88329983,
+    "original": 4.88329983,
+    "filled": 586,
+    "population": 30,
+    "body": {
+     "voxels": 586,
+     "footprint": 10,
+     "fill": 0.586,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 6,
+   "generations": 1000,
+   "scores": {
+    "1000": 5.27527,
+    "300": 4.11329,
+    "100": 2.41704
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s6--Gen_1000--Ind_0x5aa62dc3d3d0--adjFit_5.27526999--numFilled_0703--origFit_5.27526999_genome.vxa",
+    "adjusted": 5.27526999,
+    "original": 5.27526999,
+    "filled": 703,
+    "population": 30,
+    "body": {
+     "voxels": 703,
+     "footprint": 41,
+     "fill": 0.703,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 7,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.55675,
+    "300": 3.77372,
+    "100": 3.3975
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s7--Gen_1000--Ind_0x635a114ba740--adjFit_4.55674982--numFilled_0686--origFit_4.55674982_genome.vxa",
+    "adjusted": 4.55674982,
+    "original": 4.55674982,
+    "filled": 686,
+    "population": 30,
+    "body": {
+     "voxels": 686,
+     "footprint": 39,
+     "fill": 0.686,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 8,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.29452,
+    "300": 3.98252,
+    "100": 3.51516
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s8--Gen_1000--Ind_0x5deec5386460--adjFit_4.29451990--numFilled_0726--origFit_4.29451990_genome.vxa",
+    "adjusted": 4.2945199,
+    "original": 4.2945199,
+    "filled": 726,
+    "population": 30,
+    "body": {
+     "voxels": 726,
+     "footprint": 29,
+     "fill": 0.726,
+     "muscle": 1.0,
+     "feet": 2,
+     "two_feet": true
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 9,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.36556,
+    "300": 4.33285,
+    "100": 3.45615
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s9--Gen_1000--Ind_0x603934070510--adjFit_4.36556005--numFilled_0727--origFit_4.36556005_genome.vxa",
+    "adjusted": 4.36556005,
+    "original": 4.36556005,
+    "filled": 727,
+    "population": 30,
+    "body": {
+     "voxels": 727,
+     "footprint": 32,
+     "fill": 0.727,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 10,
+   "generations": 1000,
+   "scores": {
+    "1000": 5.06511,
+    "300": 2.90087,
+    "100": 2.86072
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s10--Gen_1000--Ind_0x5bbf986fb570--adjFit_5.06511021--numFilled_0753--origFit_5.06511021_genome.vxa",
+    "adjusted": 5.06511021,
+    "original": 5.06511021,
+    "filled": 753,
+    "population": 30,
+    "body": {
+     "voxels": 753,
+     "footprint": 35,
+     "fill": 0.753,
+     "muscle": 0.9787516600265604,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 11,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.9384,
+    "300": 4.54471,
+    "100": 4.10427
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s11--Gen_1000--Ind_0x5927162e0270--adjFit_4.93839979--numFilled_0687--origFit_4.93839979_genome.vxa",
+    "adjusted": 4.93839979,
+    "original": 4.93839979,
+    "filled": 687,
+    "population": 30,
+    "body": {
+     "voxels": 687,
+     "footprint": 33,
+     "fill": 0.687,
+     "muscle": 0.9694323144104804,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 12,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.28753,
+    "300": 4.02672,
+    "100": 3.61005
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s12--Gen_1000--Ind_0x62983b99eb10--adjFit_4.28752995--numFilled_0704--origFit_4.28752995_genome.vxa",
+    "adjusted": 4.28752995,
+    "original": 4.28752995,
+    "filled": 704,
+    "population": 30,
+    "body": {
+     "voxels": 704,
+     "footprint": 24,
+     "fill": 0.704,
+     "muscle": 0.9105113636363636,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 13,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.81106,
+    "300": 3.80603,
+    "100": 3.14141
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s13--Gen_1000--Ind_0x5fddad758020--adjFit_4.81105995--numFilled_0552--origFit_4.81105995_genome.vxa",
+    "adjusted": 4.81105995,
+    "original": 4.81105995,
+    "filled": 552,
+    "population": 30,
+    "body": {
+     "voxels": 552,
+     "footprint": 28,
+     "fill": 0.552,
+     "muscle": 0.8351449275362319,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 14,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.27446,
+    "300": 3.54791,
+    "100": 1.89423
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s14--Gen_1000--Ind_0x648471589230--adjFit_4.27445984--numFilled_0754--origFit_4.27445984_genome.vxa",
+    "adjusted": 4.27445984,
+    "original": 4.27445984,
+    "filled": 754,
+    "population": 30,
+    "body": {
+     "voxels": 754,
+     "footprint": 30,
+     "fill": 0.754,
+     "muscle": 0.9920424403183024,
+     "feet": 2,
+     "two_feet": true
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 15,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.26712,
+    "300": 3.78375,
+    "100": 3.75836
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s15--Gen_1000--Ind_0x5847ddf46990--adjFit_4.26711988--numFilled_0639--origFit_4.26711988_genome.vxa",
+    "adjusted": 4.26711988,
+    "original": 4.26711988,
+    "filled": 639,
+    "population": 30,
+    "body": {
+     "voxels": 639,
+     "footprint": 25,
+     "fill": 0.639,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 16,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.51323,
+    "300": 3.5525,
+    "100": 2.96399
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s16--Gen_1000--Ind_0x5b8aa5a32690--adjFit_4.51322985--numFilled_0517--origFit_4.51322985_genome.vxa",
+    "adjusted": 4.51322985,
+    "original": 4.51322985,
+    "filled": 517,
+    "population": 30,
+    "body": {
+     "voxels": 517,
+     "footprint": 5,
+     "fill": 0.517,
+     "muscle": 0.9922630560928434,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 17,
+   "generations": 1000,
+   "scores": {
+    "1000": 5.60183,
+    "300": 2.65545,
+    "100": 2.64135
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s17--Gen_1000--Ind_0x5f4afff5edf0--adjFit_5.60183001--numFilled_0701--origFit_5.60183001_genome.vxa",
+    "adjusted": 5.60183001,
+    "original": 5.60183001,
+    "filled": 701,
+    "population": 30,
+    "body": {
+     "voxels": 701,
+     "footprint": 37,
+     "fill": 0.701,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 18,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.26764,
+    "300": 3.94916,
+    "100": 3.93138
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s18--Gen_1000--Ind_0x5ee186964140--adjFit_4.26764011--numFilled_0449--origFit_4.26764011_genome.vxa",
+    "adjusted": 4.26764011,
+    "original": 4.26764011,
+    "filled": 449,
+    "population": 30,
+    "body": {
+     "voxels": 449,
+     "footprint": 15,
+     "fill": 0.449,
+     "muscle": 0.9710467706013363,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 19,
+   "generations": 1000,
+   "scores": {
+    "1000": 3.64003,
+    "300": 3.48945,
+    "100": 2.74969
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s19--Gen_1000--Ind_0x5a06e3992b40--adjFit_3.64002991--numFilled_0389--origFit_3.64002991_genome.vxa",
+    "adjusted": 3.64002991,
+    "original": 3.64002991,
+    "filled": 389,
+    "population": 30,
+    "body": {
+     "voxels": 389,
+     "footprint": 3,
+     "fill": 0.43222222222222223,
+     "muscle": 0.9922879177377892,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 20,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.44892,
+    "300": 4.2697,
+    "100": 3.83229
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s20--Gen_1000--Ind_0x56c023881ca0--adjFit_4.44891977--numFilled_0618--origFit_4.44891977_genome.vxa",
+    "adjusted": 4.44891977,
+    "original": 4.44891977,
+    "filled": 618,
+    "population": 30,
+    "body": {
+     "voxels": 618,
+     "footprint": 4,
+     "fill": 0.618,
+     "muscle": 0.9935275080906149,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 21,
+   "generations": 1000,
+   "scores": {
+    "1000": 3.75172,
+    "300": 3.67452,
+    "100": 2.64208
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s21--Gen_1000--Ind_0x5a21746aa1a0--adjFit_3.75171995--numFilled_0701--origFit_3.75171995_genome.vxa",
+    "adjusted": 3.75171995,
+    "original": 3.75171995,
+    "filled": 701,
+    "population": 30,
+    "body": {
+     "voxels": 701,
+     "footprint": 20,
+     "fill": 0.701,
+     "muscle": 1.0,
+     "feet": 2,
+     "two_feet": true
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 22,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.0766,
+    "300": 3.89997,
+    "100": 3.54017
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s22--Gen_1000--Ind_0x6288596c5b20--adjFit_4.07660007--numFilled_0534--origFit_4.07660007_genome.vxa",
+    "adjusted": 4.07660007,
+    "original": 4.07660007,
+    "filled": 534,
+    "population": 30,
+    "body": {
+     "voxels": 534,
+     "footprint": 18,
+     "fill": 0.534,
+     "muscle": 0.9456928838951311,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 23,
+   "generations": 1000,
+   "scores": {
+    "1000": 3.75061,
+    "300": 2.21638,
+    "100": 2.17259
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s23--Gen_1000--Ind_0x5f306085cb50--adjFit_3.75061011--numFilled_0705--origFit_3.75061011_genome.vxa",
+    "adjusted": 3.75061011,
+    "original": 3.75061011,
+    "filled": 705,
+    "population": 30,
+    "body": {
+     "voxels": 705,
+     "footprint": 17,
+     "fill": 0.705,
+     "muscle": 0.6836879432624113,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 24,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.52963,
+    "300": 3.48684,
+    "100": 3.27919
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s24--Gen_1000--Ind_0x5965a68293f0--adjFit_4.52963018--numFilled_0610--origFit_4.52963018_genome.vxa",
+    "adjusted": 4.52963018,
+    "original": 4.52963018,
+    "filled": 610,
+    "population": 30,
+    "body": {
+     "voxels": 610,
+     "footprint": 31,
+     "fill": 0.61,
+     "muscle": 0.9262295081967213,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 25,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.5055,
+    "300": 4.32703,
+    "100": 4.21499
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s25--Gen_1000--Ind_0x6376caa9b8d0--adjFit_4.50549984--numFilled_0664--origFit_4.50549984_genome.vxa",
+    "adjusted": 4.50549984,
+    "original": 4.50549984,
+    "filled": 664,
+    "population": 30,
+    "body": {
+     "voxels": 664,
+     "footprint": 14,
+     "fill": 0.664,
+     "muscle": 0.891566265060241,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 26,
+   "generations": 1000,
+   "scores": {
+    "1000": 3.83234,
+    "300": 3.30878,
+    "100": 3.21239
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s26--Gen_1000--Ind_0x5dbb949194f0--adjFit_3.83234000--numFilled_0724--origFit_3.83234000_genome.vxa",
+    "adjusted": 3.83234,
+    "original": 3.83234,
+    "filled": 724,
+    "population": 30,
+    "body": {
+     "voxels": 724,
+     "footprint": 24,
+     "fill": 0.724,
+     "muscle": 0.9378453038674033,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 27,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.46088,
+    "300": 3.93428,
+    "100": 1.82424
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s27--Gen_1000--Ind_0x5c4a79d7dc00--adjFit_4.46087980--numFilled_0659--origFit_4.46087980_genome.vxa",
+    "adjusted": 4.4608798,
+    "original": 4.4608798,
+    "filled": 659,
+    "population": 30,
+    "body": {
+     "voxels": 659,
+     "footprint": 20,
+     "fill": 0.659,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 28,
+   "generations": 1000,
+   "scores": {
+    "1000": 5.82037,
+    "300": 5.10424,
+    "100": 4.51497
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s28--Gen_1000--Ind_0x623487643810--adjFit_5.82037020--numFilled_0736--origFit_5.82037020_genome.vxa",
+    "adjusted": 5.8203702,
+    "original": 5.8203702,
+    "filled": 736,
+    "population": 30,
+    "body": {
+     "voxels": 736,
+     "footprint": 42,
+     "fill": 0.736,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 29,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.71394,
+    "300": 4.35429,
+    "100": 3.56612
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s29--Gen_1000--Ind_0x5f3743087390--adjFit_4.71394014--numFilled_0661--origFit_4.71394014_genome.vxa",
+    "adjusted": 4.71394014,
+    "original": 4.71394014,
+    "filled": 661,
+    "population": 30,
+    "body": {
+     "voxels": 661,
+     "footprint": 25,
+     "fill": 0.661,
+     "muscle": 0.9939485627836612,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 30,
+   "generations": 1000,
+   "scores": {
+    "1000": 3.43314,
+    "300": 3.35055,
+    "100": 3.31227
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s30--Gen_1000--Ind_0x5a799bd4bf90--adjFit_3.43314004--numFilled_0675--origFit_3.43314004_genome.vxa",
+    "adjusted": 3.43314004,
+    "original": 3.43314004,
+    "filled": 675,
+    "population": 30,
+    "body": {
+     "voxels": 675,
+     "footprint": 81,
+     "fill": 0.675,
+     "muscle": 0.922962962962963,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 31,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.71576,
+    "300": 4.32127,
+    "100": 3.38714
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s31--Gen_1000--Ind_0x5c4478d2dac0--adjFit_4.71576023--numFilled_0646--origFit_4.71576023_genome.vxa",
+    "adjusted": 4.71576023,
+    "original": 4.71576023,
+    "filled": 646,
+    "population": 30,
+    "body": {
+     "voxels": 646,
+     "footprint": 18,
+     "fill": 0.646,
+     "muscle": 0.9984520123839009,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 32,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.72813,
+    "300": 2.56931,
+    "100": 2.38198
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s32--Gen_1000--Ind_0x61833ae73080--adjFit_4.72812986--numFilled_0641--origFit_4.72812986_genome.vxa",
+    "adjusted": 4.72812986,
+    "original": 4.72812986,
+    "filled": 641,
+    "population": 30,
+    "body": {
+     "voxels": 641,
+     "footprint": 10,
+     "fill": 0.641,
+     "muscle": 0.953198127925117,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 33,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.68099,
+    "300": 4.66449,
+    "100": 4.44985
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s33--Gen_1000--Ind_0x60539eafff40--adjFit_4.68099022--numFilled_0764--origFit_4.68099022_genome.vxa",
+    "adjusted": 4.68099022,
+    "original": 4.68099022,
+    "filled": 764,
+    "population": 30,
+    "body": {
+     "voxels": 764,
+     "footprint": 15,
+     "fill": 0.764,
+     "muscle": 0.993455497382199,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 34,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.11153,
+    "300": 4.01666,
+    "100": 3.85007
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s34--Gen_1000--Ind_0x60eb8260d210--adjFit_4.11152983--numFilled_0723--origFit_4.11152983_genome.vxa",
+    "adjusted": 4.11152983,
+    "original": 4.11152983,
+    "filled": 723,
+    "population": 30,
+    "body": {
+     "voxels": 723,
+     "footprint": 28,
+     "fill": 0.723,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 35,
+   "generations": 1000,
+   "scores": {
+    "1000": 4.39702,
+    "300": 3.97266,
+    "100": 3.92848
+   },
+   "champion": {
+    "file": "Softbots--armR_P0_s35--Gen_1000--Ind_0x654cfd2a5fd0--adjFit_4.39701986--numFilled_0694--origFit_4.39701986_genome.vxa",
+    "adjusted": 4.39701986,
+    "original": 4.39701986,
+    "filled": 694,
+    "population": 30,
+    "body": {
+     "voxels": 694,
+     "footprint": 17,
+     "fill": 0.694,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  }
+ ],
+ "title": "ARM R: the original 2013 search program and simulator, no cost. Seeds 1 to 35, 1000 generations; 35 of 35 runs in the statistics.",
+ "left_out": [],
+ "notes": [],
+ "made": "2026-11-22T22:23",
+ "code": "campaign-v1-4-g27e89df-dirty",
+ "settings": {
+  "n_boot": 10000,
+  "seed": 0,
+  "criterion": [
+   0.9,
+   1.1
+  ]
+ }
+}

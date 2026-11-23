@@ -1,0 +1,60 @@
+ARM R: the original 2013 search program and simulator, no cost. Seeds 1 to 35, 1000 generations; 35 of 35 runs in the statistics.
+Reference: the 35 deposited 2013 runs, condition noCost.
+Made 2026-11-22T22:23 with code campaign-v1-4-g27e89df-dirty; 10000 bootstrap resamples, seed 0.
+
+SCORES: the champion's original score, best so far
+generation             runs    arm median (quartiles)  deposited median (quartiles)  ratio  95% interval   A12 (95% interval)        p
+      1000  primary      35          4.41 (4.27-4.71)              4.39 (4.20-5.07)   1.00   0.94-1.05    0.48 (0.34-0.62)    0.7511
+       300  secondary    35          3.91 (3.49-4.19)              3.70 (3.52-4.11)   1.06   0.96-1.10    0.54 (0.40-0.67)    0.5971
+       100  secondary    35          3.31 (2.81-3.78)              3.26 (2.75-3.59)   1.02   0.90-1.17    0.52 (0.38-0.65)    0.8143
+
+Primary outcome, generation 1000: ratio of medians 1.004, 95% interval 0.942 to 1.048.
+  REPRODUCES: the interval lies inside 0.90 to 1.10, the criterion fixed in advance.
+  What the criterion can show here: a perfect reproduction with 35 runs would meet it in 66% of cases (estimated from the deposited runs alone).
+  Mann-Whitney p = 0.7511. Holm over the 5 primary comparisons is final only when all arms are in; until then it lies between 0.7511 and 1.0000.
+
+BODY of each run's champion at generation 1000 (35 runs) against the deposited champions of generation 1000 (35 runs)
+               measure    arm median (quartiles)  deposited median (quartiles)   A12 (95% interval)        p  p (Holm)
+                voxels             675 (598-704)                 652 (594-698)  0.52 (0.38-0.66)    0.7690    1.0000
+     footprint (cells)                24 (16-30)                    26 (14-40)  0.44 (0.30-0.58)    0.3941    1.0000
+  fill of bounding box          0.68 (0.60-0.70)              0.65 (0.59-0.70)  0.52 (0.38-0.66)    0.8052    1.0000
+       muscle fraction          0.99 (0.95-1.00)              1.00 (0.96-1.00)  0.45 (0.32-0.58)    0.4639    1.0000
+      two or more feet                  3 of 35                        1 of 35         (Fisher exact)    0.6139    1.0000
+
+PER SEED
+seed  generations  score@1000   score@300   score@100  voxels  footprint   fill  muscle  feet  note
+   1         1000      4.4103      3.9059      3.8068     573         18   0.57    1.00     1  
+   2         1000      4.2795      4.0510      2.9992     545         24   0.55    1.00     1  
+   3         1000      4.3213      3.4642      3.2362     400         11   0.40    0.92     1  
+   4         1000      4.2065      3.1779      2.8862     681         16   0.68    1.00     1  
+   5         1000      4.8833      4.8833      1.8464     586         10   0.59    1.00     1  
+   6         1000      5.2753      4.1133      2.4170     703         41   0.70    1.00     1  
+   7         1000      4.5568      3.7737      3.3975     686         39   0.69    1.00     1  
+   8         1000      4.2945      3.9825      3.5152     726         29   0.73    1.00     2  
+   9         1000      4.3656      4.3328      3.4562     727         32   0.73    1.00     1  
+  10         1000      5.0651      2.9009      2.8607     753         35   0.75    0.98     1  
+  11         1000      4.9384      4.5447      4.1043     687         33   0.69    0.97     1  
+  12         1000      4.2875      4.0267      3.6101     704         24   0.70    0.91     1  
+  13         1000      4.8111      3.8060      3.1414     552         28   0.55    0.84     1  
+  14         1000      4.2745      3.5479      1.8942     754         30   0.75    0.99     2  
+  15         1000      4.2671      3.7837      3.7584     639         25   0.64    1.00     1  
+  16         1000      4.5132      3.5525      2.9640     517          5   0.52    0.99     1  
+  17         1000      5.6018      2.6555      2.6414     701         37   0.70    1.00     1  
+  18         1000      4.2676      3.9492      3.9314     449         15   0.45    0.97     1  
+  19         1000      3.6400      3.4895      2.7497     389          3   0.43    0.99     1  
+  20         1000      4.4489      4.2697      3.8323     618          4   0.62    0.99     1  
+  21         1000      3.7517      3.6745      2.6421     701         20   0.70    1.00     2  
+  22         1000      4.0766      3.9000      3.5402     534         18   0.53    0.95     1  
+  23         1000      3.7506      2.2164      2.1726     705         17   0.70    0.68     1  
+  24         1000      4.5296      3.4868      3.2792     610         31   0.61    0.93     1  
+  25         1000      4.5055      4.3270      4.2150     664         14   0.66    0.89     1  
+  26         1000      3.8323      3.3088      3.2124     724         24   0.72    0.94     1  
+  27         1000      4.4609      3.9343      1.8242     659         20   0.66    1.00     1  
+  28         1000      5.8204      5.1042      4.5150     736         42   0.74    1.00     1  
+  29         1000      4.7139      4.3543      3.5661     661         25   0.66    0.99     1  
+  30         1000      3.4331      3.3506      3.3123     675         81   0.68    0.92     1  
+  31         1000      4.7158      4.3213      3.3871     646         18   0.65    1.00     1  
+  32         1000      4.7281      2.5693      2.3820     641         10   0.64    0.95     1  
+  33         1000      4.6810      4.6645      4.4498     764         15   0.76    0.99     1  
+  34         1000      4.1115      4.0167      3.8501     723         28   0.72    1.00     1  
+  35         1000      4.3970      3.9727      3.9285     694         17   0.69    1.00     1  

@@ -119,6 +119,8 @@ Run alone, a run takes about 55 seconds per generation at the start. With all 35
 
 `--seeds`, `--gens` and `--tag` are for trials of the launcher. They need a tag of their own, so a trial cannot be written into an arm.
 
+Arm R ran from 21 November 23:27 to 22 November 21:40. Its outcome is in [`../outcomes/README.md`](../outcomes/README.md).
+
 ## Files
 
 | File | Purpose |

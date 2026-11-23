@@ -15,7 +15,7 @@ python paper/analysis/analyse_arm.py --what-can-the-criterion-show         from 
 - **Body.** Each run's final champion measured with the code used on the deposited robots: voxels, footprint, fill, muscle fraction, and two or more separate feet, corrected by Holm within the arm.
 - **Every seed**, with its generations, scores and champion.
 
-The report is printed and written to `results/analysis/` as text and as JSON.
+The report is printed and written to `results/analysis/` as text and as JSON. The reports of finished arms are kept in [`../outcomes/`](../outcomes/README.md).
 
 An arm is analysed only as a whole: while one of its seeds is unfinished the script computes nothing and says which seeds are missing. A seed that fails for good has to be named with `--failed-seeds`; it is then reported and left out.
 
