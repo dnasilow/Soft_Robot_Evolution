@@ -8,6 +8,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 PATH = os.path.join(ROOT, 'paper', 'reference_2013', 'start_arm.py')
 spec = importlib.util.spec_from_file_location('start_arm', PATH)
 start_arm = importlib.util.module_from_spec(spec)
+import sys                                    # noqa: E402
+sys.modules['start_arm'] = start_arm          # start_arm hands itself to search_arm by this name
 spec.loader.exec_module(start_arm)
 
 

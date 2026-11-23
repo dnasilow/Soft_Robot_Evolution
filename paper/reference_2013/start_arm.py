@@ -52,6 +52,8 @@ import time
 import traceback
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 OUT = os.path.join(ROOT, 'results', 'rerun2013')
 PROTOCOL = os.path.join(ROOT, 'paper', 'PROTOCOL.md')
@@ -373,6 +375,8 @@ def passthrough(a, for_launcher):
         args += ['--interval', str(a.interval)]
         if a.jobs is not None:
             args += ['--jobs', str(a.jobs)]
+        if getattr(a, 'workers', None) is not None:
+            args += ['--workers', str(a.workers)]
         if a.restart_incomplete:
             args.append('--restart-incomplete')
     return args
@@ -388,6 +392,12 @@ def start(a, prefix, seeds, generations):
     going = running_seeds(read_status(prefix, seeds))
     if going:
         print(f'{len(going)} runs of this arm are in progress without a launcher. Starting one to look after them.')
+    return launch_through_shell(a, stem)
+
+
+def launch_through_shell(a, stem):
+    """The part of starting that is the same for every kind of arm: hand the Windows shell a file
+    that starts the launcher without a window and shows its progress, then wait for its first line."""
     os.makedirs(OUT, exist_ok=True)
     before = os.path.getsize(LOG) if os.path.exists(LOG) else 0
     cmd_file = os.path.join(OUT, f'{stem}_window.cmd')
@@ -640,10 +650,11 @@ def run_launcher(a, arm, prefix, seeds, generations):
 
 
 def main(argv=None):
+    import search_arm           # the arms run with this project's own search (A)
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0],
                                  formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split('\n\n', 1)[1])
-    ap.add_argument('--arm', required=True, choices=sorted(ARMS))
+    ap.add_argument('--arm', required=True, choices=sorted(ARMS) + sorted(search_arm.ARMS))
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument('--status', action='store_true', help='report where every run is and start nothing')
     mode.add_argument('--watch', action='store_true', help='follow the progress in this console; stops nothing')
@@ -653,6 +664,7 @@ def main(argv=None):
     ap.add_argument('--restart-incomplete', action='store_true',
                     help='start unfinished seeds again from the beginning (their folders are moved aside)')
     ap.add_argument('--jobs', type=int, help='runs side by side (default: all seeds at once; each uses one core)')
+    ap.add_argument('--workers', type=int, help='arm A only: simulations at a time within one run (default 1)')
     ap.add_argument('--interval', type=float, default=10.0, help='minutes between progress lines (default 10)')
     ap.add_argument('--seeds', help=f'trial only: seeds, e.g. 1-2 (the arm uses {PROTOCOL_SEEDS})')
     ap.add_argument('--gens', type=int, help='trial only: generations (the arm uses the settings file, 1000)')
@@ -662,7 +674,8 @@ def main(argv=None):
 
     if (a.seeds or a.gens) and not a.tag:
         ap.error('--seeds and --gens change the arm; such a trial needs a --tag of its own')
-    if a.tag and (a.tag in {v['tag'] for v in ARMS.values()} or not re.fullmatch(r'[A-Za-z][A-Za-z0-9]*', a.tag)):
+    reserved = {v['tag'] for v in ARMS.values()} | {v['tag'] for v in search_arm.ARMS.values()}
+    if a.tag and (a.tag in reserved or not re.fullmatch(r'[A-Za-z][A-Za-z0-9]*', a.tag)):
         ap.error('--tag must be letters and digits, and not the name of a campaign arm')
     if a.jobs is not None and a.jobs < 1:
         ap.error('--jobs must be at least 1')
@@ -670,6 +683,12 @@ def main(argv=None):
         seeds = parse_seeds(a.seeds or PROTOCOL_SEEDS)
     except ValueError as e:
         ap.error(str(e))
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(errors='replace')
+    if a.arm in search_arm.ARMS:
+        return search_arm.main(sys.modules[__name__], a, ap, seeds)
+    if a.workers is not None:
+        ap.error('--workers is for arm A; a run of arms R and Rc uses one core')
     arm = ARMS[a.arm]
     with open(SETTINGS, encoding='utf-8', errors='replace') as f:
         generations = a.gens or settings_generations(f.read())
