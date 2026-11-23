@@ -73,7 +73,7 @@ Getting 2013 code to run on a 2026 system took four things, none of which change
 
 Two build-file adjustments as well: a `cmake_minimum_required` line prepended to two bundled CMake files, and absolute include paths. The authors' own build caches and binaries in the archive are deleted, not used. `-DBOOST_TIMER_ENABLE_DEPRECATED` re-enables two Boost headers the code includes.
 
-`collect_2013_runs.sh` copies finished or running re-runs to `results/rerun2013/`, and `summarise_reruns.py` compares them with the deposited runs generation by generation.
+`collect_2013_runs.sh` copies finished or running re-runs to `results/rerun2013/`, and `summarise_reruns.py` compares them with the deposited runs generation by generation. That is the quick view; the analysis fixed in the protocol is [`../analysis/analyse_arm.py`](../analysis/README.md).
 
 **Pilot, 21 November: 12 seeds, 10 generations each** (`pilot10_P0_s1` to `s12`; a pilot, not part of any arm). Champion score, best so far:
 
@@ -84,7 +84,7 @@ Two build-file adjustments as well: a `cmake_minimum_required` line prepended to
 | 5 | 1.27 (1.02–1.53) | 1.25 (1.09–1.48) | 1.02 | 0.51 | 0.89 |
 | 10 | 1.71 (1.34–2.10) | 1.50 (1.32–1.81) | 1.14 | 0.59 | 0.36 |
 
-At generation 10 the ratio of medians is 1.14 with a bootstrapped 95% interval of 0.86 to 1.50. Over these first ten generations the rebuilt original experiment is statistically indistinguishable from the deposited runs. Ten generations and twelve seeds cannot say more than that.
+At generation 10 the ratio of medians is 1.14 with a bootstrapped 95% interval of 0.86 to 1.48 (0.86 to 1.50 until 22 November, when the summary still resampled the runs in folder-name order instead of seed order). Over these first ten generations the rebuilt original experiment is statistically indistinguishable from the deposited runs. Ten generations and twelve seeds cannot say more than that.
 
 Cost: with 12 runs side by side, a generation took a median of 91 seconds (121 in the slowest run), so 1000 generations is at least 25 to 34 hours per run, and more once bodies grow.
 
@@ -113,7 +113,7 @@ python paper\reference_2013\start_arm.py --arm R --restart-incomplete   after an
 | Seeds 1 and 2 cut short and started again, once by killing the launcher (`dryB`), once by Ctrl+C twice (`dryC`) | The same scores as the pilot, to the last digit |
 | Both programs rebuilt from the scripts in this folder | Byte for byte the programs the pilot ran with (SHA-256 of the two programs and three libraries) |
 
-Run alone, a run takes about 55 seconds per generation at the start. With all 35 side by side on this machine (i9-13900, 32 logical processors) every core is busy and the processor holds about half its peak clock speed, so a generation takes about 215 seconds (144 to 324 across the runs, first 20 minutes of arm R). That pace does not hold: later generations are much quicker. After 15 hours the median run of arm R was at generation 684, an average of 80 seconds per generation, and the slowest at 527, which puts an arm at about 30 hours.
+Run alone, a run takes about 55 seconds per generation at the start. With all 35 side by side on this machine (i9-13900, 32 logical processors) every core is busy and the processor holds about half its peak clock speed, so a generation takes about 215 seconds (144 to 324 across the runs, first 20 minutes of arm R). That pace does not hold: later generations are much quicker. After 15 hours the median run of arm R was at generation 684, an average of 80 seconds per generation. The arm was complete after 22.2 hours (median run 20.1, fastest 15.4); the last runs speed up as the others finish.
 
 `build_2013_simulator.sh` used to clear the whole reference folder, which also holds the run folders. It now replaces only the simulator's own folder, and both build scripts refuse to run while runs are in progress.
 

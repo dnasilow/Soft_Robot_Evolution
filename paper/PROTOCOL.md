@@ -69,4 +69,29 @@ The draft of this protocol left three points open and one rule imprecise. They w
 
 ## 9. Changes after the freeze
 
-None.
+No change to the arms, the outcomes, the tests or the criterion.
+
+### 9.1 Details of the analysis, fixed on 22 November 2026
+
+Fixed on the evening of 22 November 2026. Arm R had finished at 21:40 and its launcher had printed its closing summary in the campaign window; these details were written without consulting that summary or any other result of the arm. Up to then the analysis had read only the runs' generation counts and file counts. The analysis is `paper/analysis/analyse_arm.py`. It was developed and tested on the pilot runs and on arms made up from the deposited runs themselves, and committed before it was first run on an arm.
+
+1. **Scores.** A run's score at generation g is the largest champion original fitness (column 2 of the program's learning-curve file) in generations 1 to g. The deposited curves are read the same way.
+2. **Final champion.** The robot with the highest adjusted fitness in the population of the last generation, by the fitness in its file name. Ties go to the first file name. The same rule picks the champion of each deposited run.
+3. **Body measures.** From `morphology_scorecard.body_metrics`: voxels, footprint, fill, muscle fraction (the two muscle materials over all voxels), and "two or more separate feet" as its `feet` count being 2 or more, where feet are the separate face-connected patches of the body's lowest layer.
+4. **Bootstrap.** 10,000 resamples. The arm's runs and the reference runs are each resampled with replacement, independently. The interval runs from the 2.5th to the 97.5th percentile. The random seed is fixed at 0 and the runs are taken in seed order, so a report can be reproduced to the last digit.
+5. **Tests.** Mann-Whitney U, two-sided, as SciPy computes it by default. The one yes/no measure, two or more feet, is tested with Fisher's exact test, two-sided.
+6. **Holm.** The five primary comparisons are one family. Its correction can be computed only when all five exist; until then a report gives the uncorrected p and the range the corrected one can still take. The body measures are corrected within each arm: its five measures against the deposit are one family.
+7. **Reading the criterion.** Three outcomes, by the 95% interval of the ratio of medians. Inside 0.90 to 1.10: the arm *reproduces* its reference. Not inside, but containing 1: the arm is *not distinguishable* from its reference, and reproduction within 10% is not shown. Excluding 1: the arm *differs*.
+8. **Whole arms only.** The analysis computes nothing for an arm while one of its seeds is unfinished. A seed that fails again when it is started again is reported and left out of the statistics, which then say how many runs they use.
+
+### 9.2 What the criterion can show, computed on 22 November 2026 from the deposited runs alone
+
+How often would a perfect reproduction meet the criterion? New runs were drawn from the deposited runs themselves, so that they come from the same distribution by construction, and analysed like an arm (`analyse_arm.py --what-can-the-criterion-show`).
+
+| Design | A perfect reproduction meets the criterion in | The deposit against itself gives the interval |
+|---|---|---|
+| Arms R and A: 35 runs, generation 1000, no cost | 66% of cases | 0.94 to 1.06 |
+| Arm Rc: 35 runs, generation 1000, actuated cost | 0% of cases | 0.85 to 1.17 |
+| Arm D: 10 runs, generation 300, no cost | 17% of cases | 0.93 to 1.08 |
+
+The criterion is unchanged, and these figures are reported with each result. In the cost condition the median of 35 runs is too unsteady for a 10% window, so arm Rc can only come out as "not distinguishable" or "differs". With 10 runs the same holds for arm D in five cases out of six.
