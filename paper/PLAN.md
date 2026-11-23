@@ -218,6 +218,14 @@ Details in [outcomes/README.md](outcomes/README.md). Analysed once, after your g
 - **Arm Rc is running again.** The 32 unfinished seeds were started from the beginning at 09:00, as the protocol prescribes; the three finished runs are kept. The paper has to report that 32 of this arm's seeds were started twice. The unfinished attempts are kept in `runs/_interrupted/` on the WSL side.
 - **Cost.** Nine hours of machine time.
 
+### 3.15 23 November: arm A prepared, and a flaw in the search's checkpoints corrected
+
+- **Arm A can be started with one command**, `python paper\reference_2013\start_arm.py --arm A`. It uses the same launcher without a window and runs all 35 searches side by side, each simulating one robot at a time, the way arm R ran. A run that ends without finishing is continued from its checkpoint. The launcher owns its runs: if it ends, they end, and starting the arm again continues them.
+- **Your search repeats exactly for a seed.** Seed 1 gives the fitness of all 30 robots of the pilot of 21 November in each generation compared, although the number of workers, the generation limit and the load on the machine were different.
+- **A flaw found and corrected (your choice of 23 November).** A run that was stopped and continued did not compute what it would have computed without the stop. The search loop and the genomes share one random generator, and the checkpoint split it in two. With arm A's selection scheme this went wrong only when a run was stopped within its first two generations. Two statements in `run_tendon_evolution.py` correct it. A test that failed before now passes, and real runs stopped and continued are identical to uninterrupted ones. Uninterrupted runs compute what they did before. The code of arms A, D and E is tagged `campaign-v2`; the protocol records this in section 9.3.
+- **The analysis reads arm A's runs.** `analyse_arm.py --arm A` gives the report arm R got, also sets arm A against arm R (the fifth primary comparison) and repeats arm R's result as the floor. It was tested on made-up runs; no run of arm A exists yet.
+- **Not started.** Arm A needs your go-ahead and a free machine; arm Rc is running into tomorrow. Seed 1 of arm A will repeat the pilot, so its first 100 generations are already known (2.05 at generation 100).
+
 ---
 
 ## 4. What the literature says

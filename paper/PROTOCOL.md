@@ -52,7 +52,7 @@ A run's champion at a generation is the individual with the best fitness (after 
 - If a defect is found in the code, the whole affected arm is rerun and the paper says so.
 - Every champion gets the audit (reproduced score, and for MuJoCo champions a quarter time step and floor penetration). The audit is reported; it is not used to drop runs.
 - Each run's `manifest.json` records its command, settings and code version. Arms R and Rc are not started by this project's evolution script, so their launcher records the same in `results/rerun2013/<arm>_launches.json`, together with the checksums of the two programs, their libraries and the settings file, and refuses to continue an arm on a different build.
-- The campaign runs from the code tagged `campaign-v1`. Later commits may add documentation and analysis; they do not change what a run computes.
+- The campaign runs from the code tagged `campaign-v1`. Later commits may add documentation and analysis; they do not change what a run computes. *(Amended on 23 November 2026 for arms A, D and E, which run from `campaign-v2`: section 9.3.)*
 
 ## 7. Exploratory, and labelled as such in the paper
 
@@ -95,3 +95,14 @@ How often would a perfect reproduction meet the criterion? New runs were drawn f
 | Arm D: 10 runs, generation 300, no cost | 17% of cases | 0.93 to 1.08 |
 
 The criterion is unchanged, and these figures are reported with each result. In the cost condition the median of 35 runs is too unsteady for a 10% window, so arm Rc can only come out as "not distinguishable" or "differs". With 10 runs the same holds for arm D in five cases out of six.
+
+### 9.3 The code of arms A, D and E: one correction, 23 November 2026
+
+Made with the author's approval of that day, before any run of these arms was started.
+
+- **What was found.** A trial of arm A's launcher showed that a run of this project's search which is stopped and continued from its checkpoint did not compute what it would have computed without the stop. While a run is alive, the search loop and the genomes share one random generator; the checkpoint brought them back with separate copies of it. With tournament selection, the scheme of arms A, D and E, this went wrong only when a run was stopped before its second generation was recorded. With age-fitness selection it went wrong at any generation.
+- **What was changed.** The checkpoint now holds the generator itself next to the genomes, and a continued run uses it: two statements in `run_tendon_evolution.py`. Nothing else.
+- **What it does not change.** An uninterrupted run computes what it computed before. Arms R and Rc do not use this code.
+- **Evidence.** `tests/test_resume_exact.py` fails on the code tagged `campaign-v1` and passes on the corrected code, for both selection schemes. In the 2013 simulator, seeds 1 and 2 stopped during their second generation and continued are identical to their uninterrupted runs with the corrected code (`dryT`); with the old code they differed (`dryS`). Uninterrupted, seed 1 gives the fitness of all 30 robots of the pilot of 21 November in each of the four generations compared, with the corrected code (`dryU`) as with the old one (`dryQ`).
+- **Consequence for section 6.** Arms R and Rc ran from the code tagged `campaign-v1`. Arms A, D and E run from the code tagged `campaign-v2`, which differs from it in what a run computes only by this correction. A run of these arms that is continued from its checkpoint is then the same run as an uninterrupted one. The paper reports which runs were continued.
+- **Known and left alone.** `history.json` of a continued run lists the generation it was continued from twice; the analysis reads the numbered generation files instead. The MAP-Elites loop, which no arm uses, has the same flaw and was not changed.

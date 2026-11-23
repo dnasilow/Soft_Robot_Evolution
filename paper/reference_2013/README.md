@@ -122,6 +122,18 @@ Run alone, a run takes about 55 seconds per generation at the start. With all 35
 
 `--seeds`, `--gens` and `--tag` are for trials of the launcher. They need a tag of their own, so a trial cannot be written into an arm.
 
+### Arm A: this project's search in the 2013 simulator
+
+The same commands with `--arm A` (`search_arm.py`). Its runs are of another kind, and the launcher treats them differently:
+
+- **A run is one `run_tendon_evolution.py` process**, `--simulator voxelyze2013 --no-age-pareto --pop 30 --gen 1000 --workers 1 --seed <s> --name armA_s<s>`, with its folder in `results/`. All 35 run side by side, each simulating one robot at a time.
+- **A run can be stopped and continued without loss.** It saves a checkpoint after every generation, and the same command goes on from it. Since the correction of 23 November (protocol, section 9.3) the continued run is exactly the run it would have been. So there is no `--restart-incomplete` here: starting the arm again continues what is unfinished.
+- **The launcher owns its runs.** If it ends, however it ends, Windows ends its runs with it, and nothing is lost. A run that ends without finishing is continued by the launcher, six starts at most.
+- **The code must be the tagged one.** The launcher starts the arm only if `run_tendon_evolution.py` and `src/` are identical to the tag `campaign-v2`.
+- **Its files** are in `results/campaign/`: the launcher's log, its launch records and each run's console output.
+
+Tried on 23 November with short trial runs (`dryQ`, `dryS`, `dryT`, `dryU`): three runs side by side to the end; the launcher ended alone, and its runs ended with it; a stop on request; continuation after both; seed 1 identical to the pilot of 21 November in every case with the corrected code.
+
 Arm R ran from 21 November 23:27 to 22 November 21:40. Its outcome is in [`../outcomes/README.md`](../outcomes/README.md).
 
 The launcher without a window was tried on 23 November (`dryH_P0_s3`, `s5`): a close request to its progress window left launcher and runs alive; a second start was refused; `--stop` ended the runs and the launcher; the stopped seeds started again and gave the pilot's scores; and after the launcher alone was ended, starting again adopted the runs.
@@ -133,7 +145,7 @@ Arm Rc was started on 22 November at 23:19, on the same programs, libraries and 
 | File | Purpose |
 |---|---|
 | `build_2013_search.sh`, `compat_2013_search.h`, `patches_2013_search/` | Build the original search program |
-| `start_arm.py` | Starts and looks after a whole arm of the campaign (section 6) |
+| `start_arm.py`, `search_arm.py` | Start and look after a whole arm of the campaign (section 6); the second holds what is particular to arm A |
 | `run_2013_search.sh`, `collect_2013_runs.sh`, `stop_2013_runs.sh`, `summarise_reruns.py` | Re-run the original experiment, copy out and stop its runs, and compare it with the deposit |
 | `make_template.py` | Writes the settings template from a deposited robot file, after checking the files agree |
 | `build_2013_simulator.sh` | Builds the simulator in WSL from `research_reference/repositories/softbots2013Code.tgz` |
