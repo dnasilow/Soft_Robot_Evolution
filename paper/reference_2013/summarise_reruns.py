@@ -37,6 +37,14 @@ def read_curve(path):
     return np.maximum.accumulate(a[:, 1]) if len(a) else np.zeros(0)
 
 
+def run_order(folder):
+    """Runs in the order of their seed number (armR_P0_s2 before armR_P0_s10). The bootstrap below
+    then draws exactly as paper/analysis/analyse_arm.py does, so both give the same interval."""
+    name = os.path.basename(folder)
+    digits = name[len(name.rstrip('0123456789')):]
+    return (int(digits) if digits else 0, name)
+
+
 def a12(x, y):
     """Vargha-Delaney A12: probability that a value of x exceeds a value of y (ties count half)."""
     x, y = np.asarray(x), np.asarray(y)
@@ -51,7 +59,7 @@ def main():
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
     runs = {}
-    for d in sorted(glob.glob(os.path.join(ROOT, 'results', 'rerun2013', a.prefix + '*'))):
+    for d in sorted(glob.glob(os.path.join(ROOT, 'results', 'rerun2013', a.prefix + '*')), key=run_order):
         if not os.path.isfile(os.path.join(d, 'curve.txt')):      # log files; runs before generation 1
             continue
         c = read_curve(os.path.join(d, 'curve.txt'))
@@ -83,6 +91,10 @@ def main():
           f"bootstrapped 95% interval {np.percentile(boot, 2.5):.3f}-{np.percentile(boot, 97.5):.3f}")
     print("Per run, champion score at that generation:",
           ', '.join(f'{v:.2f}' for v in sorted(x)))
+    print()
+    print("This is the quick view, generation by generation. The analysis fixed in the protocol (criterion,")
+    print("body measures, every seed) is:  python paper/analysis/analyse_arm.py --arm R")
+    print("                                (for runs that are not an arm: --pilot <prefix> --generation N)")
 
 
 if __name__ == '__main__':
