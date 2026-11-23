@@ -95,12 +95,15 @@ Cost: with 12 runs side by side, a generation took a median of 91 seconds (121 i
 ```
 python paper\reference_2013\start_arm.py --arm R                        start it
 python paper\reference_2013\start_arm.py --arm R --status               where every run is; starts nothing
-python paper\reference_2013\start_arm.py --arm R --restart-incomplete   after an interruption
+python paper\reference_2013\start_arm.py --arm R --watch                follow its progress in this window
+python paper\reference_2013\start_arm.py --arm R --stop                 stop its runs
+python paper\reference_2013\start_arm.py --arm R --restart-incomplete   start it again after an interruption
 ```
 
-- **It opens a console window of its own**, through the Windows shell, so the campaign does not depend on the program the command was typed in. That window is the campaign: the runs live in a WSL session that it holds open. Closing the window, logging off, restarting Windows or shutting WSL down (`wsl --shutdown`) stops them. One Ctrl+C is ignored with a warning; two within five seconds stop the runs.
+- **The runs are looked after by a launcher without a window**, started through the Windows shell, so they depend neither on the program the command was typed in nor on any console window. The window that opens only shows the progress: closing it stops nothing, `--watch` opens the view again, and `--stop` is the way to stop the runs. Logging off, restarting Windows or shutting WSL down (`wsl --shutdown`) still ends them.
+- **Why.** Until 23 November the launcher ran in the window and the window was the campaign. That morning both campaign windows were closed, and arm Rc lost 32 of its 35 runs nine hours in. Console windows are hosted by Windows Terminal here, where one click can close several.
 - **It keeps Windows awake** for as long as it runs, with the keep-awake of `run_tendon_evolution.py`.
-- **It starts the runs through `run_2013_search.sh`**, all 35 side by side, one core each. Finished runs are skipped, runs in progress are never touched, and a second launcher for the same arm is refused.
+- **It starts the runs through `run_2013_search.sh`**, all 35 side by side, one core each. Finished runs are skipped, runs in progress are never touched, and a second launcher for the same arm is refused. If runs are alive without a launcher, starting the arm again adopts them instead of starting anything.
 - **Every ten minutes** it copies the learning curves to `results/rerun2013/` and prints generations and time. It does not print scores.
 - **At the end** it checks that every seed finished with 1000 generations and prints the comparison with the deposited runs. For each finished run `results/rerun2013/<run>/` then holds the learning curve, the robots of every recorded generation (the settings record the whole population every tenth generation), the genomes of the champions and of the final population as the program saved them, and the program's log.
 - **Each launch is recorded** in `results/rerun2013/<arm>_launches.json`: time, command, code version, and the checksums of the two programs, their libraries and the settings file. A launch on a different build is refused. The protocol must be frozen before an arm starts.
@@ -121,7 +124,9 @@ Run alone, a run takes about 55 seconds per generation at the start. With all 35
 
 Arm R ran from 21 November 23:27 to 22 November 21:40. Its outcome is in [`../outcomes/README.md`](../outcomes/README.md).
 
-Arm Rc was started on 22 November at 23:19, on the same programs, libraries and settings file as arm R. The cost switch (`-P 2`) was tried first, on two seeds for ten generations (`dryRc_P2_s3`, `s5`): for all 50 simulated robots of the recorded generation the adjusted fitness is the original one times one minus actuated voxels over 1000, to seven digits. That is the rule read from the 2013 source, which the deposited cost robots follow as well. Under this switch the count in a robot's file name (`numFilled_`) is its number of actuated voxels, not of all voxels.
+The launcher without a window was tried on 23 November (`dryH_P0_s3`, `s5`): a close request to its progress window left launcher and runs alive; a second start was refused; `--stop` ended the runs and the launcher; the stopped seeds started again and gave the pilot's scores; and after the launcher alone was ended, starting again adopted the runs.
+
+Arm Rc was started on 22 November at 23:19, on the same programs, libraries and settings file as arm R. It was cut short on 23 November at 08:46 (three runs had finished) and its 32 unfinished seeds were started again from the beginning at 09:00, with the launcher described above. The cost switch (`-P 2`) was tried first, on two seeds for ten generations (`dryRc_P2_s3`, `s5`): for all 50 simulated robots of the recorded generation the adjusted fitness is the original one times one minus actuated voxels over 1000, to seven digits. That is the rule read from the 2013 source, which the deposited cost robots follow as well. Under this switch the count in a robot's file name (`numFilled_`) is its number of actuated voxels, not of all voxels.
 
 ## Files
 

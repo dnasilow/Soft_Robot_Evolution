@@ -211,6 +211,13 @@ Details in [outcomes/README.md](outcomes/README.md). Analysed once, after your g
 - **Arm Rc is running.** Started on 22 November at 23:19 with your go-ahead: seeds 1 to 35, 1000 generations, actuated-voxel cost, all 35 side by side, in a window titled "Soft robot campaign, arm Rc". It runs on the same programs, libraries and settings file as arm R (identical checksums). `python paper\reference_2013\start_arm.py --arm Rc --status` shows where every run is. Arm R took 22 hours.
 - **What to expect of its criterion.** As section 9.2 of the protocol records, a perfect reproduction cannot meet the 0.90 to 1.10 window in this condition. The arm will read as "not distinguishable" or as "differs".
 
+### 3.14 23 November: arm Rc cut short, a safer launcher, arm Rc started again
+
+- **What happened.** At 08:46 both campaign windows were closed: the finished one of arm R and the running one of arm Rc. The launcher ran inside its window, so arm Rc stopped. Three runs had finished; 32 were at generations 396 to 935 of 1000. Windows had not restarted and WSL had not shut down. Console windows are hosted by Windows Terminal on this machine, where one click can close several, and I had written that the old arm R window could be closed.
+- **What changed (your choice of 23 November).** The launcher is now a process without a window; the window that opens only shows progress and can be closed. `--watch` opens the view again and `--stop` stops the runs. Runs that are alive without a launcher are adopted when the arm is started again. All of this was tried before use (reference README, section 6).
+- **Arm Rc is running again.** The 32 unfinished seeds were started from the beginning at 09:00, as the protocol prescribes; the three finished runs are kept. The paper has to report that 32 of this arm's seeds were started twice. The unfinished attempts are kept in `runs/_interrupted/` on the WSL side.
+- **Cost.** Nine hours of machine time.
+
 ---
 
 ## 4. What the literature says
