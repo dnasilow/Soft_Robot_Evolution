@@ -24,6 +24,16 @@ Survey of 18–19 November 2026, for the paper plan in [PLAN.md](PLAN.md).
 - Two unpublished student term papers (Swarthmore CS81, 2015) that reran the authors' code for a few runs.
 - **Lehman et al. (Artificial Life 2020)**, "The surprising creativity of digital evolution", [arXiv:1803.03453](https://arxiv.org/abs/1803.03453): anecdotes, including these soft robots exploiting floor penetration and the time step. The only published record of contact artefacts in this system.
 
+**Checked again on 24 November 2026 with two more sources**, the OpenAlex and Scite connectors ([note 6](literature_notes/6_citing_works_sweep.md), table of all citing works in [cheney2013_citing_works.csv](literature_notes/cheney2013_citing_works.csv)). The conclusion stands on a wider base:
+
+- 477 works cite the GECCO paper or its 2014 SIGEVOlution reprint (262 the first only, 198 the reprint only, 17 both). None presents itself as a reproduction or replication. 399 of them were judged on the title alone, so a re-run reported inside a paper on another subject, or in one of the 33 dissertations, would not show.
+- 155 citation statements from 98 citing papers: none classed as supporting or contrasting, and no visible sentence about reproducing, replicating or re-running. 43 sentences are withheld by publishers.
+- The Dryad deposit has no citing work, and no indexed full text names the deposit or the code archive.
+- The 2013 configuration has been re-run as a *baseline* by at least three outside groups (Methenitis et al. 2015; Gravina et al. 2017, 2018; Singh 2025), each time to ask whether something else beats it. None of those read in full sets its baseline next to the published 2013 values or looks at the deposited runs.
+- Closest new entries: Haile, Barber, Chen 2022 (TechRxiv, [10.36227/techrxiv.20436018.v1](https://doi.org/10.36227/techrxiv.20436018.v1)), who take over materials and simulator settings without a check against 2013; La Cava & Moore 2018 ([10.1162/isal_a_00044](https://doi.org/10.1162/isal_a_00044)), whose abstract reports random search with elitism as competitive; Lai et al. 2021 ([10.1111/cgf.142661](https://doi.org/10.1111/cgf.142661)), a review that notes the public VoxCAD repository appeared after the 2013 paper.
+- The one title that suggested a re-run, Gu et al. 2019 ([10.1007/978-3-030-27535-8_3](https://doi.org/10.1007/978-3-030-27535-8_3)), is by its abstract a use of CPPN and VoxCAD on a four-legged walker, not a reproduction; its body is unread.
+- Still not covered: Google Scholar's own citing list, theses in full, code hosts and course pages. Note 6, section 7, lists what a person with library access should read.
+
 ## 3. What bodies evolve, and when limbs appear
 
 **Compact, filled, muscle-rich bodies are the default** under distance-only fitness on flat ground:
