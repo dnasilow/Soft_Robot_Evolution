@@ -8,13 +8,16 @@ nothing here reads a run.
   two_proportions      Fisher's exact test for a yes/no measure
   attainability        how often a PERFECT reproduction would meet the criterion, estimated from
                        the reference runs alone
+  median_interval      one sample: its median with a bootstrapped 95% interval   (section 9.4)
+  rank_correlation     paired measures: Spearman's rank correlation with a bootstrapped 95%
+                       interval                                                  (section 9.4)
 
 The bootstrap resamples the runs of each side with replacement, independently, 10,000 times, and
 takes the 2.5th and 97.5th percentiles. The random seed is fixed, so a report can be reproduced
 to the last digit.
 """
 import numpy as np
-from scipy.stats import fisher_exact, mannwhitneyu
+from scipy.stats import fisher_exact, mannwhitneyu, spearmanr
 
 N_BOOT = 10000           # bootstrap resamples
 SEED = 0
@@ -104,6 +107,36 @@ def two_proportions(k_arm, n_arm, k_ref, n_ref):
     p = fisher_exact([[k_arm, n_arm - k_arm], [k_ref, n_ref - k_ref]], alternative='two-sided')[1]
     return {'arm_yes': int(k_arm), 'n_arm': int(n_arm), 'reference_yes': int(k_ref),
             'n_reference': int(n_ref), 'p': float(p)}
+
+
+def median_interval(v, n=None, seed=None):
+    """One sample: (median, lower, upper), the 95% percentile interval of the median over n
+    resamples of the sample with replacement."""
+    v = np.asarray(v, float)
+    n = N_BOOT if n is None else n
+    rng = np.random.default_rng(SEED if seed is None else seed)
+    medians = np.median(rng.choice(v, (n, len(v))), axis=1)
+    return float(np.median(v)), float(np.percentile(medians, 2.5)), float(np.percentile(medians, 97.5))
+
+
+def rank_correlation(a, b, n=None, seed=None):
+    """Paired measures: (Spearman's rank correlation, lower, upper), the 95% percentile interval
+    over n resamples of the PAIRS with replacement. A resample in which one of the measures takes
+    a single value has no ranks to correlate and is left out."""
+    a, b = np.asarray(a, float), np.asarray(b, float)
+    if len(a) != len(b):
+        raise ValueError('rank_correlation needs paired measures of the same length')
+    n = N_BOOT if n is None else n
+    rng = np.random.default_rng(SEED if seed is None else seed)
+    values = []
+    for _ in range(n):
+        i = rng.integers(0, len(a), len(a))
+        if np.ptp(a[i]) > 0 and np.ptp(b[i]) > 0:
+            values.append(spearmanr(a[i], b[i]).statistic)
+    rho = float(spearmanr(a, b).statistic) if np.ptp(a) > 0 and np.ptp(b) > 0 else float('nan')
+    if not values:
+        return rho, float('nan'), float('nan')
+    return rho, float(np.percentile(values, 2.5)), float(np.percentile(values, 97.5))
 
 
 def attainability(reference, n_runs, trials=None, n_boot=None, seed=None, window=CRITERION):
