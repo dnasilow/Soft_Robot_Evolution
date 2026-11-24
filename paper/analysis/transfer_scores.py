@@ -297,7 +297,11 @@ def write_cache(path, cache):
     os.replace(tmp, path)
 
 
-def evaluate_all(jobs, workers, cache_path, evaluate=score_one, say=print):
+def tell(text):
+    print(text, flush=True)                                   # progress shows at once, also in a log file
+
+
+def evaluate_all(jobs, workers, cache_path, evaluate=score_one, say=tell):
     """jobs: (key, grid, params, step_fraction, what it is). Returns {key: result}. Results already in
     the cache are not computed again; every new one is written to it as soon as it exists."""
     cache = read_cache(cache_path)
