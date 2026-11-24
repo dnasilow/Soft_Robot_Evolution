@@ -226,6 +226,16 @@ Details in [outcomes/README.md](outcomes/README.md). Analysed once, after your g
 - **The analysis reads arm A's runs.** `analyse_arm.py --arm A` gives the report arm R got, also sets arm A against arm R (the fifth primary comparison) and repeats arm R's result as the floor. It was tested on made-up runs; no run of arm A exists yet.
 - **Chained to arm Rc (your go-ahead of 23 November).** Arm A's launcher was started with `--after Rc`: it waits for arm Rc to finish and starts arm A only if arm Rc is complete. Seed 1 of arm A will repeat the pilot, so its first 100 generations are already known (2.05 at generation 100).
 
+### 3.16 24 November: arm Rc, the second result; arm A running
+
+Details in [outcomes/README.md](outcomes/README.md).
+
+- **The cost condition repeats as well.** 35 re-runs of the original code with the actuated-voxel cost reach a median champion score of 3.57 at generation 1000, against 3.41 for the 35 deposited cost runs: ratio 1.05, 95% interval 0.88 to 1.12, A12 0.54, p = 0.55. By the fixed reading this is "not distinguishable"; the 10% window could not have been met in this condition, as recorded beforehand.
+- **The bodies repeat.** 363 voxels against 362, footprint 7 against 5, fill 0.46 against 0.44, muscle fraction 0.62 against 0.60. The cost halves the bodies and removes muscle, as in 2013.
+- **The restart rule held on real data.** Each of the 32 runs that had to be started again is identical to its interrupted attempt in every generation that attempt had reached (395 to 934 generations). All 35 champions re-simulated reproduce their scores.
+- **The hand-over worked.** Arm Rc was complete on 23 November at 23:20; arm A started by itself at 23:21 and is running (median generation 246 of 1000 on 24 November at 10:07).
+- **What the two re-execution arms give the paper.** Both conditions of the 2013 experiment repeat on a 2026 system, in scores and in bodies. That is the first step of the ladder; arm A is the second.
+
 ---
 
 ## 4. What the literature says
