@@ -1,0 +1,141 @@
+{
+ "arm": "R",
+ "seconds_between_frames": 0.0025,
+ "slowed_down": 24.0,
+ "robots": [
+  {
+   "robot": "2013 original, run 101 (median of 35)",
+   "from_a_run_of_this_project": false,
+   "voxels": 514,
+   "materials": {
+    "1": 66,
+    "2": 59,
+    "3": 389
+   },
+   "recorded_score": 4.39312983,
+   "score_in_the_campaign_simulator": 4.2203,
+   "score_in_the_recording_simulator": 4.2203,
+   "score_from_first_and_last_frame": 4.220299850006484,
+   "frames": 101,
+   "lowest_point_voxels": -0.7635244000000001,
+   "centre_height_voxels": [
+    3.28213279,
+    6.07201783
+   ],
+   "highest_point_voxels": 10.066908,
+   "body_lengths_per_cycle": [
+    0.119,
+    0.348,
+    0.36,
+    0.438,
+    0.491,
+    0.49,
+    0.481,
+    0.495,
+    0.496,
+    0.498
+   ],
+   "all_numbers_finite": true
+  },
+  {
+   "robot": "2013 original, run 103 (best of 35)",
+   "from_a_run_of_this_project": false,
+   "voxels": 761,
+   "materials": {
+    "1": 395,
+    "3": 366
+   },
+   "recorded_score": 5.94526005,
+   "score_in_the_campaign_simulator": 4.8968799999999995,
+   "score_in_the_recording_simulator": 4.8968799999999995,
+   "score_from_first_and_last_frame": 4.896880087958743,
+   "frames": 101,
+   "lowest_point_voxels": -0.7884125000000001,
+   "centre_height_voxels": [
+    3.82685941,
+    6.16105925
+   ],
+   "highest_point_voxels": 11.577735,
+   "body_lengths_per_cycle": [
+    0.147,
+    0.519,
+    0.659,
+    0.47,
+    0.447,
+    0.634,
+    0.525,
+    0.465,
+    0.518,
+    0.51
+   ],
+   "all_numbers_finite": true
+  },
+  {
+   "robot": "re-run 2026, arm R, seed 1 (median of 35)",
+   "from_a_run_of_this_project": true,
+   "voxels": 573,
+   "materials": {
+    "1": 442,
+    "3": 129,
+    "4": 2
+   },
+   "recorded_score": 4.41028976,
+   "score_in_the_campaign_simulator": 4.41029,
+   "score_in_the_recording_simulator": 4.41029,
+   "score_from_first_and_last_frame": 4.410291108242187,
+   "frames": 101,
+   "lowest_point_voxels": -0.7787485,
+   "centre_height_voxels": [
+    3.79513786,
+    6.018328950000001
+   ],
+   "highest_point_voxels": 11.119448,
+   "body_lengths_per_cycle": [
+    0.142,
+    0.379,
+    0.475,
+    0.451,
+    0.434,
+    0.517,
+    0.51,
+    0.489,
+    0.485,
+    0.523
+   ],
+   "all_numbers_finite": true
+  },
+  {
+   "robot": "re-run 2026, arm R, seed 28 (best of 35)",
+   "from_a_run_of_this_project": true,
+   "voxels": 736,
+   "materials": {
+    "1": 420,
+    "3": 316
+   },
+   "recorded_score": 5.8203702,
+   "score_in_the_campaign_simulator": 5.82037,
+   "score_in_the_recording_simulator": 5.82037,
+   "score_from_first_and_last_frame": 5.820373409580989,
+   "frames": 101,
+   "lowest_point_voxels": -0.63897062,
+   "centre_height_voxels": [
+    4.2410763000000005,
+    6.15948113
+   ],
+   "highest_point_voxels": 11.692720000000001,
+   "body_lengths_per_cycle": [
+    0.169,
+    0.527,
+    0.642,
+    0.67,
+    0.659,
+    0.611,
+    0.691,
+    0.636,
+    0.625,
+    0.589
+   ],
+   "all_numbers_finite": true
+  }
+ ]
+}

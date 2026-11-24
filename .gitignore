@@ -144,6 +144,10 @@ logs/
 !results/.gitkeep
 !results/old/.gitkeep
 
+# The videos of the campaign's outcomes ARE kept: small, and the record of what the robots do
+!paper/outcomes/videos/*.gif
+!paper/outcomes/videos/*.mp4
+
 # Windows reserved filenames
 nul
 NUL

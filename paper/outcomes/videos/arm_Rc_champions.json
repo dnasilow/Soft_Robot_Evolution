@@ -1,0 +1,145 @@
+{
+ "arm": "Rc",
+ "seconds_between_frames": 0.0025,
+ "slowed_down": 24.0,
+ "robots": [
+  {
+   "robot": "2013 original, run 107 (median of 35)",
+   "from_a_run_of_this_project": false,
+   "voxels": 331,
+   "materials": {
+    "1": 184,
+    "2": 134,
+    "3": 13
+   },
+   "recorded_score": 3.41244006,
+   "score_in_the_campaign_simulator": 3.39853,
+   "score_in_the_recording_simulator": 3.39853,
+   "score_from_first_and_last_frame": 3.3985316515384993,
+   "frames": 101,
+   "lowest_point_voxels": -0.7240362,
+   "centre_height_voxels": [
+    2.8760053699999997,
+    6.99244719
+   ],
+   "highest_point_voxels": 10.356362,
+   "body_lengths_per_cycle": [
+    0.064,
+    0.081,
+    0.309,
+    0.34,
+    0.383,
+    0.448,
+    0.46,
+    0.466,
+    0.444,
+    0.384
+   ],
+   "all_numbers_finite": true
+  },
+  {
+   "robot": "2013 original, run 103 (best of 35)",
+   "from_a_run_of_this_project": false,
+   "voxels": 346,
+   "materials": {
+    "1": 55,
+    "2": 41,
+    "3": 242,
+    "4": 8
+   },
+   "recorded_score": 4.49068022,
+   "score_in_the_campaign_simulator": 4.53538,
+   "score_in_the_recording_simulator": 4.53538,
+   "score_from_first_and_last_frame": 4.535376145640942,
+   "frames": 101,
+   "lowest_point_voxels": -0.6602901,
+   "centre_height_voxels": [
+    4.06516716,
+    6.95087062
+   ],
+   "highest_point_voxels": 10.064707,
+   "body_lengths_per_cycle": [
+    0.077,
+    0.358,
+    0.49,
+    0.519,
+    0.514,
+    0.518,
+    0.511,
+    0.517,
+    0.513,
+    0.513
+   ],
+   "all_numbers_finite": true
+  },
+  {
+   "robot": "re-run 2026, arm Rc, seed 25 (median of 35)",
+   "from_a_run_of_this_project": true,
+   "voxels": 340,
+   "materials": {
+    "1": 220,
+    "2": 20,
+    "3": 100
+   },
+   "recorded_score": 3.44410992,
+   "score_in_the_campaign_simulator": 3.4441100000000002,
+   "score_in_the_recording_simulator": 3.4441100000000002,
+   "score_from_first_and_last_frame": 3.444110946851057,
+   "frames": 101,
+   "lowest_point_voxels": -0.6463874,
+   "centre_height_voxels": [
+    2.9083534600000003,
+    4.55883611
+   ],
+   "highest_point_voxels": 10.515775000000001,
+   "body_lengths_per_cycle": [
+    0.133,
+    0.296,
+    0.297,
+    0.385,
+    0.389,
+    0.391,
+    0.389,
+    0.388,
+    0.387,
+    0.386
+   ],
+   "all_numbers_finite": true
+  },
+  {
+   "robot": "re-run 2026, arm Rc, seed 31 (best of 35)",
+   "from_a_run_of_this_project": true,
+   "voxels": 408,
+   "materials": {
+    "1": 84,
+    "2": 27,
+    "3": 283,
+    "4": 14
+   },
+   "recorded_score": 4.81947994,
+   "score_in_the_campaign_simulator": 4.81948,
+   "score_in_the_recording_simulator": 4.81948,
+   "score_from_first_and_last_frame": 4.819480674159738,
+   "frames": 101,
+   "lowest_point_voxels": -0.8104119,
+   "centre_height_voxels": [
+    3.74648045,
+    6.3848272
+   ],
+   "highest_point_voxels": 10.485544999999998,
+   "body_lengths_per_cycle": [
+    0.107,
+    0.388,
+    0.481,
+    0.523,
+    0.538,
+    0.541,
+    0.547,
+    0.552,
+    0.569,
+    0.569
+   ],
+   "all_numbers_finite": true
+  }
+ ]
+}

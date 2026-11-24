@@ -1,0 +1,63 @@
+--- a/Voxelyze/main.cpp
++++ b/Voxelyze/main.cpp
+@@ -2,6 +2,28 @@
+ #include "VX_Object.h"
+ #include "VX_Environment.h"
+ #include "VX_Sim.h"
++#include <cstdio>
++#include <cstdlib>
++
++// ---- Added for the 2026 reproduction (paper/reference_2013); not part of the 2013 program. ----
++// With the environment variable VX_TRACE set to a file name, the position, rotation and size of
++// every voxel are written to that file every VX_TRACE_EVERY seconds of simulated time (default
++// 0.001). The simulation itself is not touched: its state is only read.
++static void TraceFrame(FILE* f, CVX_Sim& Sim, double Time)
++{
++	Vec3D cm = Sim.GetCM();
++	fprintf(f, "t %.9g %.9g %.9g %.9g\n", Time, (double)cm.x, (double)cm.y, (double)cm.z);
++	int n = Sim.NumVox();
++	for (int i = 0; i < n; i++) {
++		VoxState& s = Sim.VoxArray[i].S;
++		fprintf(f, "%.7g %.7g %.7g %.6g %.6g %.6g %.6g %.6g %.6g %.6g\n",
++			(double)s.Pos.x, (double)s.Pos.y, (double)s.Pos.z,
++			(double)s.Angle.w, (double)s.Angle.x, (double)s.Angle.y, (double)s.Angle.z,
++			(double)s.Scale.x, (double)s.Scale.y, (double)s.Scale.z);
++	}
++}
++// ---- end of the addition ----
++
+ 
+ 
+ int main(int argc, char *argv[]){
+@@ -51,8 +73,22 @@
+ 	Simulator.pEnv->UpdateCurTemp(Time, &Simulator.LocalVXC);	//set the starting temperature
+ 	Simulator.IniCM=Simulator.GetCM();	//set the starting CM position
+ 
++	// ---- added: open the trace, write the number of voxels and the material of each ----
++	FILE* Trace = NULL;
++	double TraceEvery = 0.001, NextTrace = 0.0;
++	if (getenv("VX_TRACE")) {
++		Trace = fopen(getenv("VX_TRACE"), "w");
++		if (getenv("VX_TRACE_EVERY")) TraceEvery = atof(getenv("VX_TRACE_EVERY"));
++		if (Trace) {
++			fprintf(Trace, "voxels %d\n", Simulator.NumVox());
++			for (int i = 0; i < Simulator.NumVox(); i++) fprintf(Trace, "%d\n", Simulator.VoxArray[i].GetMatIndex());
++		}
++	}
++	// ---- end of the addition ----
++
+ 	while (Step<Simulator.SimStopStep && Time<Simulator.SimStopTime)
+ 		{
++		if (Trace && Time >= NextTrace) { TraceFrame(Trace, Simulator, Time); NextTrace += TraceEvery; }	// added
+ 		//do some reporting via the stdoutput if required
+ 		if (Step%100 == 0 && Simulator.print_scrn){ //Only output every n time steps
+ 			//std::cout << "Step: " << i << " \tCoM X: " << Simulator.GetCM().x*1000 << "mm" << "\tCoM Y: " << Simulator.GetCM().y*1000 << "mm" << "\tCoM Z: " << Simulator.GetCM().z*1000 << "mm\n"; //note that computing the COM requires looping through the entire voxel array, and is therefore not very efficient
+@@ -69,6 +105,8 @@
+ 		Simulator.pEnv->UpdateCurTime(Time);	//just pass in the Simulation time to the Environment (currently used only for calculating phase of actuations)
+ 		}
+ 
++	if (Trace) { TraceFrame(Trace, Simulator, Time); fclose(Trace); }	// added: the final state
++
+ 	//generate results file, if required
+ 	if (Simulator.WriteFitnessFile) Simulator.SaveResultFile(Simulator.FitnessFileNm);
+ 

@@ -150,6 +150,7 @@ Arm Rc was started on 22 November at 23:19, on the same programs, libraries and 
 | `run_2013_search.sh`, `collect_2013_runs.sh`, `stop_2013_runs.sh`, `summarise_reruns.py` | Re-run the original experiment, copy out and stop its runs, and compare it with the deposit |
 | `make_template.py` | Writes the settings template from a deposited robot file, after checking the files agree |
 | `build_2013_simulator.sh` | Builds the simulator in WSL from `research_reference/repositories/softbots2013Code.tgz` |
+| `build_2013_trace.sh`, `patches_2013_trace/` | Build a second copy of the simulator, in its own folder, that can also record every voxel's position, rotation and size at regular times (for the videos in `../outcomes/`). Four marked additions to its `main.cpp` that only read the simulation's state; it gives the same result as the campaign's simulator for every robot it has been used on |
 | `replay_in_2013_simulator.sh` | Runs a folder of robot files in it, in parallel, and writes a CSV |
 | `analyse_replay_2013.py` | Table 1 above |
 | `export_to_vxa.py` | Writes this project's robots as 2013 robot files |

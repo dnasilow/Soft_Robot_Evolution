@@ -82,6 +82,33 @@ Checks made on the result:
 
 Not yet done for this arm: the transfer scores.
 
+## What the champions do: videos
+
+Made on 24 November 2026 as a check that the scores describe real locomotion. `paper/analysis/render_champions.py` simulates each robot again in a copy of the 2013 simulator that also records where every voxel is, and draws the frames. For each arm: the champion with the median score and the champion with the best score, below the 2013 champions chosen by the same rule. A robot is 1 cm long and an evaluation lasts a quarter of a second, so the motion is slowed 24 times. The floor's squares are one body length wide, the unit of the score. Red and green are the two muscle types, light blue is soft passive tissue, dark blue stiff.
+
+**Arm R, no cost**
+
+![Champions of arm R and of the 2013 no-cost runs moving in the 2013 simulator](videos/arm_R_champions.gif)
+
+**Arm Rc, actuated-voxel cost**
+
+![Champions of arm Rc and of the 2013 cost runs moving in the 2013 simulator](videos/arm_Rc_champions.gif)
+
+What the frames and the numbers recorded with them (`videos/*.json`) show:
+
+- **The frames are the scored simulation.** For all eight robots the recording copy of the simulator reports the same distance as the campaign's simulator, and the first and last frame give that distance again. The four champions of this project's runs repeat their recorded scores to the last digit.
+- **It is locomotion, not an accident.** After a start-up of one or two cycles every robot gains a steady amount in each cycle: between 0.30 and 0.69 body lengths depending on the robot, and nearly the same from cycle to cycle for a given robot (for example 0.49 to 0.52, or 0.59 to 0.69). No voxel flies off, every number is finite, and the bodies stay on the ground: their centres stay between 3 and 7 voxels high and nothing rises above 12.
+- **The bodies are what the statistics say.** Without a cost: compact blocks of 510 to 760 voxels, mostly or entirely muscle, that rock and shuffle forward. With the cost: 330 to 410 voxels, with passive tissue. The re-runs look like the originals in both conditions.
+- **Something to know about the 2013 floor.** In this simulator the voxels that touch the floor sink into it: the lowest point of each of the eight bodies reaches 0.64 to 0.81 of a voxel below the floor's surface during its run, in the 2013 robots and the re-runs alike. The floor is a spring on each voxel's centre and the bodies are heavy. That is the original physics, not a fault of the reproduction; it matters when this simulator is compared with another.
+- **Single 2013 robots do not all score today what they scored in 2013.** The best deposited no-cost champion was recorded at 5.95 and scores 4.90 in today's build of the same source; the median one 4.39 and 4.22. This is the compiler difference documented for the replay of all deposited robots (reference README, section 1): typical robots agree to a fraction of a percent, about one in five differs by more than 5%. The captions give both numbers. Arm R and arm Rc compare distributions of whole runs, which is why they are the test of the experiment and single robots are not.
+
+| File | Content |
+|---|---|
+| `videos/arm_R_champions.gif`, `videos/arm_Rc_champions.gif` | The animations |
+| `videos/*.webp` | The same in full colour |
+| `videos/*.png` | Five moments of each, as a still picture |
+| `videos/*.json` | The checks made on each robot shown |
+
 ## Files
 
 | File | Content |

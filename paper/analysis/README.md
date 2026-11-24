@@ -39,6 +39,7 @@ The interval of the pilot is 0.86 to 1.48 here. The summary of 21 November gave 
 |---|---|
 | `protocol_stats.py` | The statistics, as pure functions: comparison of two sets of runs, the criterion, Holm, Fisher's exact test, and what the criterion can show |
 | `analyse_arm.py` | Reads an arm's collected runs and the deposited data and writes the report |
+| `render_champions.py` | Videos of an analysed arm's median and best champion next to their 2013 counterparts, simulated in the recording copy of the 2013 simulator, with checks that the frames are the simulation that was scored |
 
 ## Arm A
 
