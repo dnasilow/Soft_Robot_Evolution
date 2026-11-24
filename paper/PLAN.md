@@ -235,6 +235,8 @@ Details in [outcomes/README.md](outcomes/README.md).
 - **The restart rule held on real data.** Each of the 32 runs that had to be started again is identical to its interrupted attempt in every generation that attempt had reached (395 to 934 generations). All 35 champions re-simulated reproduce their scores.
 - **The hand-over worked.** Arm Rc was complete on 23 November at 23:20; arm A started by itself at 23:21 and is running (median generation 246 of 1000 on 24 November at 10:07).
 - **What the two re-execution arms give the paper.** Both conditions of the 2013 experiment repeat on a 2026 system, in scores and in bodies. That is the first step of the ladder; arm A is the second.
+- **Videos as a check (your request of 24 November).** The median and best champion of each arm, next to the 2013 champions chosen by the same rule, simulated again in a copy of the 2013 simulator that records every voxel's motion: [outcomes/README.md](outcomes/README.md). The frames are the scored simulations (same distances), the robots advance by a steady 0.3 to 0.7 body lengths per cycle, stay intact and stay on the ground. Two things to carry into the paper: contact voxels sink 0.6 to 0.8 of a voxel into the 2013 simulator's floor, and single deposited robots do not all score today what they scored in 2013 (the best no-cost champion: 5.95 then, 4.90 now), which is why whole runs are compared and not single robots. From now on every arm or run that succeeds gets its video.
+- **Standing instructions of 24 November.** Push every significant change and every tag to GitHub without asking (both tags are there now). Windows updates are paused until 24 December.
 
 ---
 
