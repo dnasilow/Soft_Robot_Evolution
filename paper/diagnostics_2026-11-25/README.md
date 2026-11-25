@@ -34,6 +34,7 @@ All with the MuJoCo engine and the settings of `--preset cheney2013` otherwise, 
 4. **What would support the explanation:** on `rule2013` the champions keep clearly more of their score than on `hard` (paired, per champion), turn over less, and rank more like they do in the 2013 simulator. **What would count against it:** no gain on `rule2013`. A gain on `matched` or `default` alone would say that softness helps without pinning down the rule; no gain on those two says little, since they soften friction as well.
 5. Every number is reported, whatever it shows.
 6. Added after the pilot robots below and before the champions: how many robots score within 20% of their 2013 score on each floor, and by how much the typical robot is off.
+7. Added while the champions were being scored, before any of their results was read: the champions that do not touch the bottom of the workspace (16 of arm Rc, 12 of the deposited cost champions, 1 of arm R) are scored once more under `rule2013`, started at their height in the workspace, as the 2013 simulator starts them. For those sets that removes both known differences between the engine and the 2013 simulator at once.
 
 ## The checks, on bodies that are not champions
 
