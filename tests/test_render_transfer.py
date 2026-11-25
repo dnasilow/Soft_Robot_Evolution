@@ -92,6 +92,23 @@ class TestMeasures(unittest.TestCase):
         frames[1, 2, 2] = 0.2 * MM                            # one voxel 0.3 of a voxel into the floor
         self.assertAlmostEqual(rt.lowest_point(frames), -0.3)
 
+    def test_how_far_a_body_has_turned(self):
+        cells = [(0, 0, 0), (1, 0, 0), (1, 1, 0), (1, 1, 1), (1, 1, 2), (0, 1, 2)]
+        start = first_frame(cells)
+        frames = [start]
+        for degrees in (30.0, 90.0, 170.0):
+            a = np.radians(degrees)
+            about_y = np.array([[np.cos(a), 0, np.sin(a)], [0, 1, 0], [-np.sin(a), 0, np.cos(a)]])   # rolling forward
+            f = start.copy()
+            f[:, 0:3] = start[:, 0:3] @ about_y.T + np.array([0.004 * degrees, 0.0, 0.001])            # and moving on
+            frames.append(f)
+        angles = rt.turned(np.array(frames))
+        for got, expected in zip(angles, (0.0, 30.0, 90.0, 170.0)):
+            self.assertAlmostEqual(got, expected, places=6)
+        squeezed = start.copy()
+        squeezed[:, 0:3] *= 1.1                               # a body that only swells has not turned
+        self.assertAlmostEqual(rt.turned(np.array([start, squeezed]))[1], 0.0, places=6)
+
 
 class TestRecordingTheMuJoCoEvaluation(unittest.TestCase):
     def test_the_frames_come_from_the_evaluation_that_is_scored(self):

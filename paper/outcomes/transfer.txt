@@ -1,0 +1,211 @@
+TRANSFER: the final champions of arm R, arm Rc and the deposited 2013 champions, scored in the MuJoCo engine.
+Made 2026-11-24T16:54 with code campaign-v2-9-g71f6ea4-dirty; 10000 bootstrap resamples, seed 0.
+Engine: this project's MuJoCo engine with the settings of --preset cheney2013, one evaluation of 0.25 s per champion, early stop off.
+
+Scores in workspace widths. Transfer ratio: score in the MuJoCo engine over the score in the campaign's build of the 2013 simulator.
+
+SETS OF CHAMPIONS, every body set on the floor: the preset as it is, the outcome named in section 4
+set                               n  blew up      2013 simulator       MuJoCo engine      transfer ratio  95% of its median   rank correlation (95%)  ratio >= 1
+arm R                            35        0    4.41 (4.27-4.71)    1.90 (1.45-3.47)    0.43 (0.33-0.75)      0.37-0.64       +0.26 (-0.10 to +0.57)     6 of 35 
+deposited 2013, no cost          35        0    4.32 (4.12-4.66)    3.23 (1.78-4.37)    0.75 (0.51-0.91)      0.59-0.90       +0.33 (+0.02 to +0.58)     8 of 35 
+arm Rc                           35        0    3.44 (3.29-4.13)    2.48 (1.62-3.46)    0.67 (0.46-0.92)      0.54-0.81       -0.02 (-0.33 to +0.31)     7 of 35 
+deposited 2013, actuated cost    35        0    3.34 (3.19-3.88)    2.58 (1.52-3.71)    0.85 (0.51-1.12)      0.55-1.06       -0.07 (-0.42 to +0.29)    12 of 35 
+
+  Comparisons on the transfer ratio (descriptive: no criterion, p not corrected)
+                                              median (quartiles)           reference   A12 (95% interval)        p
+arm R against deposited 2013, no cost           0.43 (0.33-0.75)    0.75 (0.51-0.91)  0.37 (0.24-0.50)    0.0571
+arm Rc against deposited 2013, actuated cost    0.67 (0.46-0.92)    0.85 (0.51-1.12)  0.42 (0.29-0.56)    0.2497
+
+THE SAME, every body started where it is in the workspace, as the 2013 simulator starts it (section 9.4, point 9)
+  Champions that do not touch the bottom of the workspace and so have a second evaluation: arm R 1 of 35, deposited 2013, no cost 0 of 35, arm Rc 16 of 35, deposited 2013, actuated cost 12 of 35
+set                               n  blew up      2013 simulator       MuJoCo engine      transfer ratio  95% of its median   rank correlation (95%)  ratio >= 1
+arm R                            35        0    4.41 (4.27-4.71)    1.90 (1.45-3.47)    0.43 (0.33-0.75)      0.37-0.64       +0.26 (-0.09 to +0.57)     6 of 35 
+deposited 2013, no cost          35        0    4.32 (4.12-4.66)    3.23 (1.78-4.37)    0.75 (0.51-0.91)      0.59-0.90       +0.33 (+0.02 to +0.58)     8 of 35 
+arm Rc                           35        0    3.44 (3.29-4.13)    2.16 (1.37-3.70)    0.61 (0.42-1.05)      0.46-0.94       -0.10 (-0.42 to +0.23)    10 of 35 
+deposited 2013, actuated cost    35        0    3.34 (3.19-3.88)    2.74 (1.91-3.77)    0.88 (0.54-1.12)      0.62-0.99       +0.12 (-0.25 to +0.46)    11 of 35 
+
+  Comparisons on the transfer ratio (descriptive: no criterion, p not corrected)
+                                              median (quartiles)           reference   A12 (95% interval)        p
+arm R against deposited 2013, no cost           0.43 (0.33-0.75)    0.75 (0.51-0.91)  0.37 (0.24-0.50)    0.0571
+arm Rc against deposited 2013, actuated cost    0.61 (0.42-1.05)    0.88 (0.54-1.12)  0.42 (0.28-0.55)    0.2309
+
+The deposited champions against the scores recorded in 2013 (another build of the same simulator):
+  deposited 2013, no cost         recorded 4.39 (4.20-5.07); MuJoCo score over the recorded score 0.68 (0.51-0.86)
+  deposited 2013, actuated cost   recorded 3.41 (3.21-4.03); MuJoCo score over the recorded score 0.77 (0.49-1.12)
+
+Recorded with the evaluations on the floor: how deep the lowest voxel sank below the floor (voxels), and the vertical part of the distance moved (share of the score).
+  arm R                           sank 0.18 (0.16-0.20); vertical share 0.05 (0.03-0.10)
+  deposited 2013, no cost         sank 0.18 (0.15-0.21); vertical share 0.05 (0.03-0.07)
+  arm Rc                          sank 0.15 (0.13-0.18); vertical share 0.07 (0.03-0.13)
+  deposited 2013, actuated cost   sank 0.15 (0.13-0.16); vertical share 0.07 (0.05-0.13)
+
+TIME-STEP CHECK: the first 5 champions of each set once more with 0.25 of the time step
+set                             champion      score  short step   change   sank  short step
+arm R                           seed 1        1.629       1.638    +0.6%   0.23        0.21
+arm R                           seed 2        0.878       1.322   +50.6%   0.19        0.20
+arm R                           seed 3        1.282       1.364    +6.4%   0.14        0.15
+arm R                           seed 4        1.816       1.891    +4.2%   0.21        0.23
+arm R                           seed 5        5.798       5.867    +1.2%   0.18        0.19
+deposited 2013, no cost         run_100       1.398       1.879   +34.4%   0.18        0.18
+deposited 2013, no cost         run_101       4.949       4.937    -0.2%   0.16        0.17
+deposited 2013, no cost         run_102       4.990       5.048    +1.2%   0.21        0.21
+deposited 2013, no cost         run_103       4.934       4.812    -2.5%   0.22        0.19
+deposited 2013, no cost         run_104       3.126       2.769   -11.4%   0.19        0.19
+arm Rc                          seed 1        2.196       2.104    -4.2%   0.16        0.16
+arm Rc                          seed 2        1.900       1.921    +1.1%   0.14        0.15
+arm Rc                          seed 3        2.716       2.724    +0.3%   0.12        0.13
+arm Rc                          seed 4        2.759       2.766    +0.3%   0.12        0.13
+arm Rc                          seed 5        4.639       4.289    -7.5%   0.17        0.18
+deposited 2013, actuated cost   run_100       3.288       3.278    -0.3%   0.14        0.14
+deposited 2013, actuated cost   run_101       3.517       3.489    -0.8%   0.11        0.11
+deposited 2013, actuated cost   run_102       2.163       1.804   -16.6%   0.14        0.15
+deposited 2013, actuated cost   run_103       1.316       1.452   +10.4%   0.15        0.13
+deposited 2013, actuated cost   run_104       1.887       1.808    -4.1%   0.08        0.08
+  Change in absolute value: median 3.3%, largest 50.6% (20 champions).
+
+AGAINST THE DIAGNOSTIC OF 18 NOVEMBER 2026 (the same robots, the same settings, other code)
+  deposited 2013, no cost         35 of 35 scores identical; largest difference 0.00e+00
+  deposited 2013, actuated cost   32 of 32 scores identical; largest difference 0.00e+00
+
+PER CHAMPION. "placed": the score when the body is started where it is in the workspace (only bodies that do not touch its bottom).
+set                             champion    voxels  lowest layer  2013 sim   MuJoCo   ratio   placed   ratio   moved x   moved y   moved z   sank  time step  note
+arm R                           seed 1         573             0     4.410    1.629    0.37                     +1.552    -0.467    -0.165   0.23   1.58e-05  
+arm R                           seed 2         545             0     4.279    0.878    0.21                     +0.758    -0.399    -0.195   0.19   3.52e-05  
+arm R                           seed 3         400             0     4.321    1.282    0.30                     +1.156    -0.461    -0.307   0.14   1.58e-05  
+arm R                           seed 4         681             0     4.207    1.816    0.43                     -1.670    +0.701    -0.119   0.21   3.52e-05  
+arm R                           seed 5         586             0     4.883    5.798    1.19                     +5.734    -0.834    -0.221   0.18   3.52e-05  
+arm R                           seed 6         703             0     5.275    1.354    0.26                     +0.152    -1.345    +0.019   0.22   3.52e-05  
+arm R                           seed 7         686             0     4.557    2.976    0.65                     -1.163    -2.737    -0.099   0.12   3.52e-05  
+arm R                           seed 8         726             0     4.295    4.417    1.03                     +4.405    -0.314    -0.114   0.17   3.52e-05  
+arm R                           seed 9         727             0     4.366    1.551    0.36                     +0.058    +1.547    -0.079   0.16   3.52e-05  
+arm R                           seed 10        753             0     5.065    4.108    0.81                     -4.086    -0.411    +0.113   0.22   3.52e-05  
+arm R                           seed 11        687             0     4.938    2.439    0.49                     +0.553    +2.375    -0.029   0.16   3.52e-05  
+arm R                           seed 12        704             0     4.288    3.921    0.91                     -3.855    +0.713    -0.053   0.18   3.52e-05  
+arm R                           seed 13        552             0     4.811    3.017    0.63                     +2.691    -1.341    -0.246   0.20   3.52e-05  
+arm R                           seed 14        754             0     4.274    0.506    0.12                     +0.462    -0.181    -0.102   0.19   3.52e-05  
+arm R                           seed 15        639             0     4.267    1.684    0.39                     -0.546    +1.589    -0.118   0.20   3.52e-05  
+arm R                           seed 16        517             0     4.513    5.010    1.11                     -1.895    -4.634    -0.162   0.16   3.52e-05  
+arm R                           seed 17        701             0     5.602    6.669    1.19                     +6.627    +0.750    -0.030   0.12   3.52e-05  
+arm R                           seed 18        449             0     4.268    1.564    0.37                     -0.218    -1.544    +0.112   0.19   3.52e-05  
+arm R                           seed 19        389             1     3.640    5.881    1.62    5.611    1.54    -3.944    -4.356    -0.230   0.16   3.52e-05  
+arm R                           seed 20        618             0     4.449    0.458    0.10                     +0.436    +0.044    -0.133   0.19   3.52e-05  
+arm R                           seed 21        701             0     3.752    2.397    0.64                     +0.592    -2.321    -0.083   0.15   3.52e-05  
+arm R                           seed 22        534             0     4.077    2.607    0.64                     +2.591    -0.140    -0.254   0.18   3.52e-05  
+arm R                           seed 23        705             0     3.751    1.067    0.28                     +1.047    -0.180    -0.102   0.18   3.52e-05  
+arm R                           seed 24        610             0     4.530    4.266    0.94                     +1.614    +3.945    -0.158   0.20   3.52e-05  
+arm R                           seed 25        664             0     4.505    1.901    0.42                     +0.021    -1.900    -0.067   0.18   3.52e-05  
+arm R                           seed 26        724             0     3.832    0.806    0.21                     +0.033    -0.798    -0.109   0.17   1.58e-05  
+arm R                           seed 27        659             0     4.461    0.450    0.10                     -0.085    +0.419    -0.139   0.25   3.52e-05  
+arm R                           seed 28        736             0     5.820    2.536    0.44                     +0.404    +2.500    +0.122   0.16   3.52e-05  
+arm R                           seed 29        661             0     4.714    5.499    1.17                     -0.527    +5.471    -0.171   0.18   3.52e-05  
+arm R                           seed 30        675             0     3.433    2.362    0.69                     -0.828    -2.209    +0.101   0.15   1.58e-05  
+arm R                           seed 31        646             0     4.716    1.671    0.35                     +1.641    -0.312    +0.028   0.21   3.52e-05  
+arm R                           seed 32        641             0     4.728    0.326    0.07                     +0.285    +0.073    -0.140   0.16   1.58e-05  
+arm R                           seed 33        764             0     4.681    2.420    0.52                     -0.825    +2.269    -0.169   0.14   2.73e-05  
+arm R                           seed 34        723             0     4.112    1.746    0.42                     +1.698    +0.395    -0.095   0.18   3.52e-05  
+arm R                           seed 35        694             0     4.397    1.646    0.37                     +1.444    +0.768    -0.187   0.18   3.52e-05  
+deposited 2013, no cost         run_100        626             0     4.650    1.398    0.30                     -1.380    +0.088    -0.207   0.18   3.52e-05  
+deposited 2013, no cost         run_101        514             0     4.220    4.949    1.17                     +0.660    +4.901    -0.183   0.16   3.52e-05  
+deposited 2013, no cost         run_102        740             0     4.688    4.990    1.06                     +4.914    +0.863    +0.040   0.21   3.52e-05  
+deposited 2013, no cost         run_103        761             0     4.897    4.934    1.01                     +0.179    +4.931    -0.043   0.22   3.52e-05  
+deposited 2013, no cost         run_104        566             0     4.082    3.126    0.77                     +3.110    -0.216    -0.224   0.19   3.52e-05  
+deposited 2013, no cost         run_105        652             0     3.038    2.186    0.72                     +0.723    +2.055    -0.181   0.15   3.52e-05  
+deposited 2013, no cost         run_106        438             0     4.459    1.713    0.38                     -1.076    -1.307    -0.260   0.17   3.52e-05  
+deposited 2013, no cost         run_107        687             0     4.248    1.190    0.28                     +1.178    +0.135    +0.101   0.22   3.52e-05  
+deposited 2013, no cost         run_108        545             0     4.355    3.772    0.87                     +3.742    +0.438    -0.171   0.22   3.52e-05  
+deposited 2013, no cost         run_109        770             0     5.417    3.626    0.67                     -1.620    +3.239    -0.175   0.17   3.52e-05  
+deposited 2013, no cost         run_110        619             0     4.327    3.881    0.90                     -0.452    +3.842    -0.303   0.30   3.52e-05  
+deposited 2013, no cost         run_111        683             0     4.257    1.246    0.29                     +0.332    +1.200    +0.044   0.23   3.52e-05  
+deposited 2013, no cost         run_112        698             0     3.842    0.274    0.07                     +0.134    -0.143    -0.191   0.13   1.58e-05  
+deposited 2013, no cost         run_113        694             0     4.155    1.082    0.26                     -0.327    +1.029    -0.064   0.24   3.52e-05  
+deposited 2013, no cost         run_114        699             0     4.181    1.106    0.26                     +1.104    +0.045    -0.049   0.16   2.73e-05  
+deposited 2013, no cost         run_115        695             0     4.206    2.843    0.68                     -2.834    +0.105    -0.192   0.13   3.52e-05  
+deposited 2013, no cost         run_116        359             0     4.347    4.356    1.00                     -4.333    +0.425    -0.138   0.13   3.52e-05  
+deposited 2013, no cost         run_117        615             0     4.320    0.739    0.17                     -0.196    +0.650    -0.293   0.15   3.52e-05  
+deposited 2013, no cost         run_118        632             0     4.060    3.353    0.83                     +3.345    -0.154    -0.160   0.15   3.52e-05  
+deposited 2013, no cost         run_119        649             0     5.003    2.974    0.59                     +2.952    +0.333    -0.138   0.13   3.52e-05  
+deposited 2013, no cost         run_120        630             0     4.428    4.057    0.92                     +1.631    +3.709    -0.209   0.31   1.58e-05  
+deposited 2013, no cost         run_121        645             0     4.537    3.406    0.75                     -0.556    -3.354    -0.193   0.19   3.52e-05  
+deposited 2013, no cost         run_122        744             0     3.626    1.849    0.51                     +0.024    +1.842    -0.166   0.18   3.52e-05  
+deposited 2013, no cost         run_123        455             0     3.294    1.699    0.52                     -0.714    +1.527    -0.214   0.18   3.52e-05  
+deposited 2013, no cost         run_124        541             0     4.042    5.700    1.41                     -5.597    -1.062    -0.176   0.20   1.58e-05  
+deposited 2013, no cost         run_125        707             0     4.359    3.795    0.87                     +3.669    -0.969    -0.024   0.14   2.73e-05  
+deposited 2013, no cost         run_126        754             0     5.183    3.040    0.59                     +2.581    -1.596    -0.180   0.22   3.52e-05  
+deposited 2013, no cost         run_127        663             0     4.217    2.693    0.64                     -2.690    +0.143    -0.014   0.14   3.52e-05  
+deposited 2013, no cost         run_128        742             0     5.125    4.653    0.91                     -0.568    +4.617    -0.112   0.16   3.52e-05  
+deposited 2013, no cost         run_129        606             0     3.748    2.874    0.77                     +0.079    -2.868    -0.152   0.18   3.52e-05  
+deposited 2013, no cost         run_130        500             0     3.549    4.380    1.23                     -4.331    +0.645    -0.103   0.26   3.52e-05  
+deposited 2013, no cost         run_131        780             0     4.666    4.746    1.02                     +0.728    -4.688    -0.114   0.21   3.52e-05  
+deposited 2013, no cost         run_132        697             0     4.902    4.434    0.90                     -1.085    +4.294    -0.214   0.15   3.52e-05  
+deposited 2013, no cost         run_133        691             0     5.085    3.232    0.64                     +3.223    +0.184    -0.155   0.19   3.52e-05  
+deposited 2013, no cost         run_134        582             0     4.236    4.931    1.16                     +4.853    -0.853    -0.188   0.16   3.52e-05  
+arm Rc                          seed 1         283             3     3.232    2.196    0.68    3.756    1.16    +1.850    -1.179    -0.090   0.16   1.58e-05  
+arm Rc                          seed 2         315             1     3.930    1.900    0.48    1.988    0.51    +0.689    +1.747    -0.285   0.14   3.52e-05  
+arm Rc                          seed 3         344             2     4.033    2.716    0.67    3.643    0.90    +2.711    +0.169    -0.046   0.12   3.52e-05  
+arm Rc                          seed 4         367             1     3.429    2.759    0.80    4.241    1.24    -2.517    +1.129    -0.025   0.12   1.58e-05  
+arm Rc                          seed 5         295             0     3.376    4.639    1.37                     +2.531    +3.886    -0.122   0.17   3.52e-05  
+arm Rc                          seed 6         293             3     4.351    3.533    0.81    5.196    1.19    +3.397    +0.970    -0.032   0.29   3.52e-05  
+arm Rc                          seed 7         369             0     3.592    3.817    1.06                     +3.716    -0.849    -0.193   0.14   3.52e-05  
+arm Rc                          seed 8         241             3     3.415    3.069    0.90    3.264    0.96    +2.986    +0.698    -0.122   0.18   3.52e-05  
+arm Rc                          seed 9         391             1     2.980    3.864    1.30    4.258    1.43    +3.719    -1.006    -0.291   0.21   1.58e-05  
+arm Rc                          seed 10        350             2     4.571    1.805    0.39    1.521    0.33    -1.165    +1.366    -0.187   0.12   3.52e-05  
+arm Rc                          seed 11        352             1     4.483    2.756    0.61    2.066    0.46    +2.469    +1.210    -0.180   0.18   1.58e-05  
+arm Rc                          seed 12        596             0     3.665    1.025    0.28                     -0.989    -0.015    -0.269   0.23   3.52e-05  
+arm Rc                          seed 13        165             0     2.216    0.996    0.45                     -0.962    +0.096    -0.240   0.14   3.52e-05  
+arm Rc                          seed 14        331             0     3.433    0.968    0.28                     -0.089    +0.956    -0.121   0.14   1.58e-05  
+arm Rc                          seed 15        363             2     4.145    4.013    0.97    2.104    0.51    +3.177    +2.451    -0.075   0.17   1.58e-05  
+arm Rc                          seed 16        516             0     3.277    2.728    0.83                     +0.777    +2.605    -0.229   0.16   3.52e-05  
+arm Rc                          seed 17        448             0     4.193    0.386    0.09                     +0.035    -0.357    -0.143   0.16   1.58e-05  
+arm Rc                          seed 18        500             0     4.124    2.432    0.59                     +2.418    -0.115    -0.225   0.19   1.58e-05  
+arm Rc                          seed 19        456             0     3.377    1.566    0.46                     +0.864    +1.288    -0.221   0.13   3.52e-05  
+arm Rc                          seed 20        382             1     4.241    1.547    0.36    1.117    0.26    +0.059    +1.539    -0.146   0.15   1.58e-05  
+arm Rc                          seed 21        292             2     3.717    2.477    0.67    3.170    0.85    -1.432    +2.017    -0.131   0.16   3.52e-05  
+arm Rc                          seed 22        298             0     4.140    0.880    0.21                     +0.877    +0.070    +0.019   0.17   3.52e-05  
+arm Rc                          seed 23        584             0     3.295    3.390    1.03                     +3.362    -0.368    -0.227   0.14   3.52e-05  
+arm Rc                          seed 24        596             0     3.017    1.727    0.57                     +0.053    +1.711    -0.232   0.17   3.52e-05  
+arm Rc                          seed 25        340             0     3.444    2.164    0.63                     -0.909    +1.961    -0.100   0.14   3.52e-05  
+arm Rc                          seed 26        399             0     3.458    0.790    0.23                     +0.515    -0.522    -0.295   0.07   1.58e-05  
+arm Rc                          seed 27        304             0     3.375    4.132    1.22                     +4.116    -0.209    -0.293   0.19   1.58e-05  
+arm Rc                          seed 28        577             0     3.183    1.224    0.38                     +0.224    -1.183    -0.222   0.27   1.58e-05  
+arm Rc                          seed 29        256             2     4.231    2.630    0.62    1.953    0.46    -1.616    -2.075    -0.034   0.15   3.52e-05  
+arm Rc                          seed 30        194             3     3.073    1.665    0.54    1.135    0.37    +1.655    +0.160    -0.096   0.12   3.52e-05  
+arm Rc                          seed 31        408             1     4.819    3.642    0.76    2.949    0.61    +3.332    +1.470    -0.057   0.13   1.58e-05  
+arm Rc                          seed 32        475             0     2.995    2.806    0.94                     -0.932    +2.632    -0.276   0.18   3.52e-05  
+arm Rc                          seed 33        440             0     3.569    4.627    1.30                     +4.037    -2.256    -0.163   0.13   3.52e-05  
+arm Rc                          seed 34        490             0     2.610    1.838    0.70                     +1.822    -0.024    -0.236   0.10   1.58e-05  
+arm Rc                          seed 35        257             2     3.296    4.634    1.41    4.378    1.33    -0.353    +4.618    -0.158   0.15   3.52e-05  
+deposited 2013, actuated cost   run_100        283             1     3.110    3.288    1.06    2.803    0.90    +1.535    +2.901    -0.198   0.14   1.58e-05  
+deposited 2013, actuated cost   run_101        668             0     3.853    3.517    0.91                     -0.887    +3.398    -0.192   0.11   1.58e-05  
+deposited 2013, actuated cost   run_102        282             0     2.813    2.163    0.77                     +1.364    -1.672    -0.152   0.14   1.58e-05  
+deposited 2013, actuated cost   run_103        346             1     4.535    1.316    0.29    1.931    0.43    +0.429    +1.230    -0.183   0.15   1.58e-05  
+deposited 2013, actuated cost   run_104        422             0     3.589    1.887    0.53                     +1.868    +0.090    -0.246   0.08   1.58e-05  
+deposited 2013, actuated cost   run_105        445             0     3.673    4.015    1.09                     +3.752    +1.405    -0.265   0.16   3.52e-05  
+deposited 2013, actuated cost   run_106        587             0     3.884    0.966    0.25                     +0.688    -0.662    -0.148   0.14   1.58e-05  
+deposited 2013, actuated cost   run_107        331             1     3.399    3.965    1.17    4.151    1.22    -2.041    +3.392    -0.225   0.16   3.52e-05  
+deposited 2013, actuated cost   run_108        411             1     4.215    4.499    1.07    4.387    1.04    +0.057    +4.494    -0.192   0.14   3.52e-05  
+deposited 2013, actuated cost   run_109        291             0     3.416    1.812    0.53                     +1.754    -0.384    -0.246   0.12   1.58e-05  
+deposited 2013, actuated cost   run_110        308             2     3.193    2.636    0.83    2.158    0.68    +2.633    -0.113    -0.060   0.15   3.52e-05  
+deposited 2013, actuated cost   run_111        325             0     3.284    4.595    1.40                     +1.226    +4.417    -0.319   0.17   3.52e-05  
+deposited 2013, actuated cost   run_112        620             0     3.327    3.053    0.92                     +2.616    +1.568    -0.133   0.11   1.58e-05  
+deposited 2013, actuated cost   run_113        330             2     3.230    4.133    1.28    3.777    1.17    -1.898    +3.666    -0.198   0.18   3.52e-05  
+deposited 2013, actuated cost   run_114        113             3     2.397    1.191    0.50    0.639    0.27    -0.746    +0.895    -0.246   0.12   1.58e-05  
+deposited 2013, actuated cost   run_115        362             0     3.854    2.486    0.64                     -1.551    -1.926    -0.250   0.18   1.58e-05  
+deposited 2013, actuated cost   run_116        400             2     3.296    3.925    1.19    4.151    1.26    -3.395    +1.964    -0.139   0.15   1.58e-05  
+deposited 2013, actuated cost   run_117        351             2     4.123    0.986    0.24    2.742    0.67    +0.975    +0.013    -0.149   0.15   3.52e-05  
+deposited 2013, actuated cost   run_118        286             0     3.207    3.761    1.17                     -2.677    -2.634    -0.200   0.17   3.52e-05  
+deposited 2013, actuated cost   run_119        591             0     4.231    2.410    0.57                     +2.383    +0.234    -0.269   0.11   1.58e-05  
+deposited 2013, actuated cost   run_120        300             0     3.883    3.293    0.85                     +3.276    +0.337    +0.054   0.23   3.52e-05  
+deposited 2013, actuated cost   run_121        643             0     3.196    3.664    1.15                     +0.605    +3.608    -0.198   0.10   2.73e-05  
+deposited 2013, actuated cost   run_122        442             0     4.313    1.430    0.33                     -0.971    +1.021    -0.248   0.24   3.52e-05  
+deposited 2013, actuated cost   run_123        292             0     3.819    3.597    0.94                     +3.006    +1.962    -0.218   0.19   3.52e-05  
+deposited 2013, actuated cost   run_124        406             2     3.322    4.894    1.47    3.874    1.17    +4.885    -0.257    -0.138   0.13   1.58e-05  
+deposited 2013, actuated cost   run_125        402             1     4.073    1.249    0.31    4.015    0.99    -0.200    -1.222    -0.163   0.16   3.52e-05  
+deposited 2013, actuated cost   run_126        277             2     3.231    3.942    1.22    4.053    1.25    +3.740    -1.224    -0.231   0.13   1.58e-05  
+deposited 2013, actuated cost   run_127        215             0     3.116    0.966    0.31                     +0.784    +0.532    -0.186   0.16   3.52e-05  
+deposited 2013, actuated cost   run_128        166             0     3.339    1.601    0.48                     -0.535    +1.487    -0.258   0.13   3.52e-05  
+deposited 2013, actuated cost   run_129        218             0     2.443    3.218    1.32                     +3.162    -0.579    -0.138   0.14   3.52e-05  
+deposited 2013, actuated cost   run_130        477             0     2.735    1.336    0.49                     +1.307    -0.121    -0.254   0.15   2.73e-05  
+deposited 2013, actuated cost   run_131        419             0     2.925    2.580    0.88                     +2.551    -0.301    -0.243   0.16   1.58e-05  
+deposited 2013, actuated cost   run_132        571             0     1.354    1.333    0.98                     +1.195    +0.567    -0.159   0.08   1.58e-05  
+deposited 2013, actuated cost   run_133        377             0     4.012    2.208    0.55                     -1.183    -1.864    +0.052   0.18   3.52e-05  
+deposited 2013, actuated cost   run_134        404             0     4.194    2.583    0.62                     -1.977    -1.662    +0.014   0.14   2.73e-05  

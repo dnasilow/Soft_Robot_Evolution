@@ -143,7 +143,22 @@ def per_cycle(times, cms):
     """Distance from the start at the end of each cycle, in body lengths, and the gain per cycle."""
     d = np.linalg.norm(cms - cms[0], axis=1) / rc.BODY
     at = [float(np.interp(k * rc.CYCLE, times, d)) for k in range(11)]
-    return [round(v, 3) for v in np.diff(at)]
+    return [round(float(v), 3) for v in np.diff(at)]
+
+
+def turned(frames):
+    """How far the body as a whole has turned from its first recorded state, in degrees, at every
+    frame: the angle of the rigid rotation that best maps the voxels' first positions (about
+    their centre) onto their positions now."""
+    first = frames[0][:, 0:3] - frames[0][:, 0:3].mean(axis=0)
+    angles = []
+    for f in frames:
+        now = f[:, 0:3] - f[:, 0:3].mean(axis=0)
+        u, _, vt = np.linalg.svd(first.T @ now)
+        d = np.sign(np.linalg.det(vt.T @ u.T))
+        r = vt.T @ np.diag([1.0, 1.0, d]) @ u.T
+        angles.append(math.degrees(math.acos(max(-1.0, min(1.0, (np.trace(r) - 1.0) / 2.0)))))
+    return np.array(angles)
 
 
 def lowest_point(frames):
@@ -216,6 +231,7 @@ def main(argv=None):
         if abs(fmj[0][:, 2].min() - f13[0][:, 2].min()) > 1e-9:
             raise SystemExit(f'{who}: the body does not start at the same height in the two simulators.')
         turn = (heading(cmmj) - heading(cm13) + 180.0) % 360.0 - 180.0
+        turned_13, turned_mj = turned(f13), turned(fmj)
         record = {
             'robot': who, 'started': 'set on the floor' if how == 'floor' else 'at its height in the workspace',
             'voxels': int(len(m13)), 'lowest_layer': row['lowest_layer'],
@@ -223,11 +239,15 @@ def main(argv=None):
             'simulator_2013': {'score': reference / rc.BODY, 'score_in_the_recording_copy': recorded / rc.BODY,
                                'heading_degrees': heading(cm13), 'body_lengths_per_cycle': per_cycle(t13, cm13),
                                'lowest_point_voxels': lowest_point(f13),
+                               'body_turned_degrees': {'at_the_end': round(float(turned_13[-1]), 1),
+                                                       'at_most': round(float(turned_13.max()), 1)},
                                'moved_vertically_body_lengths': float((cm13[-1][2] - cm13[0][2]) / rc.BODY),
                                'all_numbers_finite': bool(np.isfinite(f13).all())},
             'mujoco_engine': {'score': score, 'score_in_the_transfer_report': expected, 'blew_up': blew_up,
                               'ratio': score / row['evolved'], 'heading_degrees': heading(cmmj),
                               'body_lengths_per_cycle': per_cycle(tmj, cmmj), 'lowest_point_voxels': lowest_point(fmj),
+                              'body_turned_degrees': {'at_the_end': round(float(turned_mj[-1]), 1),
+                                                      'at_most': round(float(turned_mj.max()), 1)},
                               'moved_vertically_body_lengths': float((cmmj[-1][2] - cmmj[0][2]) / rc.BODY),
                               'all_numbers_finite': bool(np.isfinite(fmj).all())},
             'heading_in_mujoco_relative_to_2013_degrees': turn,
@@ -239,8 +259,10 @@ def main(argv=None):
         print(f"{who} ({record['started']}): 2013 simulator {reference / rc.BODY:.4f}, MuJoCo engine {score:.4f} "
               f"({score / row['evolved']:.2f}), heading {turn:+.0f} degrees from the 2013 one, lowest point "
               f"{record['simulator_2013']['lowest_point_voxels']:+.2f} and {record['mujoco_engine']['lowest_point_voxels']:+.2f} voxels")
-        print(f"   per cycle, 2013: {record['simulator_2013']['body_lengths_per_cycle']}")
-        print(f"   per cycle, MuJoCo: {record['mujoco_engine']['body_lengths_per_cycle']}")
+        for name, key in (('2013', 'simulator_2013'), ('MuJoCo', 'mujoco_engine')):
+            print(f"   {name}: gain in distance per cycle {record[key]['body_lengths_per_cycle']}; the body turned "
+                  f"{record[key]['body_turned_degrees']['at_the_end']:.0f} degrees by the end, "
+                  f"{record[key]['body_turned_degrees']['at_most']:.0f} at most")
     if not shown:
         raise SystemExit('The report holds no champion of an arm of re-runs.')
 
@@ -257,7 +279,8 @@ def main(argv=None):
             right += f"; set on the floor {r['mujoco_engine']['score_when_set_on_the_floor']:.2f}"
         captions.append([(f"{r['robot']}: the 2013 simulator",
                           f"{r['simulator_2013']['score']:.2f} body lengths in 10 cycles, {r['voxels']} voxels"
-                          + (f", starts {r['lowest_layer']} voxels up" if r['lowest_layer'] else '')),
+                          + (f", starts {r['lowest_layer']} voxel{'s' if r['lowest_layer'] > 1 else ''} up"
+                             if r['lowest_layer'] else '')),
                          ('the same robot in the MuJoCo engine'
                           + (', started at the same height' if r['started'] != 'set on the floor' else ''), right)])
     slowdown = a.frame_ms / 1000 / a.every

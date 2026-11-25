@@ -45,6 +45,13 @@ With the recorded scores now confirmed, the transplant test of 18 November (`../
 
 Transfer is not symmetric. Bodies evolved under heavy damping move slowly and survive the move to the 2013 physics; bodies evolved under the 2013 physics rely on lightly damped dynamics that the heavier damping removes.
 
+**24 November: the same measurement as an outcome of the protocol, with the re-runs.** The final champions of arms R and Rc and the deposited champions, scored in the engine with the preset (`../analysis/transfer_scores.py`; results in [`../outcomes/README.md`](../outcomes/README.md), section "Transfer"). Against their scores in this build of the 2013 simulator the champions keep a median of 0.43 (arm R), 0.75 (deposited, no cost), 0.67 (arm Rc) and 0.85 (deposited, cost), and the two simulators do not agree on which champions are the better ones. The deposited champions give exactly the scores of the diagnostic of 18 November.
+
+**Two differences between the engine and this simulator that the preset does not remove:**
+
+- **Where a body starts.** This simulator starts a body where it is in the workspace. A body that does not touch the bottom starts in the air and falls first, and the distance the simulator reports is three-dimensional, so the drop is part of the score. The engine sets every body on the floor before it starts. Checked on the deposited cost champion of run_114, which starts 3 voxels up: its lowest voxels begin 3.5 mm above the floor's plane and reach it after about 15 ms, and the reported distance of 2.397 is the three-dimensional one (the horizontal part is 2.344). 12 of the 35 deposited cost champions and 16 of arm Rc's 35 are off the bottom, by 1 to 3 layers; none of the deposited no-cost champions and 1 of arm R's. The engine can start a body at a height (`initial_height` of `load_robot`); the search does not use it.
+- **How far a body sinks into the floor.** Here the lowest point of a moving champion is 0.6 to 0.9 of a voxel below the floor's surface; in the engine 0.10 to 0.15 of a voxel (videos of 24 November, same robots in both). The engine's floor was made hard in September 2026 on the reading that this simulator's floor is effectively hard. The recordings show that a moving champion sinks most of a voxel into it. Whether this is what costs the champions their gait in the engine has not been tested.
+
 ## 4. Evolving in the 2013 simulator
 
 Since 21 November the evolution script can use the 2013 simulator as its evaluator:

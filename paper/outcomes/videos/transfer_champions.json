@@ -1,0 +1,181 @@
+{
+ "seconds_between_frames": 0.0025,
+ "slowed_down": 24.0,
+ "robots": [
+  {
+   "robot": "arm R, seed 34",
+   "started": "set on the floor",
+   "voxels": 723,
+   "lowest_layer": 0,
+   "same_voxels_and_materials_in_both_simulators": true,
+   "simulator_2013": {
+    "score": 4.11153,
+    "score_in_the_recording_copy": 4.11153,
+    "heading_degrees": 4.757131982189544,
+    "body_lengths_per_cycle": [
+     0.195,
+     0.231,
+     0.386,
+     0.454,
+     0.463,
+     0.468,
+     0.466,
+     0.483,
+     0.481,
+     0.484
+    ],
+    "lowest_point_voxels": -0.812634,
+    "body_turned_degrees": {
+     "at_the_end": 39.6,
+     "at_most": 49.7
+    },
+    "moved_vertically_body_lengths": -0.151697872,
+    "all_numbers_finite": true
+   },
+   "mujoco_engine": {
+    "score": 1.7461332737125816,
+    "score_in_the_transfer_report": 1.7461332737125816,
+    "blew_up": false,
+    "ratio": 0.424691865536722,
+    "heading_degrees": 13.088069267175364,
+    "body_lengths_per_cycle": [
+     0.168,
+     0.321,
+     0.566,
+     0.558,
+     0.427,
+     0.254,
+     0.195,
+     0.055,
+     -0.457,
+     -0.343
+    ],
+    "lowest_point_voxels": -0.10092477702731961,
+    "body_turned_degrees": {
+     "at_the_end": 46.7,
+     "at_most": 117.6
+    },
+    "moved_vertically_body_lengths": -0.09478616806011825,
+    "all_numbers_finite": true
+   },
+   "heading_in_mujoco_relative_to_2013_degrees": 8.330937284985822
+  },
+  {
+   "robot": "arm Rc, seed 18",
+   "started": "set on the floor",
+   "voxels": 500,
+   "lowest_layer": 0,
+   "same_voxels_and_materials_in_both_simulators": true,
+   "simulator_2013": {
+    "score": 4.123729999999999,
+    "score_in_the_recording_copy": 4.123729999999999,
+    "heading_degrees": -13.433414177296182,
+    "body_lengths_per_cycle": [
+     0.162,
+     0.394,
+     0.459,
+     0.477,
+     0.48,
+     0.484,
+     0.502,
+     0.526,
+     0.396,
+     0.245
+    ],
+    "lowest_point_voxels": -0.8632681999999999,
+    "body_turned_degrees": {
+     "at_the_end": 59.2,
+     "at_most": 59.2
+    },
+    "moved_vertically_body_lengths": -0.20153820500000003,
+    "all_numbers_finite": true
+   },
+   "mujoco_engine": {
+    "score": 2.431668707736037,
+    "score_in_the_transfer_report": 2.431668707736037,
+    "blew_up": false,
+    "ratio": 0.589676967598311,
+    "heading_degrees": -2.725735070607222,
+    "body_lengths_per_cycle": [
+     0.176,
+     0.597,
+     0.65,
+     0.178,
+     0.14,
+     0.297,
+     0.262,
+     0.066,
+     0.02,
+     0.044
+    ],
+    "lowest_point_voxels": -0.1523942507820125,
+    "body_turned_degrees": {
+     "at_the_end": 68.3,
+     "at_most": 76.8
+    },
+    "moved_vertically_body_lengths": -0.22549273875752923,
+    "all_numbers_finite": true
+   },
+   "heading_in_mujoco_relative_to_2013_degrees": 10.707679106688971
+  },
+  {
+   "robot": "arm Rc, seed 31",
+   "started": "at its height in the workspace",
+   "voxels": 408,
+   "lowest_layer": 1,
+   "same_voxels_and_materials_in_both_simulators": true,
+   "simulator_2013": {
+    "score": 4.81948,
+    "score_in_the_recording_copy": 4.81948,
+    "heading_degrees": -6.0218621423422976,
+    "body_lengths_per_cycle": [
+     0.214,
+     0.342,
+     0.438,
+     0.521,
+     0.538,
+     0.535,
+     0.544,
+     0.551,
+     0.568,
+     0.569
+    ],
+    "lowest_point_voxels": -0.8104119,
+    "body_turned_degrees": {
+     "at_the_end": 54.2,
+     "at_most": 64.9
+    },
+    "moved_vertically_body_lengths": -0.201042556,
+    "all_numbers_finite": true
+   },
+   "mujoco_engine": {
+    "score": 2.9493183120395914,
+    "score_in_the_transfer_report": 2.9493183120395914,
+    "blew_up": false,
+    "ratio": 0.6119577939439648,
+    "heading_degrees": -0.9493159992923982,
+    "body_lengths_per_cycle": [
+     0.176,
+     0.324,
+     0.124,
+     0.37,
+     0.502,
+     0.281,
+     0.397,
+     0.412,
+     0.239,
+     0.125
+    ],
+    "lowest_point_voxels": -0.13071941395966521,
+    "body_turned_degrees": {
+     "at_the_end": 93.9,
+     "at_most": 101.2
+    },
+    "moved_vertically_body_lengths": -0.0654242394273137,
+    "all_numbers_finite": true,
+    "score_when_set_on_the_floor": 3.642164518191727
+   },
+   "heading_in_mujoco_relative_to_2013_degrees": 5.072546143049891
+  }
+ ]
+}

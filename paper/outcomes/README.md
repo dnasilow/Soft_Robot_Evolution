@@ -39,7 +39,7 @@ Checks made on the result:
 
 The arm was launched once and no run was interrupted, so no seed was started more than once.
 
-Not yet done for this arm: the transfer scores, each champion scored in the MuJoCo engine (a secondary outcome of the protocol).
+The transfer scores of this arm's champions, a secondary outcome of the protocol, are in the section "Transfer" below.
 
 ## Arm Rc: the original 2013 experiment with the actuated-voxel cost, re-executed
 
@@ -80,7 +80,7 @@ Checks made on the result:
 
 32 of this arm's 35 seeds were started twice (the three that had finished were kept). The unfinished attempts are kept on the WSL side in `runs/_interrupted/`.
 
-Not yet done for this arm: the transfer scores.
+The transfer scores of this arm's champions are in the section "Transfer" below.
 
 ## What the champions do: videos
 
@@ -109,6 +109,92 @@ What the frames and the numbers recorded with them (`videos/*.json`) show:
 | `videos/*.png` | Five moments of each, as a still picture |
 | `videos/*.json` | The checks made on each robot shown |
 
+## Transfer: the champions of arms R and Rc in the MuJoCo engine
+
+A secondary outcome of the protocol: every final champion scored in the simulator it was not evolved in. Here the 35 champions of arm R, the 35 of arm Rc and the 35 deposited champions of each condition, each scored once in this project's MuJoCo engine with the settings of `--preset cheney2013`, over the full 0.25 s. How it is computed was fixed in PROTOCOL.md, section 9.4, before any champion of an arm was scored. Scored on 24 November 2026 with `paper/analysis/transfer_scores.py` as committed in 84c2fda. The report names commit 71f6ea4, made while the run was under way; it added the video tool and did not touch the scoring code. It says "dirty" for the tracked simulator log and a documentation file. The engine was that of the code tag `campaign-v2`. 189 evaluations, four hours of processor time.
+
+The transfer ratio of a champion is its score in the MuJoCo engine over its score in this campaign's build of the 2013 simulator: how much of its score it keeps.
+
+**Champions evolved in the 2013 simulator lose a large part of their score in the MuJoCo engine, and the two simulators do not agree on which champions are the better ones.**
+
+Every body set on the floor, which is the preset as it is and the outcome the protocol names:
+
+| Champions | Score in the 2013 simulator, median (quartiles) | Score in the MuJoCo engine | Transfer ratio | 95% interval of its median | Rank agreement between the simulators (95% interval) | Keep all or more |
+|---|---|---|---|---|---|---|
+| Arm R | 4.41 (4.27–4.71) | 1.90 (1.45–3.47) | 0.43 (0.33–0.75) | 0.37–0.64 | +0.26 (−0.10 to +0.57) | 6 of 35 |
+| Deposited 2013, no cost | 4.32 (4.12–4.66) | 3.23 (1.78–4.37) | 0.75 (0.51–0.91) | 0.59–0.90 | +0.33 (+0.02 to +0.58) | 8 of 35 |
+| Arm Rc | 3.44 (3.29–4.13) | 2.48 (1.62–3.46) | 0.67 (0.46–0.92) | 0.54–0.81 | −0.02 (−0.33 to +0.31) | 7 of 35 |
+| Deposited 2013, actuated cost | 3.34 (3.19–3.88) | 2.58 (1.52–3.71) | 0.85 (0.51–1.12) | 0.55–1.06 | −0.07 (−0.42 to +0.29) | 12 of 35 |
+
+| On the transfer ratio | Arm, median | Deposited, median | A12 (95% interval) | p (Mann-Whitney, not corrected) |
+|---|---|---|---|---|
+| Arm R against the deposited no-cost champions | 0.43 | 0.75 | 0.37 (0.24–0.50) | 0.057 |
+| Arm Rc against the deposited cost champions | 0.67 | 0.85 | 0.42 (0.29–0.56) | 0.25 |
+
+What the numbers say:
+
+- **Every set loses.** The median champion keeps between 0.43 and 0.85 of its score. No simulation blew up.
+- **Single robots go every way.** Ratios run from 0.07 to 1.62. In each set between 6 and 12 champions score as much or more in the MuJoCo engine, and between 8 and 20 keep less than half.
+- **No agreement on rank.** A champion's score in one simulator says little about its score in the other: the rank agreement is +0.26 and +0.33 without the cost, and none with it. For comparison, two builds of the 2013 simulator itself agree at +0.88 and +0.91 on the same deposited champions (reference README, section 1).
+- **Re-run champions against 2013 champions.** Arm R's champions tend to keep less than the deposited no-cost ones (0.43 against 0.75, p = 0.057, not corrected). In the cost condition the difference is smaller and far from clear (p = 0.25). These comparisons are descriptive and carry no criterion; the data do not settle whether the tendency is real. Arm A will add 35 more champions evolved in this campaign's build.
+- **This repeats the diagnostic of 18 November and extends it to the re-runs.** Against the scores recorded in 2013 the deposited champions keep 0.68 (no cost) and 0.77 (cost), the figures measured then.
+
+### Where a body starts
+
+Found while preparing this outcome, and recorded in the protocol before any arm champion was scored. The 2013 simulator starts a body where it is in the workspace. A body that does not touch the bottom starts in the air and falls first, and the score, a distance in three dimensions, includes the drop. Checked in the recording copy of the simulator on the deposited cost champion of run_114: it starts 3 voxels up, falls for about 15 ms, and the simulator reports the three-dimensional distance (2.397, where the horizontal distance alone is 2.344). The MuJoCo engine sets every body on the floor before it starts.
+
+How many champions this concerns: none of the deposited no-cost champions, 1 of arm R's, 12 of the deposited cost champions, 16 of arm Rc's (1 to 3 layers up). Each of them was scored a second time in the MuJoCo engine, started at its height in the workspace:
+
+| Champions | Off the bottom | Transfer ratio, set on the floor | Transfer ratio, started where they are | 95% interval of its median | Rank agreement |
+|---|---|---|---|---|---|
+| Arm R | 1 of 35 | 0.43 (0.33–0.75) | 0.43 (0.33–0.75) | 0.37–0.64 | +0.26 (−0.09 to +0.57) |
+| Deposited 2013, no cost | 0 of 35 | 0.75 (0.51–0.91) | the same | | |
+| Arm Rc | 16 of 35 | 0.67 (0.46–0.92) | 0.61 (0.42–1.05) | 0.46–0.94 | −0.10 (−0.42 to +0.23) |
+| Deposited 2013, actuated cost | 12 of 35 | 0.85 (0.51–1.12) | 0.88 (0.54–1.12) | 0.62–0.99 | +0.12 (−0.25 to +0.46) |
+
+- For the sets it changes little: the medians move by 0.05 and 0.03, and arm Rc against the deposit stays as unclear as before (A12 0.42, p = 0.23).
+- For single robots it matters a great deal: started at its height, a body off the bottom scores higher in half the cases and lower in the other half (8 of 16 in arm Rc, 6 of 12 in the deposit). The score changes by more than half a body length for 15 of the 29, and by as much as 2.8 (deposited run_125: 1.25 on the floor, 4.01 from one voxel up).
+- **It is a difference between the preset and the 2013 experiment that was not known before**, and it concerns the cost condition most. Whether arm D should start its bodies the way the 2013 simulator does is open and has to be settled before arm D starts (PROTOCOL.md, section 9.4, point 9; PLAN.md, decision 11).
+
+### Checks
+
+| Check | Result |
+|---|---|
+| The scoring is the search's own evaluation under the preset: the search's command line run under the preset, then every robot of its final population scored by this script | The same score for every robot (`tests/test_transfer_scores.py`) |
+| The deposited champions against the diagnostic of 18 November, which scored the same robots with other code | Identical to the last digit: 35 of 35 without the cost, 32 of 32 with it (for 3 cost runs the diagnostic had taken another robot as champion, the one with the highest original score) |
+| The score against the distance the centre of mass moved, read separately | Agree in all 169 evaluations at the engine's time step |
+| Simulations that blew up, or that the engine could not build | None |
+| The body in the two simulators, for the three robots of the video | The same voxels of the same materials in the same places, and the same starting height |
+| **A quarter of the time step**, on the first five champions of each set (named in the protocol beforehand) | The score changes by 3.3% in the median, by more than 10% for 5 of the 20, and by 51% for one (arm R, seed 2: 0.88 becomes 1.32). No direction: the median change is +0.3% |
+
+The last check limits what a single number means: the MuJoCo score of one robot can depend on the time step by tens of percent. The five that change by more than 10% all score below 3.2 in the MuJoCo engine; the five checked champions that score above 4.5 change by 0.2% to 7.5%. The medians of the sets rest on 35 robots each and the check gives no sign of a bias, but it covered 20 robots, not all. The same goes for the starting height above: a robot whose score moves by a body length when it is started one voxel higher is not a robot with one well-defined score in this engine.
+
+Also recorded with every evaluation: the lowest voxel sinks 0.15 to 0.18 of a voxel below the floor in the median, part of which is a contracted muscle voxel being smaller, and the vertical part of the distance moved is 5% to 7% of the score.
+
+### What it looks like
+
+![Three champions in the 2013 simulator and in the MuJoCo engine](videos/transfer_champions.gif)
+
+`paper/analysis/render_transfer.py` shows the same robot in both simulators, left the 2013 simulator, right the MuJoCo engine. The robots are chosen by a rule, not by eye: for each arm the champion with the median transfer ratio among those that touch the bottom of the workspace, and for arm Rc also the one with the median ratio among those that do not, started at its height. The right-hand frames come from the evaluation that was scored (its score is the reported one to the last digit).
+
+| Robot | 2013 simulator | MuJoCo engine | Gain in distance per cycle, 2013 | Gain per cycle, MuJoCo | The body turns over by at most |
+|---|---|---|---|---|---|
+| Arm R, seed 34 | 4.11 | 1.75 (0.42) | 0.45 to 0.48 from the fourth cycle on | 0.57 and 0.56 in cycles 3 and 4, then falling, −0.46 and −0.34 in the last two | 50° and 118° |
+| Arm Rc, seed 18 | 4.12 | 2.43 (0.59) | 0.46 to 0.53 in cycles 3 to 8 | 0.60 and 0.65 in cycles 2 and 3, then 0.02 to 0.30 | 59° and 77° |
+| Arm Rc, seed 31, starts 1 voxel up | 4.82 | 2.95 (0.61); 3.64 when set on the floor | 0.52 to 0.57 from the fourth cycle on | uneven, 0.12 to 0.50 | 65° and 101° |
+
+- **The start is alike, the rest is not.** In the MuJoCo engine all three robots set off in nearly the same direction as in the 2013 simulator (5° to 11° apart) and are about as fast, or faster, for the first two to four cycles. Then they tip further over than they ever do in the 2013 simulator and the gait breaks down; the first one moves back towards its start in the last two cycles.
+- **In the 2013 simulator the same robots keep a steady gait** for most or all of the run, gaining nearly the same distance in each cycle (the second one slows in its last two cycles).
+- **The floors differ.** In the 2013 simulator the lowest point of these bodies is 0.81 to 0.86 of a voxel below the floor's surface; in the MuJoCo engine 0.10 to 0.15. A body standing most of a voxel deep in the floor may be held upright by it. That the 2013 gaits lean on this is a reading that fits what is seen here; these runs do not test it.
+
+Three robots are three robots. They were picked as the middle of their sets, so they show a typical loss, not the range.
+
+| File | Content |
+|---|---|
+| `transfer.txt`, `transfer.json` | The report as printed and as data, with every champion |
+| `transfer_champions.csv` | One row per champion: both scores, both ratios, the distance moved along each axis, how deep it sank, the time step, and the score at a quarter of the time step where it was checked |
+| `videos/transfer_champions.gif`, `.webp`, `.png`, `.json` | The animation, the same in full colour, five moments as a still picture, and the checks and measurements of the three robots |
+
 ## Files
 
 | File | Content |
@@ -116,3 +202,4 @@ What the frames and the numbers recorded with them (`videos/*.json`) show:
 | `arm_R.txt`, `arm_Rc.txt` | The reports as printed, with every seed |
 | `arm_R.json`, `arm_Rc.json` | The same as data: every number, every seed's scores and champion |
 | `arm_R_champion_audit.csv`, `arm_Rc_champion_audit.csv` | The audits: recorded score and re-simulated distance of each champion |
+| `transfer.txt`, `transfer.json`, `transfer_champions.csv` | The transfer outcome (section above) |
