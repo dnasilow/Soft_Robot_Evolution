@@ -38,7 +38,10 @@ FLOORS = ('hard', 'matched', 'default', 'rule2013')
 MATCHED_TIME_CONSTANT, MATCHED_IMPEDANCE = 0.0045, 0.99       # MuJoCo's contact as soft under load as the 2013 spring
 # What a kept evaluation was computed with: change the name here whenever a floor's code or constants change.
 FLOOR_ID = {'hard': 'hard', 'matched': f'matched-{MATCHED_TIME_CONSTANT}-{MATCHED_IMPEDANCE}', 'default': 'default',
-            'rule2013': 'rule2013-1'}
+            'rule2013': 'rule2013-1', 'rule2013_placed': 'rule2013-1-placed'}
+# README, point 7: the 2013 rule with a body started where it is in the workspace. Only a body that
+# does not touch the bottom differs from 'rule2013'; for the others that evaluation serves.
+PLACED = 'rule2013_placed'
 COL_DAMP, MU_STATIC, MU_DYNAMIC = 0.8, 1.0, 0.5               # ColDampingZ, uStatic, uDynamic of the 2013 robot files
 EVERY = 0.0025                                                # seconds between recorded states
 TIPPED = 90.0                                                 # degrees: a body that has turned further has tipped over
@@ -111,7 +114,7 @@ def install_2013_floor(engine):
     engine.forces = forces
 
 
-def floor_settings(name, params):
+def floor_settings(name, params, grid=None):
     """-> (the engine's settings, what to do to the loaded engine or None)."""
     if name == 'hard':
         return params, None
@@ -121,6 +124,8 @@ def floor_settings(name, params):
         return params, soften_contact
     if name == 'rule2013':
         return params, install_2013_floor
+    if name == PLACED:
+        return dict(params, initial_height=ts.lowest_layer(grid) * params['voxel_size']), install_2013_floor
     raise ValueError(f'unknown floor {name!r}')
 
 
@@ -145,12 +150,14 @@ def evaluate(job):
     started = time.time()
     out = {'key': key, 'floor': floor, 'score': 0.0, 'blew_up': False, 'error': None}
     try:
-        settings, prepare = floor_settings(floor, params)
+        settings, prepare = floor_settings(floor, params, grid)
         score, blew_up, _, times, cms, frames = rt.mujoco_frames(np.asarray(grid), settings, EVERY, prepare)
         out.update(score=float(score), blew_up=bool(blew_up))
         if np.isfinite(frames).all():
             out.update(motion_measures(times, cms, frames))
     except Exception as exc:                                  # noqa: BLE001
+        if ts.out_of_memory(exc):                             # not a result of the robot: stop the run
+            raise RuntimeError(f'out of memory while scoring ({type(exc).__name__}: {exc})') from exc
         out['error'] = f'{type(exc).__name__}: {exc}'
     out['seconds'] = round(time.time() - started, 1)
     return out
@@ -186,14 +193,31 @@ def body_key(grid):
     return hashlib.sha256(repr(g.shape).encode() + g.tobytes()).hexdigest()[:20]
 
 
+def kept_name(key, floor, grid):
+    """Under which name an evaluation is kept. A body that touches the bottom of the workspace has
+    no separate evaluation 'started where it is': the one set on the floor is that evaluation."""
+    if floor == PLACED and ts.lowest_layer(grid) == 0:
+        floor = 'rule2013'
+    return f'{key}/{FLOOR_ID[floor]}'
+
+
 def run_all(robots, floors, workers, cache_path=CACHE, say=ts.tell):
     """robots: dicts with 'grid'. Adds nothing to them; returns {(body key, floor or '2013'): result}."""
     params = ts.worker_parameters(ts.evaluator_arguments())
-    cache = ts.read_cache(cache_path)
+    cache = {k: v for k, v in ts.read_cache(cache_path).items() if not v.get('error')}     # a failure is not a result
     bodies = {body_key(r['grid']): r['grid'] for r in robots}
     todo_2013 = [(k, g, EVERY) for k, g in bodies.items() if f'{k}/2013' not in cache]
-    todo = [(f'{k}/{FLOOR_ID[floor]}', g, params, floor) for floor in floors for k, g in bodies.items()
-            if f'{k}/{FLOOR_ID[floor]}' not in cache]
+
+    def kept_as(k, floor):
+        return kept_name(k, floor, bodies[k])
+
+    todo, queued = [], set()
+    for floor in floors:
+        for k, g in bodies.items():
+            name = kept_as(k, floor)
+            if name not in cache and name not in queued:
+                queued.add(name)
+                todo.append((name, g, params, floor if name.endswith(FLOOR_ID[floor]) else 'rule2013'))
     say(f'{len(bodies)} bodies: {len(todo_2013)} runs of the 2013 simulator and {len(todo)} evaluations in the '
         f'MuJoCo engine to do.')
     started = time.time()
@@ -206,8 +230,11 @@ def run_all(robots, floors, workers, cache_path=CACHE, say=ts.tell):
                     say(f'  2013 simulator: {i}/{len(todo_2013)}  ({(time.time() - started) / 60:.1f} min so far)')
     if todo:
         from multiprocessing import Pool
-        with Pool(workers) as pool:
+        with Pool(ts.workers_that_fit(workers, say=say), maxtasksperchild=8) as pool:
             for i, result in enumerate(pool.imap_unordered(evaluate, todo, chunksize=1), 1):
+                if result['error']:
+                    raise SystemExit(f"An evaluation failed ({result['floor']}: {result['error']}). Nothing is "
+                                     f"summarised from an incomplete run; what was finished is kept.")
                 cache[result['key']] = result
                 ts.write_cache(cache_path, cache)
                 if i % 10 == 0 or i == len(todo) or result['error'] or result['blew_up']:
@@ -215,7 +242,7 @@ def run_all(robots, floors, workers, cache_path=CACHE, say=ts.tell):
                         f"{'  BLEW UP' if result['blew_up'] else ''}{'  ERROR ' + result['error'] if result['error'] else ''}"
                         f"  ({(time.time() - started) / 60:.1f} min so far)")
     out = {(k, '2013'): cache[f'{k}/2013'] for k in bodies}
-    out.update({(k, floor): cache[f'{k}/{FLOOR_ID[floor]}'] for k in bodies for floor in floors})
+    out.update({(k, floor): cache[kept_as(k, floor)] for k in bodies for floor in floors})
     return out
 
 
@@ -385,7 +412,7 @@ def main(argv=None):
     what.add_argument('--checks', action='store_true')
     what.add_argument('--pilot', action='store_true')
     what.add_argument('--champions', action='store_true')
-    ap.add_argument('--floors', nargs='+', default=list(FLOORS), choices=FLOORS)
+    ap.add_argument('--floors', nargs='+', default=list(FLOORS), choices=FLOORS + (PLACED,))
     ap.add_argument('--workers', type=int, default=10)
     a = ap.parse_args(argv)
     if hasattr(sys.stdout, 'reconfigure'):

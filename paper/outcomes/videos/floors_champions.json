@@ -1,0 +1,234 @@
+{
+ "seconds_between_frames": 0.0025,
+ "slowed_down": 24.0,
+ "robots": [
+  {
+   "robot": "arm R, seed 34",
+   "started": "set on the floor",
+   "voxels": 723,
+   "lowest_layer": 0,
+   "simulator_2013": {
+    "score": 4.11153,
+    "share_of_its_2013_score": 1.0000000413471402,
+    "gain_in_distance_per_cycle": [
+     0.195,
+     0.231,
+     0.386,
+     0.454,
+     0.463,
+     0.468,
+     0.466,
+     0.483,
+     0.481,
+     0.484
+    ],
+    "lowest_point_voxels": -0.812634,
+    "body_turned_degrees": {
+     "at_the_end": 39.6,
+     "at_most": 49.7
+    },
+    "heading_degrees": 4.757131982189544
+   },
+   "hard": {
+    "score": 1.7461332737125816,
+    "share_of_its_2013_score": 0.424691865536722,
+    "gain_in_distance_per_cycle": [
+     0.168,
+     0.321,
+     0.566,
+     0.558,
+     0.427,
+     0.254,
+     0.195,
+     0.055,
+     -0.457,
+     -0.343
+    ],
+    "lowest_point_voxels": -0.10092477702731961,
+    "body_turned_degrees": {
+     "at_the_end": 46.7,
+     "at_most": 117.6
+    },
+    "heading_degrees": 13.088069267175364,
+    "blew_up": false,
+    "heading_relative_to_2013_degrees": 8.330937284985822
+   },
+   "rule2013": {
+    "score": 4.077872766514071,
+    "share_of_its_2013_score": 0.9918139804701528,
+    "gain_in_distance_per_cycle": [
+     0.23,
+     0.369,
+     0.481,
+     0.468,
+     0.181,
+     0.242,
+     0.558,
+     0.507,
+     0.553,
+     0.488
+    ],
+    "lowest_point_voxels": -0.8385098216299858,
+    "body_turned_degrees": {
+     "at_the_end": 61.6,
+     "at_most": 76.7
+    },
+    "heading_degrees": 11.203393232427457,
+    "blew_up": false,
+    "heading_relative_to_2013_degrees": 6.44626125023791
+   }
+  },
+  {
+   "robot": "arm Rc, seed 18",
+   "started": "set on the floor",
+   "voxels": 500,
+   "lowest_layer": 0,
+   "simulator_2013": {
+    "score": 4.123729999999999,
+    "share_of_its_2013_score": 0.9999999563501992,
+    "gain_in_distance_per_cycle": [
+     0.162,
+     0.394,
+     0.459,
+     0.477,
+     0.48,
+     0.484,
+     0.502,
+     0.526,
+     0.396,
+     0.245
+    ],
+    "lowest_point_voxels": -0.8632681999999999,
+    "body_turned_degrees": {
+     "at_the_end": 59.2,
+     "at_most": 59.2
+    },
+    "heading_degrees": -13.433414177296182
+   },
+   "hard": {
+    "score": 2.431668707736037,
+    "share_of_its_2013_score": 0.589676967598311,
+    "gain_in_distance_per_cycle": [
+     0.176,
+     0.597,
+     0.65,
+     0.178,
+     0.14,
+     0.297,
+     0.262,
+     0.066,
+     0.02,
+     0.044
+    ],
+    "lowest_point_voxels": -0.1523942507820125,
+    "body_turned_degrees": {
+     "at_the_end": 68.3,
+     "at_most": 76.8
+    },
+    "heading_degrees": -2.725735070607222,
+    "blew_up": false,
+    "heading_relative_to_2013_degrees": 10.707679106688971
+   },
+   "rule2013": {
+    "score": 2.9278818227927714,
+    "share_of_its_2013_score": 0.710008098248749,
+    "gain_in_distance_per_cycle": [
+     0.198,
+     0.662,
+     0.566,
+     0.368,
+     0.313,
+     0.286,
+     0.13,
+     0.092,
+     0.145,
+     0.167
+    ],
+    "lowest_point_voxels": -0.8337029091466691,
+    "body_turned_degrees": {
+     "at_the_end": 73.8,
+     "at_most": 73.8
+    },
+    "heading_degrees": -17.505934302659792,
+    "blew_up": false,
+    "heading_relative_to_2013_degrees": -4.07252012536361
+   }
+  },
+  {
+   "robot": "arm Rc, seed 31",
+   "started": "at its height in the workspace",
+   "voxels": 408,
+   "lowest_layer": 1,
+   "simulator_2013": {
+    "score": 4.81948,
+    "share_of_its_2013_score": 1.0000000124494761,
+    "gain_in_distance_per_cycle": [
+     0.214,
+     0.342,
+     0.438,
+     0.521,
+     0.538,
+     0.535,
+     0.544,
+     0.551,
+     0.568,
+     0.569
+    ],
+    "lowest_point_voxels": -0.8104119,
+    "body_turned_degrees": {
+     "at_the_end": 54.2,
+     "at_most": 64.9
+    },
+    "heading_degrees": -6.0218621423422976
+   },
+   "hard": {
+    "score": 2.9493183120395914,
+    "share_of_its_2013_score": 0.6119577939439648,
+    "gain_in_distance_per_cycle": [
+     0.176,
+     0.324,
+     0.124,
+     0.37,
+     0.502,
+     0.281,
+     0.397,
+     0.412,
+     0.239,
+     0.125
+    ],
+    "lowest_point_voxels": -0.13071941395966521,
+    "body_turned_degrees": {
+     "at_the_end": 93.9,
+     "at_most": 101.2
+    },
+    "heading_degrees": -0.9493159992923982,
+    "blew_up": false,
+    "heading_relative_to_2013_degrees": 5.072546143049891
+   },
+   "rule2013": {
+    "score": 5.697244293842528,
+    "share_of_its_2013_score": 1.1821284380825803,
+    "gain_in_distance_per_cycle": [
+     0.225,
+     0.429,
+     0.574,
+     0.641,
+     0.676,
+     0.61,
+     0.591,
+     0.653,
+     0.759,
+     0.538
+    ],
+    "lowest_point_voxels": -0.8596889068736946,
+    "body_turned_degrees": {
+     "at_the_end": 175.3,
+     "at_most": 179.4
+    },
+    "heading_degrees": 28.320089369797405,
+    "blew_up": false,
+    "heading_relative_to_2013_degrees": 34.3419515121397
+   }
+  }
+ ]
+}

@@ -185,9 +185,31 @@ Also recorded with every evaluation: the lowest voxel sinks 0.15 to 0.18 of a vo
 
 - **The start is alike, the rest is not.** In the MuJoCo engine all three robots set off in nearly the same direction as in the 2013 simulator (5° to 11° apart) and are about as fast, or faster, for the first two to four cycles. Then they tip further over than they ever do in the 2013 simulator and the gait breaks down; the first one moves back towards its start in the last two cycles.
 - **In the 2013 simulator the same robots keep a steady gait** for most or all of the run, gaining nearly the same distance in each cycle (the second one slows in its last two cycles).
-- **The floors differ.** In the 2013 simulator the lowest point of these bodies is 0.81 to 0.86 of a voxel below the floor's surface; in the MuJoCo engine 0.10 to 0.15. A body standing most of a voxel deep in the floor may be held upright by it. That the 2013 gaits lean on this is a reading that fits what is seen here; these runs do not test it.
+- **The floors differ.** In the 2013 simulator the lowest point of these bodies is 0.81 to 0.86 of a voxel below the floor's surface; in the MuJoCo engine 0.10 to 0.15. A body standing most of a voxel deep in the floor may be held upright by it. That the 2013 gaits lean on this is a reading that fits what is seen here; these runs do not test it. The test followed the next day and is reported below.
 
 Three robots are three robots. They were picked as the middle of their sets, so they show a typical loss, not the range.
+
+### Tested on 25 November: the loss is the floor
+
+Exploratory, not an outcome of the protocol; the full account is in [`../diagnostics_2026-11-25/README.md`](../diagnostics_2026-11-25/README.md).
+
+The 2013 simulator's floor, read from its source, is a spring on the centre of each contact voxel (`E × size / 2`, 5000 N/m) with a friction rule that stops a slow voxel dead and holds it. Under a champion's weight that spring gives 0.14 to 0.29 of a voxel at rest; the preset's floor gives practically nothing. The rule was emulated on the loaded engine, without changing the engine's code, checked on blocks (a block rests and lands where the 2013 simulator puts it, to four digits at rest) and on the 12 pilot robots, and then all 140 champions were scored under it.
+
+| Champions | Share of the score kept on the preset's floor | Under the 2013 floor rule, started where they are | Better under the rule | Rank agreement with the 2013 scores |
+|---|---|---|---|---|
+| Arm R | 0.43 (0.33–0.75) | 1.02 (0.77–1.27) | 29 of 35 | +0.26 becomes +0.36 |
+| Deposited 2013, no cost | 0.75 (0.51–0.91) | 1.16 (0.76–1.33) | 28 of 35 | +0.33 becomes +0.59 |
+| Arm Rc | 0.67 (0.46–0.92) | 1.07 (0.84–1.25) | 29 of 35 | −0.02 becomes +0.61 |
+| Deposited 2013, actuated cost | 0.85 (0.51–1.12) | 1.15 (0.85–1.33) | 25 of 35 | −0.07 becomes +0.58 |
+
+- **Under the 2013 floor rule the champions keep their score** (p between 0.000002 and 0.004 by set, per champion against the preset's floor). They stand as deep in the floor as in the 2013 simulator (0.74 to 0.83 of a voxel against 0.68 to 0.79) and tip over less (52 of 140 against 67).
+- **It is the rule, not softness as such**: MuJoCo's own contact made as soft at rest, and its default contact, do not help.
+- **The engine is still not the 2013 simulator robot by robot.** Under the rule the typical champion is off by about a quarter, the engine tends to give somewhat more than the 2013 simulator (2% to 16% in the median), and 52 champions still tip over where 5 do in the 2013 simulator.
+- **The rule is an emulation written for this test.** Whether arms D and E should run with it is decision 11 in the plan.
+
+![Three champions in the 2013 simulator, on the preset's floor and under the 2013 floor rule](videos/floors_champions.gif)
+
+The same three robots as above: left the 2013 simulator, middle the engine on the preset's floor, right the engine under the 2013 floor rule. The first is restored (4.08 against 4.11), the second helped a little (2.93 against 4.12), the third overshoots by rolling over (5.70 against 4.82).
 
 | File | Content |
 |---|---|

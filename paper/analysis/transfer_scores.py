@@ -34,6 +34,7 @@ The report is printed and written to results/analysis/ as text, JSON and CSV.
 import argparse
 import csv
 import datetime
+import gc
 import hashlib
 import json
 import os
@@ -115,6 +116,49 @@ def worker_parameters(arguments):
         evaluator.close()
 
 
+GB_PER_WORKER = 3.0      # a worker scoring champion-sized bodies: the libraries take 1.5 GB and MuJoCo reserves
+                         # 1.2 GB for a loaded body of 800 voxels (measured 25 November 2026)
+KEEP_FREE_GB = 6.0       # left for everything else on the machine, the running arm above all
+
+
+def free_commit_gb():
+    """How much memory Windows can still promise to programs, in GB (None where it cannot be asked).
+    When this runs out, any program on the machine can fail, also a campaign run."""
+    if not sys.platform.startswith('win'):
+        return None
+    import ctypes
+
+    class Status(ctypes.Structure):
+        _fields_ = [('dwLength', ctypes.c_ulong), ('dwMemoryLoad', ctypes.c_ulong)] + [
+            (name, ctypes.c_ulonglong) for name in ('ullTotalPhys', 'ullAvailPhys', 'ullTotalPageFile', 'ullAvailPageFile',
+                                                    'ullTotalVirtual', 'ullAvailVirtual', 'ullAvailExtendedVirtual')]
+    status = Status()
+    status.dwLength = ctypes.sizeof(status)
+    if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
+        return None
+    return status.ullAvailPageFile / 2 ** 30
+
+
+def workers_that_fit(wanted, free=None, say=print):
+    """No more worker processes than the machine's free memory allows; stops if not even one fits."""
+    free = free_commit_gb() if free is None else free
+    if free is None:
+        return wanted
+    fit = int((free - KEEP_FREE_GB) / GB_PER_WORKER)
+    if fit < 1:
+        raise SystemExit(f'Only {free:.0f} GB of memory are left to promise to programs; one evaluation can need '
+                         f'{GB_PER_WORKER:.0f} GB and {KEEP_FREE_GB:.0f} GB stay free for the rest. Nothing was started.')
+    if fit < wanted:
+        say(f'{free:.0f} GB of memory are left to promise to programs: {fit} worker processes instead of {wanted}.')
+    return min(wanted, fit)
+
+
+def out_of_memory(exc):
+    """True if the exception means the machine had no memory to give. That is not a result of the
+    robot, so it must stop the run instead of being recorded as a score of zero."""
+    return isinstance(exc, MemoryError) or 'allocate' in str(exc).lower()
+
+
 def score_one(job):
     """One body in the MuJoCo engine. The evaluation is the search's own (the body of
     mujoco_tendon_evaluator._eval_worker: same engine, same call), with what section 9.4 records
@@ -124,6 +168,7 @@ def score_one(job):
     out = {'key': key, 'score': 0.0, 'blew_up': False, 'error': None, 'moved': None, 'time_step': None,
            'normal_time_step': None, 'steps': None, 'sunk': None, 'consistent': None,
            'step_fraction': float(step_fraction)}
+    engine = None
     try:
         from src.evolution import mujoco_tendon_evaluator as evaluation
         import src.physics.mujoco_beam_physics as beam
@@ -161,7 +206,16 @@ def score_one(job):
         if np.isfinite(lowest[0]):
             out['sunk'] = float((size / 2 - lowest[0]) / size)
     except Exception as exc:                                  # noqa: BLE001  (the search scores such a body 0)
+        if out_of_memory(exc):
+            raise RuntimeError(f'out of memory while scoring ({type(exc).__name__}: {exc})') from exc
         out['error'] = f'{type(exc).__name__}: {exc}'
+    finally:
+        # The watched step refers to the engine and the engine to it; taken apart here so that the
+        # engine's memory (over a GB for a large body) is given back before the next evaluation.
+        if engine is not None:
+            engine.__dict__.pop('step', None)
+        del engine
+        gc.collect()
     out['seconds'] = round(time.time() - started, 1)
     return out
 
@@ -323,8 +377,10 @@ def evaluate_all(jobs, workers, cache_path, evaluate=score_one, say=tell):
 
     plain = [j[:4] for j in todo]
     if todo and workers > 1:
+        workers = workers_that_fit(workers, say=say)
+    if todo and workers > 1:
         from multiprocessing import Pool
-        with Pool(workers) as pool:
+        with Pool(workers, maxtasksperchild=8) as pool:
             for result in pool.imap_unordered(evaluate, plain, chunksize=1):
                 keep(result)
     else:

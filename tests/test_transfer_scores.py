@@ -269,6 +269,33 @@ class TestKeepingWhatWasScored(unittest.TestCase):
             self.assertEqual(first['a'], again['a'])
             self.assertEqual(sorted(again), ['a', 'b', 'c'])
 
+    def test_no_more_workers_than_the_memory_allows(self):
+        """25 November 2026: fourteen workers on champion-sized bodies used up the machine's memory
+        while an arm was running, and 86 evaluations failed. The number of workers now follows the
+        memory that is free, and a failed allocation stops a run instead of counting as a score."""
+        quiet = lambda *_: None
+        per, keep = ts.GB_PER_WORKER, ts.KEEP_FREE_GB
+        self.assertEqual(ts.workers_that_fit(10, free=keep + 4 * per + 0.5, say=quiet), 4)
+        self.assertEqual(ts.workers_that_fit(3, free=keep + 40 * per, say=quiet), 3)
+        with mock.patch.object(ts, 'free_commit_gb', return_value=None):      # a system that cannot be asked
+            self.assertEqual(ts.workers_that_fit(5, say=quiet), 5)
+        with self.assertRaises(SystemExit) as stop:
+            ts.workers_that_fit(4, free=keep + 0.5 * per, say=quiet)
+        self.assertIn('Nothing was started', str(stop.exception))
+        if sys.platform.startswith('win'):
+            self.assertGreater(ts.free_commit_gb(), 0)
+
+    def test_running_out_of_memory_is_not_a_score(self):
+        self.assertTrue(ts.out_of_memory(MemoryError('Unable to allocate 4.02 MiB for an array')))
+        self.assertTrue(ts.out_of_memory(ValueError('Error: engine error: Could not allocate memory')))
+        self.assertFalse(ts.out_of_memory(ValueError('No voxels in grid!')))
+        from src.evolution import mujoco_tendon_evaluator as evaluation
+        params = ts.worker_parameters(ts.evaluator_arguments())
+        with mock.patch.object(evaluation, '_make_engine', side_effect=MemoryError('Unable to allocate 1 GiB')):
+            with self.assertRaises(RuntimeError) as stop:
+                ts.score_one(('k', small_body(), params, 1.0))
+        self.assertIn('out of memory', str(stop.exception))
+
     def test_the_key_follows_body_settings_and_step(self):
         p = {'a': 1}
         k = ts.evaluation_key(small_body(), p, 1.0, 'tag')

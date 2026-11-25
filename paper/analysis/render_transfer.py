@@ -21,6 +21,7 @@ Checks made on every robot shown, each of which stops the script if it fails
 Written to paper/outcomes/videos/: transfer_champions.gif, .webp, .png (five moments), .json.
 """
 import argparse
+import gc
 import json
 import math
 import os
@@ -118,12 +119,20 @@ def mujoco_frames(grid, params, every, prepare=None):
             keep()
 
     engine.step = watched_step
-    score = float(engine.get_fitness(simulation_time=params['simulation_time'], settle_time=params['settle_time'],
-                                     return_descriptors=False, **evaluation._fitness_kw(params)))
-    if len(times) < int(round(params['simulation_time'] / every)) + 1:
-        keep()                                                # the state the score was read from
-    materials = np.array([int(c13.OURS_TO_2013[int(m)]) for m in engine.mats])
-    return score, bool(engine.diverged()), materials, np.array(times), np.array(cms), np.array(frames)
+    try:
+        score = float(engine.get_fitness(simulation_time=params['simulation_time'], settle_time=params['settle_time'],
+                                         return_descriptors=False, **evaluation._fitness_kw(params)))
+        if len(times) < int(round(params['simulation_time'] / every)) + 1:
+            keep()                                            # the state the score was read from
+        materials = np.array([int(c13.OURS_TO_2013[int(m)]) for m in engine.mats])
+        return score, bool(engine.diverged()), materials, np.array(times), np.array(cms), np.array(frames)
+    finally:
+        # The engine and the functions hung on it refer to each other; taken apart here so that its
+        # memory (over a GB for a large body) is given back before the next body is loaded.
+        engine.__dict__.pop('step', None)
+        engine.__dict__.pop('forces', None)
+        del engine
+        gc.collect()
 
 
 def same_body(materials_a, frame_a, materials_b, frame_b):
