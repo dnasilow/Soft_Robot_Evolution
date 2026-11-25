@@ -84,15 +84,19 @@ def robot_text(row):
 # --------------------------------------------------------------------------------------------
 # the MuJoCo engine, recorded
 # --------------------------------------------------------------------------------------------
-def mujoco_frames(grid, params, every):
+def mujoco_frames(grid, params, every, prepare=None):
     """The scored evaluation itself (as transfer_scores.score_one runs it), keeping the state of
     every voxel each `every` seconds. Lengths are returned in the 2013 simulator's units, where a
     voxel is 1 mm, so that both simulators can be drawn by the same code.
+    prepare: called with the engine once the body is loaded (diagnostics that set up another
+    floor use it); None leaves the engine as the search runs it.
     -> score, blew up, materials (2013 numbers), times, centre of mass, voxel states (f x n x 10)."""
     from src.evolution import mujoco_tendon_evaluator as evaluation
     engine = evaluation._make_engine(params)
     engine.load_robot(np.asarray(grid), voxel_size=params['voxel_size'], initial_height=params['initial_height'],
                       gait_params=None)
+    if prepare is not None:
+        prepare(engine)
     size = float(engine.voxel_size)
     scale = c13.VOXEL_SIZE_2013 / size
     times, cms, frames = [], [], []

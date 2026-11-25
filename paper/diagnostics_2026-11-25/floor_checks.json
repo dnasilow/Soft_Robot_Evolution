@@ -1,0 +1,250 @@
+{
+ "block at rest (3x3x3, soft)": {
+  "2013 simulator": {
+   "lowest_centre_at_the_end": 0.4835187,
+   "lowest_centre_at_its_lowest": 0.4812568,
+   "lowest_centre_mean_of_last_50_ms": 0.48351869999999997,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -0.02105882999999995
+   ],
+   "blew_up": false,
+   "score": 0.002105882999999995
+  },
+  "hard": {
+   "lowest_centre_at_the_end": 0.4998058298949317,
+   "lowest_centre_at_its_lowest": 0.49976906888565004,
+   "lowest_centre_mean_of_last_50_ms": 0.4998058298949317,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -0.004772170105068812
+   ],
+   "blew_up": false,
+   "score": 0.0004772170105068812
+  },
+  "matched": {
+   "lowest_centre_at_the_end": 0.48331318999999956,
+   "lowest_centre_at_its_lowest": 0.48331318999999956,
+   "lowest_centre_mean_of_last_50_ms": 0.4833131899999994,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -0.021264810000001105
+   ],
+   "blew_up": false,
+   "score": 0.0021264810000001105
+  },
+  "default": {
+   "lowest_centre_at_the_end": -0.8221390721488456,
+   "lowest_centre_at_its_lowest": -0.8279847520322016,
+   "lowest_centre_mean_of_last_50_ms": -0.8222212776494453,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -1.3256304957039657
+   ],
+   "blew_up": false,
+   "score": 0.13256304957039655
+  },
+  "rule2013": {
+   "lowest_centre_at_the_end": 0.4835192000000007,
+   "lowest_centre_at_its_lowest": 0.4811397586493121,
+   "lowest_centre_mean_of_last_50_ms": 0.48351920000000087,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -0.021058799999999635
+   ],
+   "blew_up": false,
+   "score": 0.0021058799999999636
+  }
+ },
+ "tower at rest (2x2x10, soft)": {
+  "2013 simulator": {
+   "lowest_centre_at_the_end": 0.44506429999999997,
+   "lowest_centre_at_its_lowest": 0.4157458,
+   "lowest_centre_mean_of_last_50_ms": 0.4450642999999999,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -0.13321964000000044
+   ],
+   "blew_up": false,
+   "score": 0.013321964000000044
+  },
+  "hard": {
+   "lowest_centre_at_the_end": 0.4995651115798134,
+   "lowest_centre_at_its_lowest": 0.4994807657460432,
+   "lowest_centre_mean_of_last_50_ms": 0.49956511220018684,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -0.07871898031340877
+   ],
+   "blew_up": false,
+   "score": 0.007871898031340877
+  },
+  "matched": {
+   "lowest_centre_at_the_end": 0.4443772997733402,
+   "lowest_centre_at_its_lowest": 0.4436798915273157,
+   "lowest_centre_mean_of_last_50_ms": 0.44437729964368505,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -0.13390648714510425
+   ],
+   "blew_up": false,
+   "score": 0.013390648714510425
+  },
+  "default": {
+   "lowest_centre_at_the_end": -2.3177718787447974,
+   "lowest_centre_at_its_lowest": -2.342214257966415,
+   "lowest_centre_mean_of_last_50_ms": -2.3179743178851075,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -2.880626739069699
+   ],
+   "blew_up": false,
+   "score": 0.28806267390696993
+  },
+  "rule2013": {
+   "lowest_centre_at_the_end": 0.44506401768129944,
+   "lowest_centre_at_its_lowest": 0.4136134980861489,
+   "lowest_centre_mean_of_last_50_ms": 0.44506404618415396,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -0.13321978653590016
+   ],
+   "blew_up": false,
+   "score": 0.013321978653590017
+  }
+ },
+ "block dropped from 3 voxels (3x3x3, soft)": {
+  "2013 simulator": {
+   "lowest_centre_at_the_end": 0.4834767,
+   "lowest_centre_at_its_lowest": 0.3708987,
+   "lowest_centre_mean_of_last_50_ms": 0.4834022247524753,
+   "moved_voxels": [
+    -0.0008563499999999363,
+    -0.0003375999999997645,
+    -3.0210576899999997
+   ],
+   "blew_up": false,
+   "score": 0.30210578302338426
+  },
+  "hard": {
+   "lowest_centre_at_the_end": 0.4998058298949316,
+   "lowest_centre_at_its_lowest": 0.43321210836017593,
+   "lowest_centre_mean_of_last_50_ms": 0.49980582989493166,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -3.004772170105071
+   ],
+   "blew_up": false,
+   "score": 0.30047721701050706
+  },
+  "matched": {
+   "lowest_centre_at_the_end": 0.4833131900000055,
+   "lowest_centre_at_its_lowest": -0.1606003869895179,
+   "lowest_centre_mean_of_last_50_ms": 0.48331319000000544,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -3.021264809999996
+   ],
+   "blew_up": false,
+   "score": 0.3021264809999996
+  },
+  "default": {
+   "lowest_centre_at_the_end": -0.8226646463090168,
+   "lowest_centre_at_its_lowest": -2.892612992343786,
+   "lowest_centre_mean_of_last_50_ms": -0.8243580586717004,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -4.3261560006337625
+   ],
+   "blew_up": false,
+   "score": 0.43261560006337624
+  },
+  "rule2013": {
+   "lowest_centre_at_the_end": 0.48351919999999915,
+   "lowest_centre_at_its_lowest": 0.3603520875788951,
+   "lowest_centre_mean_of_last_50_ms": 0.483519199999999,
+   "moved_voxels": [
+    0.0,
+    0.0,
+    -3.021058800000003
+   ],
+   "blew_up": false,
+   "score": 0.3021058800000003
+  }
+ },
+ "shaker (4x4x4, two muscle phases)": {
+  "2013 simulator": {
+   "lowest_centre_at_the_end": 0.3055882,
+   "lowest_centre_at_its_lowest": 0.2932513,
+   "lowest_centre_mean_of_last_50_ms": 0.47916668712871296,
+   "moved_voxels": [
+    -0.29095821000000005,
+    0.001529700000000786,
+    -0.09370047999999997
+   ],
+   "blew_up": false,
+   "score": 0.03056776077842872
+  },
+  "hard": {
+   "lowest_centre_at_the_end": 0.45624980059558434,
+   "lowest_centre_at_its_lowest": 0.4138922793744498,
+   "lowest_centre_mean_of_last_50_ms": 0.6406200984599546,
+   "moved_voxels": [
+    -5.27494700520975,
+    -3.1831861500930536,
+    0.6564825334331191
+   ],
+   "blew_up": false,
+   "score": 0.6195862271759945
+  },
+  "matched": {
+   "lowest_centre_at_the_end": 0.29795907772872515,
+   "lowest_centre_at_its_lowest": 0.07891419066933152,
+   "lowest_centre_mean_of_last_50_ms": 0.3274640191158576,
+   "moved_voxels": [
+    0.8192493009486583,
+    -0.07759711961397353,
+    0.008697493518138033
+   ],
+   "blew_up": false,
+   "score": 0.08229619532340172
+  },
+  "default": {
+   "lowest_centre_at_the_end": 0.017147586418347942,
+   "lowest_centre_at_its_lowest": -0.22456884933109003,
+   "lowest_centre_mean_of_last_50_ms": -0.04801291519027836,
+   "moved_voxels": [
+    -1.8621618466139458,
+    0.06543353593376017,
+    -0.0671290130150686
+   ],
+   "blew_up": false,
+   "score": 0.1864519936873251
+  },
+  "rule2013": {
+   "lowest_centre_at_the_end": 0.512538255831933,
+   "lowest_centre_at_its_lowest": 0.2724769390902578,
+   "lowest_centre_mean_of_last_50_ms": 0.5096918213434652,
+   "moved_voxels": [
+    -0.017726368659995356,
+    -0.03377961958323251,
+    0.11003962772262489
+   ],
+   "blew_up": false,
+   "score": 0.011646461485958663
+  }
+ }
+}

@@ -1,0 +1,10 @@
+PILOT ROBOTS (generation 10 of the 12-seed pilot; not an arm) on four floors of the MuJoCo engine
+
+rehearsal: pilot10_P0_s: 12 robots
+  in the 2013 simulator: score 1.71 (1.34-2.10); repeats its known score 12 of 12; lowest point 0.82 (0.78-0.84) voxels below the surface; turns over by at most 56 (40-66) degrees, 1 tip beyond 90; late over early distance 1.45 (1.12-1.70)
+  floor      blew up               score          share kept  95% of median    rank agreement (95%)   >= 1  within 20%              off by                sunk    turned at most  tipped          late/early  gain over hard (95%), better, p
+  hard             0    1.88 (0.97-2.16)    0.97 (0.61-1.46)    0.53-1.52     +0.22 (-0.42 to +0.81)      6           3    0.51 (0.27-0.69)    0.08 (0.07-0.11)       80 (75-110)       4    1.16 (0.46-1.32)  
+  matched          0    1.77 (1.59-2.80)    1.13 (0.88-1.35)    0.87-1.35     +0.64 (+0.08 to +0.94)      8           6    0.26 (0.13-0.41)    1.05 (0.81-1.25)       87 (67-107)       6    1.03 (0.57-1.44)  +0.26 (-0.19 to +0.42), 8 of 12, p = 0.2661
+  default          0    1.60 (1.16-1.79)    0.98 (0.64-1.23)    0.63-1.24     +0.27 (-0.41 to +0.81)      6           3    0.30 (0.21-0.39)    2.98 (2.71-3.25)        74 (61-90)       3    1.25 (0.53-1.76)  -0.12 (-0.66 to +0.19), 4 of 12, p = 0.4238
+  rule2013         0    1.53 (1.40-2.39)    1.15 (0.98-1.22)    0.96-1.24     +0.76 (+0.23 to +0.98)      8           7    0.18 (0.11-0.28)    0.80 (0.76-0.87)       68 (63-100)       4    0.88 (0.41-1.26)  -0.03 (-0.44 to +0.55), 6 of 12, p = 0.8501
+
