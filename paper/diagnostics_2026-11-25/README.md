@@ -147,10 +147,25 @@ The rule stops a sliding voxel when the brake would stop it within one time step
 | 0.7, the engine's | 0 | 1.15 (0.98–1.22) | 0.18 (0.11–0.28) | 7 of 12 | +0.76 (+0.23 to +0.98) |
 | 0.35 | 0 | 1.18 (0.98–1.29) | 0.24 (0.14–0.34) | 4 of 12 | +0.72 (+0.11 to +0.94) |
 
-- **The nearer the step is to the 2013 one, the nearer the scores are to the 2013 simulator's**, in all three measures. The steps are small and twelve robots are few: the intervals overlap widely.
+- On these twelve robots, the nearer the step is to the 2013 one, the nearer the scores are to the 2013 simulator's, in all three measures. The steps are small and twelve robots are few: the intervals overlap widely.
 - Nothing blew up at 0.9, and an evaluation is a fifth shorter.
 - At the engine's own step the rule in the engine gives the pilot robots exactly the scores the emulation gave them (12 of 12).
-- The same at 0.9 for the 140 champions: `check_time_step.py --champions` (`time_step_champions.json`).
+
+The same at 0.9 for the 140 champions, `check_time_step.py --champions` (`time_step_champions.json`), next to their scores at 0.7 from the champions' table above:
+
+| Champions | `DtFrac` | Share of the 2013 score, median (quartiles) | Off by, median | Within 20% | Rank agreement with the 2013 scores | Closer to its 2013 score at 0.9 than at 0.7 |
+|---|---|---|---|---|---|---|
+| Arm R | 0.9 | 1.05 (0.85–1.21) | 0.21 | 16 of 35 | +0.43 | 21 of 35 |
+| | 0.7 | 1.02 (0.77–1.27) | 0.25 | 13 of 35 | +0.36 | |
+| Deposited 2013, no cost | 0.9 | 1.16 (0.85–1.35) | 0.28 | 13 of 35 | +0.62 | 19 of 35 |
+| | 0.7 | 1.16 (0.76–1.33) | 0.29 | 10 of 35 | +0.59 | |
+| Arm Rc | 0.9 | 1.11 (0.85–1.31) | 0.27 | 14 of 35 | +0.56 | 16 of 35 |
+| | 0.7 | 1.07 (0.84–1.25) | 0.22 | 14 of 35 | +0.61 | |
+| Deposited 2013, actuated cost | 0.9 | 1.11 (0.78–1.30) | 0.29 | 12 of 35 | +0.55 | 19 of 35 |
+| | 0.7 | 1.15 (0.85–1.33) | 0.26 | 12 of 35 | +0.58 | |
+
+- **On the champions the trend of the pilot robots is not there.** 75 of 140 are closer to their 2013 score at 0.9 and 65 are further; the typical error is smaller at 0.9 in two sets and larger in two; the rank agreement moves by 0.03 to 0.07 either way. Nothing blew up.
+- **So the time step, within 0.7 to 0.9, is not what keeps the engine from matching the 2013 simulator robot by robot.** Single robots do move with it, as they do with every small change; the sets do not.
 
 ## A lesson about memory
 
@@ -166,4 +181,4 @@ The first run of the champions used 14 worker processes. For a body of 800 voxel
 | `floor_pilot.txt`, `floor_pilot.json` | The pilot robots on the four floors |
 | `floor_champions.txt`, `floor_champions.json` | The 140 champions on the five floors, with every robot |
 | `check_built_in_floor.py`, `built_in_floor_check.json` | The engine's own floor and start against the emulation, champion by champion |
-| `check_time_step.py`, `time_step_check.json` | The pilot robots under the new preset at three time steps |
+| `check_time_step.py`, `time_step_check.json`, `time_step_champions.json` | The pilot robots under the new preset at three time steps, and the 140 champions at the 2013 one |
