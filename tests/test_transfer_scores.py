@@ -228,9 +228,10 @@ class TestReadingChampions(unittest.TestCase):
         self.assertEqual([c['label'] for c in champions], ['seed 1', 'seed 2', 'seed 3'])
         self.assertTrue((champions[2]['grid'] == self.bodies[3]).all())
 
-    def run_main(self, arm, differs):
+    def run_main(self, arm, tag):
+        """tag: the campaign code tag the engine's code is taken to equal (None: none of them)."""
         out = io.StringIO()
-        with mock.patch('search_arm.code_differs_from_tag', return_value=differs), contextlib.redirect_stdout(out):
+        with mock.patch('search_arm.campaign_tag_of_code', return_value=tag), contextlib.redirect_stdout(out):
             code = ts.main(['--arms', arm, '--results-dir', self.results, '--outcomes-dir', self.outcomes,
                             '--out-dir', os.path.join(self.tmp.name, 'out'), '--cache',
                             os.path.join(self.tmp.name, 'cache.json')])
@@ -239,16 +240,43 @@ class TestReadingChampions(unittest.TestCase):
         return code, out.getvalue()
 
     def test_an_arm_that_was_not_analysed_is_refused(self):
-        code, said = self.run_main('Rc', None)
-        self.assertEqual(code, 2)
-        self.assertIn('has not been analysed', said)
-        self.assertIn('Nothing was computed', said)
+        for tag in ('campaign-v2', 'campaign-v3'):            # the engine of either code tag is the campaign's
+            code, said = self.run_main('Rc', tag)
+            self.assertEqual(code, 2)
+            self.assertIn('has not been analysed', said)
+            self.assertIn('Nothing was computed', said)
 
     def test_an_engine_that_is_not_the_campaigns_is_refused(self):
-        code, said = self.run_main('R', 'run_tendon_evolution.py or src/ differ from the code tagged campaign-v2.')
+        code, said = self.run_main('R', None)
         self.assertEqual(code, 2)
-        self.assertIn('differ from the code tagged', said)
+        self.assertIn('not those of a code tag of the campaign (campaign-v2, campaign-v3)', said)
         self.assertIn('Nothing was computed', said)
+
+    def test_which_code_tag_the_code_is_at(self):
+        """A made-up repository with two tags: the newest tag the files equal is named, and none
+        when they equal neither."""
+        def git(*a):
+            subprocess.run(['git', '-C', d, '-c', 'user.name=t', '-c', 'user.email=t@t'] + list(a), check=True,
+                           capture_output=True)
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, 'src'))
+            for name, text in (('run_tendon_evolution.py', 'one'), (os.path.join('src', 'engine.py'), 'one')):
+                with open(os.path.join(d, name), 'w') as f:
+                    f.write(text)
+            git('init', '-q')
+            git('add', '-A')
+            git('commit', '-q', '-m', 'first')
+            git('tag', 'old')
+            self.assertEqual(search_arm.campaign_tag_of_code(root=d, tags=('old', 'new')), 'old')     # 'new' does not exist yet
+            with open(os.path.join(d, 'src', 'engine.py'), 'w') as f:
+                f.write('two')
+            self.assertIsNone(search_arm.campaign_tag_of_code(root=d, tags=('old', 'new')))
+            git('commit', '-q', '-am', 'second')
+            git('tag', 'new')
+            self.assertEqual(search_arm.campaign_tag_of_code(root=d, tags=('old', 'new')), 'new')
+            with open(os.path.join(d, 'notes.txt'), 'w') as f:                                        # not a file that computes a run
+                f.write('x')
+            self.assertEqual(search_arm.campaign_tag_of_code(root=d, tags=('old', 'new')), 'new')
 
 
 class TestKeepingWhatWasScored(unittest.TestCase):

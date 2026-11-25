@@ -50,7 +50,12 @@ ARMS = {
     'A': {'tag': 'armA', 'generations': 1000, 'condition': 'noCost',
           'runner': ['--simulator', 'voxelyze2013', '--no-age-pareto', '--pop', '30']},
 }
-CODE_TAG = 'campaign-v2'
+CODE_TAG = 'campaign-v2'            # the code arm A runs from
+# Every code tag of the campaign that this project's search has run or will run from, oldest
+# first. Arms D and E run from campaign-v3, which adds the 2013 simulator's floor and start to
+# the engine as options (PROTOCOL.md, section 9.5). A run or an evaluation that does not use
+# those options computes under campaign-v3 what it computed under campaign-v2.
+ENGINE_TAGS = ('campaign-v2', 'campaign-v3')
 RUN_DEFINING = ['run_tendon_evolution.py', 'src']
 MAX_ATTEMPTS = 6            # times one run is started or continued by one launcher
 
@@ -117,6 +122,15 @@ def code_differs_from_tag(creationflags=0, tag=None, root=None):
         return f'The tag {tag} does not exist in this repository.'
     if git('diff', '--quiet', tag, '--', *RUN_DEFINING) != 0:
         return f'run_tendon_evolution.py or src/ differ from the code tagged {tag}.'
+    return None
+
+
+def campaign_tag_of_code(creationflags=0, root=None, tags=None):
+    """The newest code tag of the campaign that the files which compute a run are, as they stand
+    on disk, equal to; None if they are those of no such tag."""
+    for tag in reversed(tags or ENGINE_TAGS):
+        if code_differs_from_tag(creationflags, tag, root) is None:
+            return tag
     return None
 
 

@@ -699,7 +699,12 @@ def main(argv=None):
         sys.stdout.reconfigure(errors='replace')
 
     import search_arm
-    differs = search_arm.code_differs_from_tag()
+    # The engine must be the campaign's: the code of one of its tags. Under --preset cheney2013,
+    # which is what this outcome is scored with, every one of them computes the same scores
+    # (PROTOCOL.md, section 9.5), so evaluations are kept under the first tag's name.
+    tag = search_arm.campaign_tag_of_code()
+    differs = None if tag else ('run_tendon_evolution.py or src/ are not those of a code tag of the campaign ('
+                                + ', '.join(search_arm.ENGINE_TAGS) + ').')
     notes = []
     sets = {}
     if a.arms:
@@ -736,7 +741,7 @@ def main(argv=None):
         name = f'transfer_rehearsal_{a.rehearsal}{a.generation}'
 
     params = worker_parameters(evaluator_arguments())
-    code = search_arm.CODE_TAG if not differs else aa.code_version()
+    code = search_arm.ENGINE_TAGS[0] if tag else aa.code_version()
     jobs, keys = [], {}
     for set_name, champions in sets.items():
         for i, c in enumerate(champions):
