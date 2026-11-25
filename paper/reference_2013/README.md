@@ -54,6 +54,8 @@ Transfer is not symmetric. Bodies evolved under heavy damping move slowly and su
 
 **25 November: the floor rule, read from the source and tested** ([`../diagnostics_2026-11-25/README.md`](../diagnostics_2026-11-25/README.md)). `CVXS_Voxel::CalcFloorEffect` pushes a voxel whose centre is lower than half its size up with `E × size/2 × (size/2 − z)`: a spring of 5000 N/m per contact voxel of the soft and muscle materials, which gives 0.14 to 0.29 of a voxel under a champion at rest. Its friction brakes a sliding voxel with half its normal force and, once the brake would stop it within one time step, sets its horizontal momentum to zero and holds it until the pull exceeds the full normal force. With this rule emulated on the engine, the champions keep their scores (median share 1.02 to 1.16 by set, against 0.43 to 0.85 on the preset's floor). Softer MuJoCo contacts do not have that effect. So the floor is the main reason the champions lose their gait in the engine; robot by robot the engine with the rule still differs from this simulator (typical champion off by a quarter).
 
+**Since 25 November both differences can be switched off in the engine**: `--floor-contact rule2013` is this simulator's floor rule in place of MuJoCo's contact, `--start workspace` starts a body where it is in the workspace, and `--preset cheney2013-floor` is `cheney2013` with both (PROTOCOL.md, section 9.5; tests in `tests/test_floor2013.py`). `cheney2013` itself is unchanged and remains the hard-floor condition.
+
 ## 4. Evolving in the 2013 simulator
 
 Since 21 November the evolution script can use the 2013 simulator as its evaluator:

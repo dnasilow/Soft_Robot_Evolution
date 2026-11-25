@@ -205,7 +205,7 @@ The 2013 simulator's floor, read from its source, is a spring on the centre of e
 - **Under the 2013 floor rule the champions keep their score** (p between 0.000002 and 0.004 by set, per champion against the preset's floor). They stand as deep in the floor as in the 2013 simulator (0.74 to 0.83 of a voxel against 0.68 to 0.79) and tip over less (52 of 140 against 67).
 - **It is the rule, not softness as such**: MuJoCo's own contact made as soft at rest, and its default contact, do not help.
 - **The engine is still not the 2013 simulator robot by robot.** Under the rule the typical champion is off by about a quarter, the engine tends to give somewhat more than the 2013 simulator (2% to 16% in the median), and 52 champions still tip over where 5 do in the 2013 simulator.
-- **The rule is an emulation written for this test.** Whether arms D and E should run with it is decision 11 in the plan.
+- **The rule was an emulation written for this test.** The same day it was built into the engine as an option, together with the 2013 start, and arm D is to run with both (`--preset cheney2013-floor`; PROTOCOL.md, section 9.5). The engine's own rule gives the same scores as the emulation, to the last digit.
 
 ![Three champions in the 2013 simulator, on the preset's floor and under the 2013 floor rule](videos/floors_champions.gif)
 

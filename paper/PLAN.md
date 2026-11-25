@@ -264,6 +264,15 @@ Your "Yes, test it". Exploratory, in [diagnostics_2026-11-25/README.md](diagnost
 - **For the paper.** This is the audit's most concrete finding so far: the 2013 champions lean on a floor that lets a body sink most of a voxel and pins its slow contact voxels. On a floor that does not, about half of the same bodies tip over, and the median champion loses a third of its score (15% to 57% by set). It also names what arm D has to decide (decision 11).
 - **A lesson about this machine.** A champion-sized body reserves 1.2 GB in MuJoCo. Fourteen workers next to arm A used up the memory the system could promise; 86 evaluations failed and showed as zeros, which were caught and run again. Arm A was not harmed. The scoring scripts now size themselves to the free memory and stop instead of recording a failure. The launcher for arm D will need the same care.
 
+### 3.19 25 November: the 2013 floor and start built into the engine
+
+Your "Yes, build it" (decision 11). Recorded in the protocol as section 9.5.
+
+- **Two new options, nothing else changed.** `--floor-contact rule2013` is the floor of the 2013 simulator itself, in place of MuJoCo's contact. `--start workspace` starts a body where it is in the workspace, as the 2013 simulator does. The preset `cheney2013-floor` is `cheney2013` with both. `cheney2013` itself is untouched, so everything scored with it stays repeatable, and it remains available as the hard-floor condition.
+- **Held to what was tested.** The rule in the engine is the emulation of the floor test moved into the engine line for line. Tests require the same score to the last digit from both, and all 140 champions were scored again through the search's own evaluation under the new preset (result in section 9.5 of the protocol).
+- **Built in a separate checkout.** Arm A's launcher refuses to continue a run if the engine code in the campaign's folder differs from its tag, so the work was done on the branch `engine/floor2013` in its own folder. It joins the campaign branch, and gets the tag `campaign-v3`, once arm A is complete.
+- **Arm D** is to run with `--preset cheney2013-floor`. Two points are still yours (decisions 12 and 13 below).
+
 ---
 
 ## 4. What the literature says
@@ -460,6 +469,10 @@ Google Scholar blocks automated access from this network with a "not a robot" ch
 
 | 10 | Use the rebuilt 2013 simulator as the evaluation back end for the re-evolution experiments (section 3.7), keeping the MuJoCo engine as the independent second implementation | Yes |
 | 11 | Arms D and E, before they start: the engine differs from the 2013 simulator in where a body starts (on the floor, against where it is in the workspace) and in its floor (hard, against a spring with a stop-dead friction rule). The test of 25 November shows that the floor is what costs the 2013 champions their score in the engine (section 3.18). Keep the preset as frozen and report both differences, or build both into the engine first | Build both into the engine as options (the 2013 floor rule and the 2013 start), with tests against the 2013 simulator, and make them arm D's setting; keep the present hard floor as one of the E arms, so that the paper measures what the floor does to evolution, not only to finished champions. It is a change to arms that have not started: a new code tag and an entry in section 9 of the protocol |
+| 12 | Which sensitivity arm carries the hard floor (`--preset cheney2013` as it was). The protocol's E3, "the soft floor of September 2026", is MuJoCo's default contact, on which bodies sink 3 to 4 voxels (section 3.18) | Make the hard floor E3 and drop the September floor from the campaign: it is far from the 2013 floor and the floor test already shows what it does to finished champions. Adding the hard floor as a fourth E arm instead costs three more runs, about a day |
+| 13 | The time step. The 2013 files say `DtFrac` 0.9 (the step is 0.9 of the largest stable one); the engine uses 0.7. The 2013 floor rule stops a sliding voxel when the brake would stop it within one step, so the step is part of the rule | Decide on the measurement of section 9.5: adopt 0.9 for arm D only if the pilot robots agree better with the 2013 simulator at 0.9 and nothing blows up |
+
+**Decided on 25 November 2026:** 11 yes ("Yes, build it"): the 2013 floor rule and the 2013 start are built into the engine as options, and arm D is to run with them (section 3.19). Open: 12 and 13.
 
 **Decided on 21 November 2026:** 1 yes. 2 yes, as new options with defaults unchanged, together with the 2013 cost penalty, a switch for the 2013 CPPN-NEAT settings and a run manifest. 3 yes. 4 yes. 6 yes: branch `paper/reproduction`, small commits, pushed. 7: scipy, pandas and pytest. 10 yes. The 2013 search is realised by re-running the original search code (yes; built and piloted, section 3.9). The protocol is approved and frozen, and arm R (35 re-runs of the original code) has your go-ahead (section 3.10). Still open: 5, 8, 9, and the go-ahead for each later arm (Rc, A, D, E), which each cost days of machine time.
 

@@ -124,6 +124,34 @@ What it does not show:
 
 One robot restored, one helped a little, one that overshoots by rolling: the three show the spread behind the medians above. Under the rule all three stand as deep in the floor as in the 2013 simulator (0.83 to 0.86 of a voxel against 0.81 to 0.86).
 
+## Built into the engine, the same day
+
+With the author's go-ahead the rule and the start became options of the engine: `--floor-contact rule2013`, `--start workspace`, and the preset `cheney2013-floor` with both (PROTOCOL.md, section 9.5). The engine's rule is the emulation above moved into the engine line for line.
+
+`python paper/diagnostics_2026-11-25/check_built_in_floor.py` scores the champions once more, now through the search's own evaluation under the new preset, and sets them against the emulation's scores of the table above (`rule2013`, started where it is). It also scores three champions of each set under the old preset against the transfer outcome. Result in `built_in_floor_check.json`:
+
+| | Scores identical to the last digit |
+|---|---|
+| `--preset cheney2013-floor`, all 140 champions, against the emulation | 140 of 140 |
+| `--preset cheney2013`, 12 champions, against the transfer outcome of 24 November | 12 of 12 |
+
+So every figure of the champions' table above is a figure of the new preset, and the old preset computes what it computed before the change.
+
+## The time step
+
+The rule stops a sliding voxel when the brake would stop it within one time step, so the time step is part of the rule. The 2013 robot files say `DtFrac` 0.9: the step is 0.9 of the largest stable one. The engine uses 0.7. `python paper/diagnostics_2026-11-25/check_time_step.py` scores the 12 pilot robots under the new preset at three values (`time_step_check.json`):
+
+| `DtFrac` | Blew up | Share of the 2013 score, median (quartiles) | Off by, median (quartiles) | Within 20% | Rank agreement with the 2013 scores (95% interval) |
+|---|---|---|---|---|---|
+| 0.9, as in 2013 | 0 | 1.10 (1.00–1.18) | 0.14 (0.08–0.30) | 7 of 12 | +0.79 (+0.31 to +0.98) |
+| 0.7, the engine's | 0 | 1.15 (0.98–1.22) | 0.18 (0.11–0.28) | 7 of 12 | +0.76 (+0.23 to +0.98) |
+| 0.35 | 0 | 1.18 (0.98–1.29) | 0.24 (0.14–0.34) | 4 of 12 | +0.72 (+0.11 to +0.94) |
+
+- **The nearer the step is to the 2013 one, the nearer the scores are to the 2013 simulator's**, in all three measures. The steps are small and twelve robots are few: the intervals overlap widely.
+- Nothing blew up at 0.9, and an evaluation is a fifth shorter.
+- At the engine's own step the rule in the engine gives the pilot robots exactly the scores the emulation gave them (12 of 12).
+- The same at 0.9 for the 140 champions: `check_time_step.py --champions` (`time_step_champions.json`).
+
 ## A lesson about memory
 
 The first run of the champions used 14 worker processes. For a body of 800 voxels MuJoCo reserves 1.2 GB, and with arm A's 31 runs on the machine the system ran out of memory it could promise: 86 of the 140 evaluations under `rule2013` failed and were recorded as scores of zero. No run of arm A was harmed. The zeros stood out in the first summary and nothing was concluded from it. The scripts now take no more workers than the free memory allows and stop instead of recording a failure as a score, and the 86 were run again.
@@ -137,3 +165,5 @@ The first run of the champions used 14 worker processes. For a body of 800 voxel
 | `floor_checks.json` | The simple bodies: every number of the table above |
 | `floor_pilot.txt`, `floor_pilot.json` | The pilot robots on the four floors |
 | `floor_champions.txt`, `floor_champions.json` | The 140 champions on the five floors, with every robot |
+| `check_built_in_floor.py`, `built_in_floor_check.json` | The engine's own floor and start against the emulation, champion by champion |
+| `check_time_step.py`, `time_step_check.json` | The pilot robots under the new preset at three time steps |

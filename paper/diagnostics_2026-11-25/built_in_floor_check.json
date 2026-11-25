@@ -1,0 +1,1082 @@
+{
+ "made": "2026-11-25T13:03",
+ "code": "campaign-v2-14-g0f2f0e7-dirty",
+ "rows": [
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 1",
+   "score": 4.412990046566774,
+   "reference": 4.412990046566774
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 2",
+   "score": 3.9837217101315345,
+   "reference": 3.9837217101315345
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 3",
+   "score": 2.1733432818886897,
+   "reference": 2.1733432818886897
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 4",
+   "score": 2.0724797530625225,
+   "reference": 2.0724797530625225
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 5",
+   "score": 8.973050974795648,
+   "reference": 8.973050974795648
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 6",
+   "score": 6.940300906745736,
+   "reference": 6.940300906745736
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 7",
+   "score": 4.667477471843838,
+   "reference": 4.667477471843838
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 8",
+   "score": 2.620179235103265,
+   "reference": 2.620179235103265
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 9",
+   "score": 6.100546161352686,
+   "reference": 6.100546161352686
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 10",
+   "score": 3.2544614724573737,
+   "reference": 3.2544614724573737
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 11",
+   "score": 3.734469956927914,
+   "reference": 3.734469956927914
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 12",
+   "score": 5.881584585888642,
+   "reference": 5.881584585888642
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 13",
+   "score": 3.7976732918913583,
+   "reference": 3.7976732918913583
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 14",
+   "score": 5.287457613373877,
+   "reference": 5.287457613373877
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 15",
+   "score": 5.291028324679592,
+   "reference": 5.291028324679592
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 16",
+   "score": 5.638875158897499,
+   "reference": 5.638875158897499
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 17",
+   "score": 8.954695989428215,
+   "reference": 8.954695989428215
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 18",
+   "score": 3.113121737286956,
+   "reference": 3.113121737286956
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 19",
+   "score": 4.723633989699233,
+   "reference": 4.723633989699233
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 20",
+   "score": 6.313250571660284,
+   "reference": 6.313250571660284
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 21",
+   "score": 4.061240890315896,
+   "reference": 4.061240890315896
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 22",
+   "score": 4.114843838271878,
+   "reference": 4.114843838271878
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 23",
+   "score": 4.0990235361207885,
+   "reference": 4.0990235361207885
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 24",
+   "score": 3.6243398532976014,
+   "reference": 3.6243398532976014
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 25",
+   "score": 4.787319866333078,
+   "reference": 4.787319866333078
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 26",
+   "score": 1.905139344475272,
+   "reference": 1.905139344475272
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 27",
+   "score": 3.9877406411133443,
+   "reference": 3.9877406411133443
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 28",
+   "score": 8.753090848358584,
+   "reference": 8.753090848358584
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 29",
+   "score": 5.028047121823625,
+   "reference": 5.028047121823625
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 30",
+   "score": 3.587843524340287,
+   "reference": 3.587843524340287
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 31",
+   "score": 2.3228476405014886,
+   "reference": 2.3228476405014886
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 32",
+   "score": 6.128074199100107,
+   "reference": 6.128074199100107
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 33",
+   "score": 4.339844676693354,
+   "reference": 4.339844676693354
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 34",
+   "score": 4.077872766514071,
+   "reference": 4.077872766514071
+  },
+  {
+   "preset": "new",
+   "set": "arm_R",
+   "label": "seed 35",
+   "score": 1.2132124917463063,
+   "reference": 1.2132124917463063
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_100",
+   "score": 6.666709207561251,
+   "reference": 6.666709207561251
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_101",
+   "score": 5.15727028998086,
+   "reference": 5.15727028998086
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_102",
+   "score": 6.413065290655092,
+   "reference": 6.413065290655092
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_103",
+   "score": 6.204663986059394,
+   "reference": 6.204663986059394
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_104",
+   "score": 5.419373155717861,
+   "reference": 5.419373155717861
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_105",
+   "score": 3.8646230665370207,
+   "reference": 3.8646230665370207
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_106",
+   "score": 0.7007308687678787,
+   "reference": 0.7007308687678787
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_107",
+   "score": 1.793184733541228,
+   "reference": 1.793184733541228
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_108",
+   "score": 5.617064634934456,
+   "reference": 5.617064634934456
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_109",
+   "score": 3.2168485967646308,
+   "reference": 3.2168485967646308
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_110",
+   "score": 2.732386768653568,
+   "reference": 2.732386768653568
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_111",
+   "score": 5.66510236912882,
+   "reference": 5.66510236912882
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_112",
+   "score": 0.5792235415424123,
+   "reference": 0.5792235415424123
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_113",
+   "score": 2.9922609837024483,
+   "reference": 2.9922609837024483
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_114",
+   "score": 5.639852072446777,
+   "reference": 5.639852072446777
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_115",
+   "score": 3.157466195686306,
+   "reference": 3.157466195686306
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_116",
+   "score": 4.347794862795986,
+   "reference": 4.347794862795986
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_117",
+   "score": 5.0097955233180285,
+   "reference": 5.0097955233180285
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_118",
+   "score": 3.8825650928028557,
+   "reference": 3.8825650928028557
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_119",
+   "score": 6.651794285988251,
+   "reference": 6.651794285988251
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_120",
+   "score": 6.668564474752148,
+   "reference": 6.668564474752148
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_121",
+   "score": 5.366723992370074,
+   "reference": 5.366723992370074
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_122",
+   "score": 2.6167768346423186,
+   "reference": 2.6167768346423186
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_123",
+   "score": 2.8725459816741004,
+   "reference": 2.8725459816741004
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_124",
+   "score": 2.3930099265196567,
+   "reference": 2.3930099265196567
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_125",
+   "score": 3.3143734750969087,
+   "reference": 3.3143734750969087
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_126",
+   "score": 5.626270922137517,
+   "reference": 5.626270922137517
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_127",
+   "score": 4.251264714127949,
+   "reference": 4.251264714127949
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_128",
+   "score": 7.268195609247273,
+   "reference": 7.268195609247273
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_129",
+   "score": 4.428166174938604,
+   "reference": 4.428166174938604
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_130",
+   "score": 4.569587253749458,
+   "reference": 4.569587253749458
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_131",
+   "score": 6.726983986375232,
+   "reference": 6.726983986375232
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_132",
+   "score": 6.621498080297796,
+   "reference": 6.621498080297796
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_133",
+   "score": 5.7015074815053435,
+   "reference": 5.7015074815053435
+  },
+  {
+   "preset": "new",
+   "set": "deposit_noCost",
+   "label": "run_134",
+   "score": 4.693335332285462,
+   "reference": 4.693335332285462
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 1",
+   "score": 3.2403385208215316,
+   "reference": 3.2403385208215316
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 2",
+   "score": 4.257619167552668,
+   "reference": 4.257619167552668
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 3",
+   "score": 4.937247786009918,
+   "reference": 4.937247786009918
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 4",
+   "score": 4.130593806632546,
+   "reference": 4.130593806632546
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 5",
+   "score": 4.6136461785160945,
+   "reference": 4.6136461785160945
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 6",
+   "score": 7.423099166398127,
+   "reference": 7.423099166398127
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 7",
+   "score": 4.657293480486076,
+   "reference": 4.657293480486076
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 8",
+   "score": 3.575361223468628,
+   "reference": 3.575361223468628
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 9",
+   "score": 4.241565496232407,
+   "reference": 4.241565496232407
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 10",
+   "score": 5.550333053371966,
+   "reference": 5.550333053371966
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 11",
+   "score": 4.4788624248774145,
+   "reference": 4.4788624248774145
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 12",
+   "score": 3.91697053592046,
+   "reference": 3.91697053592046
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 13",
+   "score": 1.336810066160889,
+   "reference": 1.336810066160889
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 14",
+   "score": 3.0395130965361092,
+   "reference": 3.0395130965361092
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 15",
+   "score": 4.341032087746584,
+   "reference": 4.341032087746584
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 16",
+   "score": 3.8226406577918937,
+   "reference": 3.8226406577918937
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 17",
+   "score": 6.189416269622991,
+   "reference": 6.189416269622991
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 18",
+   "score": 2.9278818227927714,
+   "reference": 2.9278818227927714
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 19",
+   "score": 4.302855580556697,
+   "reference": 4.302855580556697
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 20",
+   "score": 6.492773766617456,
+   "reference": 6.492773766617456
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 21",
+   "score": 3.172809731576126,
+   "reference": 3.172809731576126
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 22",
+   "score": 3.441665827845076,
+   "reference": 3.441665827845076
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 23",
+   "score": 4.0136439024568755,
+   "reference": 4.0136439024568755
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 24",
+   "score": 3.648013277458474,
+   "reference": 3.648013277458474
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 25",
+   "score": 3.3470181025100563,
+   "reference": 3.3470181025100563
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 26",
+   "score": 0.8454051953750177,
+   "reference": 0.8454051953750177
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 27",
+   "score": 2.415320387363337,
+   "reference": 2.415320387363337
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 28",
+   "score": 2.16850776578866,
+   "reference": 2.16850776578866
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 29",
+   "score": 3.975980782620308,
+   "reference": 3.975980782620308
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 30",
+   "score": 1.3595663147848085,
+   "reference": 1.3595663147848085
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 31",
+   "score": 5.697244293842528,
+   "reference": 5.697244293842528
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 32",
+   "score": 4.080469664011994,
+   "reference": 4.080469664011994
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 33",
+   "score": 4.520025434629991,
+   "reference": 4.520025434629991
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 34",
+   "score": 1.389865094053926,
+   "reference": 1.389865094053926
+  },
+  {
+   "preset": "new",
+   "set": "arm_Rc",
+   "label": "seed 35",
+   "score": 2.6502934310255837,
+   "reference": 2.6502934310255837
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_100",
+   "score": 1.0655074902285122,
+   "reference": 1.0655074902285122
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_101",
+   "score": 5.122880643432418,
+   "reference": 5.122880643432418
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_102",
+   "score": 1.5637442828728072,
+   "reference": 1.5637442828728072
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_103",
+   "score": 3.9718237980491464,
+   "reference": 3.9718237980491464
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_104",
+   "score": 0.3844137969160701,
+   "reference": 0.3844137969160701
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_105",
+   "score": 4.096326006640621,
+   "reference": 4.096326006640621
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_106",
+   "score": 5.504072967916973,
+   "reference": 5.504072967916973
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_107",
+   "score": 4.148053187432735,
+   "reference": 4.148053187432735
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_108",
+   "score": 5.329959843440891,
+   "reference": 5.329959843440891
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_109",
+   "score": 3.857003587360982,
+   "reference": 3.857003587360982
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_110",
+   "score": 3.120701055556575,
+   "reference": 3.120701055556575
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_111",
+   "score": 4.441761294864314,
+   "reference": 4.441761294864314
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_112",
+   "score": 3.9022080807791197,
+   "reference": 3.9022080807791197
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_113",
+   "score": 4.061713645882434,
+   "reference": 4.061713645882434
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_114",
+   "score": 2.454211080978083,
+   "reference": 2.454211080978083
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_115",
+   "score": 3.415622196236523,
+   "reference": 3.415622196236523
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_116",
+   "score": 4.372871670389078,
+   "reference": 4.372871670389078
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_117",
+   "score": 4.7225006310463025,
+   "reference": 4.7225006310463025
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_118",
+   "score": 2.675204888239323,
+   "reference": 2.675204888239323
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_119",
+   "score": 3.1481639058537305,
+   "reference": 3.1481639058537305
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_120",
+   "score": 4.629832932769834,
+   "reference": 4.629832932769834
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_121",
+   "score": 3.856993142673709,
+   "reference": 3.856993142673709
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_122",
+   "score": 5.978002322431145,
+   "reference": 5.978002322431145
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_123",
+   "score": 5.172886253329266,
+   "reference": 5.172886253329266
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_124",
+   "score": 4.633262158539666,
+   "reference": 4.633262158539666
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_125",
+   "score": 5.717289559516286,
+   "reference": 5.717289559516286
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_126",
+   "score": 4.527012328229759,
+   "reference": 4.527012328229759
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_127",
+   "score": 1.8835090464135602,
+   "reference": 1.8835090464135602
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_128",
+   "score": 1.0003183989833326,
+   "reference": 1.0003183989833326
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_129",
+   "score": 3.067303038838535,
+   "reference": 3.067303038838535
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_130",
+   "score": 1.6898459619313935,
+   "reference": 1.6898459619313935
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_131",
+   "score": 2.853727992767204,
+   "reference": 2.853727992767204
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_132",
+   "score": 2.1004096251059314,
+   "reference": 2.1004096251059314
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_133",
+   "score": 1.161918997516594,
+   "reference": 1.161918997516594
+  },
+  {
+   "preset": "new",
+   "set": "deposit_costNumActuated",
+   "label": "run_134",
+   "score": 4.429214841139973,
+   "reference": 4.429214841139973
+  },
+  {
+   "preset": "old",
+   "set": "arm_R",
+   "label": "seed 1",
+   "score": 1.628724955219979,
+   "reference": 1.628724955219979
+  },
+  {
+   "preset": "old",
+   "set": "arm_R",
+   "label": "seed 2",
+   "score": 0.8782895303342936,
+   "reference": 0.8782895303342936
+  },
+  {
+   "preset": "old",
+   "set": "arm_R",
+   "label": "seed 3",
+   "score": 1.2815373629397155,
+   "reference": 1.2815373629397155
+  },
+  {
+   "preset": "old",
+   "set": "deposit_noCost",
+   "label": "run_100",
+   "score": 1.3978180208093516,
+   "reference": 1.3978180208093516
+  },
+  {
+   "preset": "old",
+   "set": "deposit_noCost",
+   "label": "run_101",
+   "score": 4.948742762361837,
+   "reference": 4.948742762361837
+  },
+  {
+   "preset": "old",
+   "set": "deposit_noCost",
+   "label": "run_102",
+   "score": 4.989724560894092,
+   "reference": 4.989724560894092
+  },
+  {
+   "preset": "old",
+   "set": "arm_Rc",
+   "label": "seed 1",
+   "score": 2.1958875318267412,
+   "reference": 2.1958875318267412
+  },
+  {
+   "preset": "old",
+   "set": "arm_Rc",
+   "label": "seed 2",
+   "score": 1.8998688773486128,
+   "reference": 1.8998688773486128
+  },
+  {
+   "preset": "old",
+   "set": "arm_Rc",
+   "label": "seed 3",
+   "score": 2.716166961920737,
+   "reference": 2.716166961920737
+  },
+  {
+   "preset": "old",
+   "set": "deposit_costNumActuated",
+   "label": "run_100",
+   "score": 3.288247685941549,
+   "reference": 3.288247685941549
+  },
+  {
+   "preset": "old",
+   "set": "deposit_costNumActuated",
+   "label": "run_101",
+   "score": 3.51709130380369,
+   "reference": 3.51709130380369
+  },
+  {
+   "preset": "old",
+   "set": "deposit_costNumActuated",
+   "label": "run_102",
+   "score": 2.163143000910933,
+   "reference": 2.163143000910933
+  }
+ ],
+ "new": {
+  "what": "preset cheney2013-floor against the emulation of the floor test",
+  "compared": 140,
+  "identical": 140,
+  "largest_difference": 0.0
+ },
+ "old": {
+  "what": "preset cheney2013 against the transfer outcome",
+  "compared": 12,
+  "identical": 12,
+  "largest_difference": 0.0
+ }
+}
