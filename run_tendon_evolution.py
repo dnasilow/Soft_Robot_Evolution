@@ -287,7 +287,7 @@ _PHYSICS_DEFAULTS = {'friction': None, 'early_term_threshold': None, 'early_term
                      'materials': 'evosoro', 'gravity': None, 'floor_contact': 'mujoco',
                      'phase_mode': 'offset', 'direction': 'forward', 'divide_by': 'body',
                      'workspace_voxels': None, 'global_damping': None,
-                     'simulator': 'mujoco', 'penalty': 'none', 'penalty_exp': 1.0}
+                     'simulator': 'mujoco', 'penalty': 'none', 'penalty_exp': 1.0, 'start': 'floor'}
 
 # --preset: named sets of options. Each entry is (argparse dest, value); an option given
 # explicitly on the command line always wins over the preset.
@@ -309,6 +309,12 @@ _PRESETS = {
         ('grid_size', 10), ('no_trim', True),
     ],
 }
+# cheney2013-floor = cheney2013 with the two things found on 24-25 November 2026 to differ from
+# the 2013 simulator: its floor (a spring on each contact voxel's centre with a stop-dead friction
+# rule, not a hard floor) and where a body starts (where it is in the workspace, not set on the
+# floor). cheney2013 itself is left as it was, so that everything scored with it stays repeatable.
+_PRESETS['cheney2013-floor'] = [(d, 'rule2013' if d == 'floor_contact' else v)
+                                for d, v in _PRESETS['cheney2013']] + [('start', 'workspace')]
 
 # Set by the command-line entry point; written into the run folder once the overwrite guard has
 # passed. Library callers (tests, notebooks) that never set it get no manifest.
@@ -352,7 +358,7 @@ _VX2013_FIXED = {'sim_time': 0.25, 'settle': 0.0, 'freq': 40.0, 'amp': 0.14, 'di
 _VX2013_NO_EFFECT = ('body', 'materials', 'floor_contact', 'friction', 'friction_static',
                      'friction_kinetic', 'slip_speed', 'stick_speed', 'poisson', 'dt_rule',
                      'gravity', 'damping_global', 'early_term_bl', 'early_term_frac', 'phase_mode',
-                     'phase_gain_init', 'preset', 'gait', 'gait_wavenum')
+                     'phase_gain_init', 'preset', 'gait', 'gait_wavenum', 'start')
 
 
 def _git_state():
@@ -644,6 +650,7 @@ def run_evolution(
     divide_by:       str   = "body",     # score unit: own body length | fixed workspace width
     workspace_voxels: int  = None,       # workspace width in voxels (the grid side)
     global_damping:  float = None,       # beam only: global damping ratio (None = 0.01)
+    start:           str   = "floor",    # floor: set on the floor | workspace: where it is in the workspace
     simulator:       str   = "mujoco",   # mujoco | voxelyze2013 (the original 2013 simulator)
     penalty:         str   = "none",     # 2013 cost condition: none|voxels|actuated|connections
     penalty_exp:     float = 1.0,        # exponent of that penalty
@@ -728,6 +735,7 @@ def run_evolution(
         global_damping       = global_damping,
         penalty              = penalty,
         penalty_exp          = penalty_exp,
+        start                = start,
     )
     evaluator = _swap_in_simulator(evaluator, simulator, n_workers, workspace_voxels,
                                    penalty, penalty_exp)
@@ -743,7 +751,8 @@ def run_evolution(
                   if body == 'beam' else {}),
                'direction': direction, 'divide_by': divide_by,
                **({'workspace_voxels': workspace_voxels} if divide_by == 'workspace' else {}),
-               'simulator': simulator, 'penalty': penalty, 'penalty_exp': penalty_exp}
+               'simulator': simulator, 'penalty': penalty, 'penalty_exp': penalty_exp,
+               'start': start}
 
     def _gp(cppn_list):
         """Per-robot gait provider (None list => legacy material gait). Per-voxel-phase
@@ -1134,6 +1143,7 @@ def run_map_elites(
     divide_by:       str   = "body",     # score unit: own body length | fixed workspace width
     workspace_voxels: int  = None,       # workspace width in voxels (the grid side)
     global_damping:  float = None,       # beam only: global damping ratio (None = 0.01)
+    start:           str   = "floor",    # floor: set on the floor | workspace: where it is in the workspace
     simulator:       str   = "mujoco",   # mujoco | voxelyze2013 (the original 2013 simulator)
     penalty:         str   = "none",     # 2013 cost condition: none|voxels|actuated|connections
     penalty_exp:     float = 1.0,        # exponent of that penalty
@@ -1237,6 +1247,7 @@ def run_map_elites(
         global_damping       = global_damping,
         penalty              = penalty,
         penalty_exp          = penalty_exp,
+        start                = start,
     )
     evaluator = _swap_in_simulator(evaluator, simulator, n_workers, workspace_voxels,
                                    penalty, penalty_exp)
@@ -1252,7 +1263,8 @@ def run_map_elites(
                   if body == 'beam' else {}),
                'direction': direction, 'divide_by': divide_by,
                **({'workspace_voxels': workspace_voxels} if divide_by == 'workspace' else {}),
-               'simulator': simulator, 'penalty': penalty, 'penalty_exp': penalty_exp}
+               'simulator': simulator, 'penalty': penalty, 'penalty_exp': penalty_exp,
+               'start': start}
 
     archive = {}   # (i,j) -> {'cppn','genome','fitness','desc'}
 
@@ -1613,12 +1625,24 @@ if __name__ == "__main__":
                              "working baseline. replace: overwrite it, as the tendon engine does - "
                              "on beam bodies that scores 0.0000 for ANY field, leaving no gradient.")
     parser.add_argument("--floor-contact", dest="floor_contact", type=str, default="mujoco",
-                        choices=["mujoco", "voxelyze"],
+                        choices=["mujoco", "voxelyze", "rule2013"],
                         help="--body beam only. mujoco (default): MuJoCo's own soft contact, whose "
-                             "stiffness ignores the material. voxelyze: Voxelyze's penalty floor, "
-                             "k = 2*E*L per voxel (CVX_Voxel::floorForce). Needed for any raised "
-                             "gravity: with MuJoCo's default a body sinks 2.7 voxels through the "
-                             "floor at Cheney's gravity, against 0.8%% of a voxel with this.")
+                             "stiffness ignores the material. voxelyze: a hard floor, modelled on the "
+                             "later Voxelyze library's penalty floor, k = 2*E*L per voxel "
+                             "(CVX_Voxel::floorForce); with MuJoCo's default a body sinks 2.7 voxels "
+                             "through the floor at Cheney's gravity. rule2013: the floor of the 2013 "
+                             "simulator itself (CVXS_Voxel::CalcFloorEffect), in place of MuJoCo's "
+                             "contact: a spring E*size/2 on each contact voxel's centre, and a "
+                             "friction rule that brakes a sliding voxel and stops a slow one dead. "
+                             "Under a body's weight it gives a few tenths of a voxel. Its friction "
+                             "is 1.0 static / 0.5 dynamic unless --friction-static/-kinetic or "
+                             "--friction say otherwise; --slip-speed and --stick-speed do not apply.")
+    parser.add_argument("--start", dest="start", type=str, default="floor", choices=["floor", "workspace"],
+                        help="Where a body begins. floor (default): set on the floor. workspace: where "
+                             "it is in the workspace, as the 2013 simulator starts it: a body whose "
+                             "lowest voxels are k layers above the bottom of the workspace begins k "
+                             "voxels up and falls first (with --direction any the drop counts in the "
+                             "score, as it does in 2013).")
     parser.add_argument("--gravity", dest="gravity", type=float, default=None,
                         help="--body beam only. Gravity in m/s^2 (positive number). Default is the "
                              "preset's own: 9.81 for evosoro, 274.68 for cheney2013 (his 27.468 "
@@ -1628,15 +1652,19 @@ if __name__ == "__main__":
                              "velocity and spin. Default 0.01 (evosoro's SlowDampingZ), which every "
                              "run up to November 2026 used. The deposited 2013 robot files all say "
                              "0.001.")
-    parser.add_argument("--preset", dest="preset", type=str, default=None, choices=["cheney2013"],
+    parser.add_argument("--preset", dest="preset", type=str, default=None, choices=sorted(_PRESETS),
                         help="A named set of options; anything you also give explicitly wins. "
                              "cheney2013: the physics and scoring of Cheney et al. 2013 as read from "
                              "its deposited files and source: --body beam --materials cheney2013 "
                              "--floor-contact voxelyze --friction-static 1.0 --friction-kinetic 0.5 "
                              "--freq 40 --amp 0.14 --poisson off --damping-global 0.001 "
                              "--sim-time 0.25 --settle 0 --direction any --divide-by workspace "
-                             "--fitness forward --grid-size 10 --no-trim. It does not set the search "
-                             "(--pop, --gen, --no-age-pareto, --map-elites).")
+                             "--fitness forward --grid-size 10 --no-trim. cheney2013-floor: the same "
+                             "with the 2013 simulator's own floor and start, --floor-contact rule2013 "
+                             "--start workspace (25 November 2026: on the hard floor of cheney2013 "
+                             "the 2013 champions lose a third of their score, under this floor they "
+                             "keep it). Neither sets the search (--pop, --gen, --no-age-pareto, "
+                             "--map-elites).")
     parser.add_argument("--simulator", dest="simulator", type=str, default="mujoco",
                         choices=["mujoco", "voxelyze2013"],
                         help="mujoco (default): this project's engine. voxelyze2013: the ORIGINAL "
@@ -1744,6 +1772,10 @@ if __name__ == "__main__":
         _zg = ZETA_GLOBAL if args.damping_global is None else args.damping_global
         print(f"  Damping    : global ratio {_zg:g}"
               + ("" if args.damping_global is None else "  (--damping-global)"))
+        print(f"  Floor      : {args.floor_contact}"
+              + ("  (the 2013 simulator's own floor rule; MuJoCo's contact is off)"
+                 if args.floor_contact == "rule2013" else "")
+              + ("   |   a body starts where it is in the workspace" if args.start == "workspace" else ""))
     else:
         _beam_only = [f for f, changed in (("--poisson", args.poisson != "on"),
                                            ("--dt-rule", args.dt_rule != "voxelyze"),
@@ -1883,6 +1915,7 @@ if __name__ == "__main__":
             simulator            = args.simulator,
             penalty              = args.penalty,
             penalty_exp          = args.penalty_exp,
+            start                = args.start,
         )
     else:
         run_evolution(
@@ -1930,4 +1963,5 @@ if __name__ == "__main__":
             simulator            = args.simulator,
             penalty              = args.penalty,
             penalty_exp          = args.penalty_exp,
+            start                = args.start,
         )

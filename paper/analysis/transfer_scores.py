@@ -70,12 +70,13 @@ CONDITIONS = {'noCost': 'no cost', 'costNumActuated': 'actuated cost'}
 # --------------------------------------------------------------------------------------------
 # the engine: the search's own evaluation under the preset
 # --------------------------------------------------------------------------------------------
-def evaluator_arguments(early_stop=False, workspace=None):
-    """The arguments run_tendon_evolution.py gives its evaluator under --preset cheney2013, read
-    from the preset itself. early_stop=True keeps the search's early stop (used only to check
-    this function against a real run); the transfer outcome switches it off."""
+def evaluator_arguments(early_stop=False, workspace=None, preset=PRESET):
+    """The arguments run_tendon_evolution.py gives its evaluator under a preset (--preset
+    cheney2013 unless another is named), read from the preset itself. early_stop=True keeps the
+    search's early stop (used only to check this function against a real run); the transfer
+    outcome switches it off."""
     import run_tendon_evolution as runner
-    preset = dict(runner._PRESETS[PRESET])
+    name, preset = preset, dict(runner._PRESETS[preset])
     used = set()
 
     def take(key):
@@ -98,10 +99,11 @@ def evaluator_arguments(early_stop=False, workspace=None):
         gravity=None, floor_contact=take('floor_contact'), phase_mode='offset',
         direction=take('direction'), divide_by=take('divide_by'), workspace_voxels=side,
         global_damping=float(take('damping_global')), penalty='none', penalty_exp=1.0,
+        start=take('start') if 'start' in preset else 'floor',
     )
     unused = sorted(set(preset) - used)
     if unused:
-        raise SystemExit(f'The preset {PRESET} has settings this script does not know: {unused}. '
+        raise SystemExit(f'The preset {name} has settings this script does not know: {unused}. '
                          f'It must be taught them before it can speak for the preset.')
     return arguments
 
@@ -177,7 +179,7 @@ def score_one(job):
             usual = beam.DT_FRAC_VX if engine.dt_rule == 'voxelyze' else beam.DT_FRAC
             engine.dt_frac = usual * step_fraction
         engine.load_robot(np.asarray(grid), voxel_size=params['voxel_size'],
-                          initial_height=params['initial_height'], gait_params=None)
+                          initial_height=evaluation._start_height(np.asarray(grid), params), gait_params=None)
         size = float(engine.voxel_size)
         out['time_step'] = float(engine.default_timestep)
         out['normal_time_step'] = float(engine.stable_dt(None))
@@ -328,6 +330,9 @@ def set_title(name):
 # --------------------------------------------------------------------------------------------
 def evaluation_key(grid, params, step_fraction, code):
     grid = np.ascontiguousarray(grid, np.int8)
+    # A body set on the floor is what every evaluation was before the start became a setting:
+    # left out of the key, so that what was scored before 25 November 2026 is still found.
+    params = {k: v for k, v in params.items() if not (k == 'start' and v == 'floor')}
     h = hashlib.sha256()
     h.update(repr(grid.shape).encode())
     h.update(grid.tobytes())

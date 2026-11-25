@@ -43,6 +43,15 @@ def workspace_grid(grid, n: int = WORKSPACE) -> np.ndarray:
     return block.astype(np.int8)
 
 
+def start_height(grid, n: int = WORKSPACE, voxel_size: float = VOXEL_SIZE_2013) -> float:
+    """How far above the floor a body begins when it is started where it is in the workspace, as
+    the 2013 simulator starts it: its lowest occupied layer times the voxel size. 0 for a body
+    that touches the bottom of the workspace, and for an empty body. (The 2013 simulator lets
+    such a body fall, and its score, a distance in three dimensions, includes the drop.)"""
+    occupied = np.argwhere(workspace_grid(grid, n) != 0)
+    return float(occupied[:, 2].min() * voxel_size) if len(occupied) else 0.0
+
+
 def layer_rows(g) -> list:
     """Our n^3 grid as the rows of a robot file: one string per layer (z), row-major over y
     then x, in the 2013 material numbers."""

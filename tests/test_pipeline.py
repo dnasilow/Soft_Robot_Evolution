@@ -388,7 +388,7 @@ class TestDampingAndPreset(unittest.TestCase):
         r = subprocess.run([sys.executable, os.path.join(ROOT, 'run_tendon_evolution.py'), '--help'],
                            capture_output=True, text=True, timeout=60)
         self.assertIn('--damping-global', r.stdout)
-        self.assertIn('--preset {cheney2013}', r.stdout)
+        self.assertIn('--preset {cheney2013,cheney2013-floor}', r.stdout)      # the second since 25 November 2026
 
     def test_damping_rejected_with_springs(self):
         with tempfile.TemporaryDirectory() as tmp:

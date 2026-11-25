@@ -63,6 +63,20 @@ def _make_engine(params):
                                friction=params.get('friction'), **kw)
 
 
+STARTS = ('floor', 'workspace')
+
+
+def _start_height(genome, params) -> float:
+    """Where a body begins. 'floor' (default): set on the floor, plus initial_height. 'workspace':
+    where it is in the workspace, as the 2013 simulator starts it - a body that does not touch
+    the bottom of the workspace begins that many voxels up and falls first."""
+    height = params['initial_height']
+    if params.get('start', 'floor') == 'workspace':
+        from src.evolution import cheney2013 as c13
+        height += c13.start_height(genome, params['workspace_voxels'], params['voxel_size'])
+    return height
+
+
 def _fitness_kw(params):
     """Optional get_fitness overrides; absent keys keep the engine defaults unchanged."""
     kw = {}
@@ -85,7 +99,7 @@ def _eval_worker(args):
         engine.load_robot(
             genome,
             voxel_size     = params['voxel_size'],
-            initial_height = params['initial_height'],
+            initial_height = _start_height(genome, params),
             gait_params    = gait_param,
         )
         # Flex v1 is open-loop only; skip controller attach entirely for flex.
@@ -146,7 +160,12 @@ class MuJoCoTendonEvaluator:
         global_damping:      float = None,         # beam only: global damping ratio (None = 0.01)
         penalty:             str   = "none",       # 2013 cost condition: none|voxels|actuated|connections
         penalty_exp:         float = 1.0,          # exponent of that penalty
+        start:               str   = "floor",      # floor: set on the floor | workspace: where it is in the workspace
     ):
+        if start not in STARTS:
+            raise ValueError(f"start must be one of {STARTS}, got {start!r}")
+        if start == 'workspace' and workspace_voxels is None:
+            raise ValueError("start='workspace' needs workspace_voxels (the side of the workspace)")
         self.simulation_time   = simulation_time
         self.settle_time       = settle_time
         self.voxel_size        = voxel_size
@@ -184,6 +203,7 @@ class MuJoCoTendonEvaluator:
             'divide_by':           divide_by,
             'workspace_voxels':    workspace_voxels,
             'global_damping':      global_damping,
+            'start':               start,
         }
         # 2013 cost conditions: fitness * (1 - (count / maximum) ** exponent), applied to whatever
         # the engine returned (see src/evolution/cheney2013.py). 'none' leaves fitness untouched.
@@ -246,7 +266,7 @@ class MuJoCoTendonEvaluator:
                 self.engine.load_robot(
                     genome,
                     voxel_size     = self.voxel_size,
-                    initial_height = self.initial_height,
+                    initial_height = _start_height(genome, self._params),
                     gait_params    = gp,
                 )
                 if self.attach_controller and not self.use_flex:

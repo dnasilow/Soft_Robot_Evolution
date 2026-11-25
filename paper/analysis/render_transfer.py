@@ -94,8 +94,8 @@ def mujoco_frames(grid, params, every, prepare=None):
     -> score, blew up, materials (2013 numbers), times, centre of mass, voxel states (f x n x 10)."""
     from src.evolution import mujoco_tendon_evaluator as evaluation
     engine = evaluation._make_engine(params)
-    engine.load_robot(np.asarray(grid), voxel_size=params['voxel_size'], initial_height=params['initial_height'],
-                      gait_params=None)
+    engine.load_robot(np.asarray(grid), voxel_size=params['voxel_size'],
+                      initial_height=evaluation._start_height(np.asarray(grid), params), gait_params=None)
     if prepare is not None:
         prepare(engine)
     size = float(engine.voxel_size)

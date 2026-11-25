@@ -51,6 +51,16 @@ Time step: explicit bond forces need dt below the fastest bond mode, so each rob
          Poisson on, E*L without). `dt_rule='ours'` is the older, ~1.6x more conservative estimate
          that also sums every bond on a voxel and includes damping rates. Both are capped at 0.5 ms.
          Robots with bone (100x stiffer) need ~10x more steps either way.
+Floor of the 2013 simulator (`floor_contact='rule2013'`, added 2026-11-25): the floor as the 2013
+         code itself computes it (CVXS_Voxel::CalcFloorEffect in softbots2013Code.tgz), in place of
+         MuJoCo's contact, which is switched off. A voxel whose centre is lower than half its
+         current size is pushed up by a spring on its CENTRE, E*size/2*(size/2 - z), damped with
+         ColDampingZ*2*m*sqrt(E*size/m)*vz. Along the floor it is braked with uDynamic*N against
+         its motion; once the brake would stop it within one time step (uDynamic*N*dt >= m*speed)
+         its horizontal velocity is set to zero and it is held, all horizontal force on it
+         cancelled, until the pull on it exceeds uStatic*N. Under a body's weight this floor gives
+         (a 650-voxel body on 26 voxels rests 0.14 of a voxel deep) and it pins slow contact
+         voxels; the 2013 champions rely on both (paper/diagnostics_2026-11-25).
 
 Forces are applied through xfrc_applied between mj_step1 and mj_step2: after a plain mj_step,
 xpos/xquat/cvel still describe the PREVIOUS state, and bond forces computed from one-step-old
@@ -87,6 +97,11 @@ DT_FRAC_VX       = 0.7                               # evosoro DtFrac, dt_rule='
 FLOOR_TIMECONST  = 5e-4                              # --floor-contact voxelyze: MuJoCo
 #   contact time constant. 0.5 ms is 2% of a 40 Hz cycle and >= 25 time steps, which
 #   keeps penetration at ~0.14 of a voxel while walking (MuJoCo's 20 ms default: 1.6).
+# --floor-contact rule2013: friction of the 2013 floor rule when no floor friction is given (the
+# uStatic and uDynamic of every deposited 2013 robot file). Its vertical damping is ZETA_COLLISION.
+FLOOR2013_MU_STATIC  = 1.0
+FLOOR2013_MU_DYNAMIC = 0.5
+FLOOR_CONTACTS = ("mujoco", "voxelyze", "rule2013")
 _COLORS = {1: '0 1 0 1', 2: '1 0 0 1', 3: '0 1 1 1', 4: '0 0 1 1'}
 _AXES = np.eye(3)
 
@@ -169,8 +184,8 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
         if phase_mode not in ("offset", "replace"):
             raise ValueError(f"phase_mode must be 'offset' or 'replace', got {phase_mode!r}")
         self.phase_mode = phase_mode
-        if floor_contact not in ("mujoco", "voxelyze"):
-            raise ValueError(f"floor_contact must be 'mujoco' or 'voxelyze', got {floor_contact!r}")
+        if floor_contact not in FLOOR_CONTACTS:
+            raise ValueError(f"floor_contact must be one of {FLOOR_CONTACTS}, got {floor_contact!r}")
         self.floor_contact = floor_contact
         self.materials = materials
         self.gravity = gravity                # None = the preset's own value
@@ -184,6 +199,7 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
         self.global_damping = ZETA_GLOBAL if global_damping is None else float(global_damping)
         self.external = None          # optional (n, 6) extra world-frame force/torque (tests)
         self.test_damping = 0.0       # optional global drag rate for static tests only
+        self._floor_E = self._floor_dof = None    # set by load_robot for floor_contact='rule2013'
 
     # ------------------------------------------------------------------
     def load_robot(self, voxel_grid: np.ndarray, voxel_size: float = 0.01,
@@ -341,7 +357,8 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
         self._floor_r0 = L / 2
         # per-voxel dof address (None for clamped voxels) for stick-slip speed lookups
         self._ss_vidx = self._ss_sliding = None
-        if fr is not None and fr['mode'] == 'stickslip':
+        # (the 2013 floor rule has its own stop rule; MuJoCo's floor friction is not in play there)
+        if fr is not None and fr['mode'] == 'stickslip' and self.floor_contact != "rule2013":
             if clamped:
                 raise ValueError("stick-slip floor with clamped voxels is not supported")
             adr = self.model.jnt_dofadr[:n]
@@ -379,6 +396,19 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
             self.model.pair_solimp[pid, 0] = 0.99
             self.model.pair_solimp[pid, 1] = 0.9999
             self.model.pair_solimp[pid, 2] = L / 1000
+        self._floor_E = self._floor_dof = None
+        if self.floor_contact == "rule2013":
+            # The 2013 simulator's own floor rule replaces MuJoCo's contact (see _floor_rule): no
+            # contact is detected or solved, the rule's forces are added in forces().
+            if clamped:
+                raise ValueError("the 2013 floor rule with clamped voxels is not supported")
+            self.model.opt.disableflags |= int(mujoco.mjtDisableBit.mjDSBL_CONTACT)
+            self._floor_E = Ev                                   # each voxel's own modulus
+            self._floor_dof = np.asarray(self.model.jnt_dofadr[:n])   # where its velocity starts in qvel
+            self._floor_mu_s, self._floor_mu_k = FLOOR2013_MU_STATIC, FLOOR2013_MU_DYNAMIC
+            if fr is not None:                                   # a floor friction given explicitly
+                self._floor_mu_s = float(fr['mu'] if fr['mode'] == 'single' else fr['mu_s'])
+                self._floor_mu_k = float(fr['mu'] if fr['mode'] == 'single' else fr['mu_k'])
         self.external = None
         mujoco.mj_forward(self.model, self.data)
         if gait_params is not None:
@@ -601,7 +631,48 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
         if self.test_damping:
             F -= self.test_damping * self._m * v
             T -= self.test_damping * self._I * w
+        if self._floor_dof is not None:
+            self._floor_rule(F, s)
         return F, T
+
+    def _floor_rule(self, force: np.ndarray, strain: np.ndarray) -> None:
+        """The floor of the 2013 simulator (CVXS_Voxel::CalcFloorEffect), added to the forces the
+        voxels already have. `force` is changed in place; a voxel the rule stops has its
+        horizontal velocity set to zero, as the 2013 code zeroes its momentum.
+
+        For a voxel whose centre is lower than half its current size:
+          up:               E*size/2*(size/2 - z)  -  ColDampingZ*2*m*sqrt(E*size/m)*vz
+          along the floor:  not moving and pulled with less than uStatic*N -> held (force cancelled)
+                            moving, and uDynamic*N*dt < m*speed -> braked with uDynamic*N
+                            moving, but slower than that -> stopped dead and held
+        The 2013 code tests a voxel's velocity against exactly zero; so does this, which is why a
+        stopped voxel must have its velocity set to exactly zero and its force exactly cancelled."""
+        data, length, mass = self.data, self.voxel_size, self._m
+        dof, modulus = self._floor_dof, self._floor_E
+        z = data.xpos[1:, 2]
+        size = length * (1.0 + strain)
+        k = np.where(z < size / 2)[0]
+        if not len(k):
+            return
+        vx, vy, vz = data.qvel[dof[k]], data.qvel[dof[k] + 1], data.qvel[dof[k] + 2]
+        normal = modulus[k] * size[k] / 2 * (size[k] / 2 - z[k])
+        pull = np.hypot(force[k, 0], force[k, 1])             # along the floor, before the floor acts
+        force[k, 2] += normal - ZETA_COLLISION * 2 * mass * np.sqrt(modulus[k] * size[k] / mass) * vz
+        speed = np.hypot(vx, vy)
+        still = (vx == 0.0) & (vy == 0.0)
+        held = still & (pull < self._floor_mu_s * normal)
+        brake = self._floor_mu_k * normal
+        sliding = ~still & (brake * self.default_timestep < mass * speed)
+        stopped = ~still & ~sliding
+        s = np.where(sliding)[0]
+        force[k[s], 0] -= brake[s] * vx[s] / speed[s]
+        force[k[s], 1] -= brake[s] * vy[s] / speed[s]
+        fixed = k[held | stopped]
+        force[fixed, 0] = 0.0
+        force[fixed, 1] = 0.0
+        halt = dof[k[stopped]]
+        data.qvel[halt] = 0.0
+        data.qvel[halt + 1] = 0.0
 
     def _collision_forces(self, p, v, s):
         """Voxelyze self-collision over the watch list (see module docstring)."""
