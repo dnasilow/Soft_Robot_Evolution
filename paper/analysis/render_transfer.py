@@ -68,12 +68,14 @@ def choose(champions):
 
 
 def robot_text(row):
-    """The robot file of a champion of an arm of re-runs, from its run's archive."""
+    """The robot file of a champion of an arm. For an arm of re-runs it comes from the run's
+    archive. A champion of this project's search (arm A) is a body in its run's final population
+    and is written to a robot file as the search wrote it for the simulator."""
     arm = row['set'][len('arm_'):]
     spec = aa.ARMS[arm]
-    if spec['kind'] != 'rerun':
-        raise SystemExit(f'Arm {arm} keeps no robot files; its champions have to be exported first.')
     seed = int(row['label'].split()[-1])
+    if spec['kind'] == 'search':
+        return rc.search_robot_text(os.path.join(aa.SEARCH_RUNS, f"{spec['prefix']}{seed}"), row['file'])
     archive = os.path.join(aa.RERUNS, f"{spec['prefix']}{seed}", f"Gen_{spec['generations']:04d}.tgz")
     with tarfile.open(archive, 'r:gz') as t:
         for m in t:
@@ -277,7 +279,7 @@ def main(argv=None):
                   f"{record[key]['body_turned_degrees']['at_the_end']:.0f} degrees by the end, "
                   f"{record[key]['body_turned_degrees']['at_most']:.0f} at most")
     if not shown:
-        raise SystemExit('The report holds no champion of an arm of re-runs.')
+        raise SystemExit('The report holds no champion of an arm.')
 
     n = min(min(len(a13[1]), len(amj[1])) for a13, amj, _ in shown)
     times = shown[0][0][1][:n]

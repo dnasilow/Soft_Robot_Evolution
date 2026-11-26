@@ -247,7 +247,7 @@ Also recorded with every evaluation: the lowest voxel sinks 0.15 to 0.18 of a vo
 
 ### What it looks like
 
-![Three champions in the 2013 simulator and in the MuJoCo engine](videos/transfer_champions.gif)
+![Four champions in the 2013 simulator and in the MuJoCo engine](videos/transfer_champions.gif)
 
 `paper/analysis/render_transfer.py` shows the same robot in both simulators, left the 2013 simulator, right the MuJoCo engine. The robots are chosen by a rule, not by eye: for each arm the champion with the median transfer ratio among those that touch the bottom of the workspace, and for arm Rc also the one with the median ratio among those that do not, started at its height. The right-hand frames come from the evaluation that was scored (its score is the reported one to the last digit).
 
@@ -256,12 +256,15 @@ Also recorded with every evaluation: the lowest voxel sinks 0.15 to 0.18 of a vo
 | Arm R, seed 34 | 4.11 | 1.75 (0.42) | 0.45 to 0.48 from the fourth cycle on | 0.57 and 0.56 in cycles 3 and 4, then falling, −0.46 and −0.34 in the last two | 50° and 118° |
 | Arm Rc, seed 18 | 4.12 | 2.43 (0.59) | 0.46 to 0.53 in cycles 3 to 8 | 0.60 and 0.65 in cycles 2 and 3, then 0.02 to 0.30 | 59° and 77° |
 | Arm Rc, seed 31, starts 1 voxel up | 4.82 | 2.95 (0.61); 3.64 when set on the floor | 0.52 to 0.57 from the fourth cycle on | uneven, 0.12 to 0.50 | 65° and 101° |
+| Arm A, seed 14 (added on 26 November) | 5.23 | 2.73 (0.52) | 0.55 to 0.62 from the third cycle on | 0.54 in cycle 2, then 0.12 to 0.35 | 48° and 116° |
 
 - **The start is alike, the rest is not.** In the MuJoCo engine all three robots set off in nearly the same direction as in the 2013 simulator (5° to 11° apart) and are about as fast, or faster, for the first two to four cycles. Then they tip further over than they ever do in the 2013 simulator and the gait breaks down; the first one moves back towards its start in the last two cycles.
 - **In the 2013 simulator the same robots keep a steady gait** for most or all of the run, gaining nearly the same distance in each cycle (the second one slows in its last two cycles).
 - **The floors differ.** In the 2013 simulator the lowest point of these bodies is 0.81 to 0.86 of a voxel below the floor's surface; in the MuJoCo engine 0.10 to 0.15. A body standing most of a voxel deep in the floor may be held upright by it. That the 2013 gaits lean on this is a reading that fits what is seen here; these runs do not test it. The test followed the next day and is reported below.
 
-Three robots are three robots. They were picked as the middle of their sets, so they show a typical loss, not the range.
+**Arm A's median champion, added on 26 November, shows the same thing.** Seed 14 gains 0.55 to 0.62 body lengths per cycle in the 2013 simulator from the third cycle on and never turns over by more than 48°. In the MuJoCo engine it is as fast in the second cycle (0.54), then tips over, by 116° at most, and gains 0.12 to 0.35 per cycle. It also veers: its heading over the whole run is 48° off the one it takes in the 2013 simulator, where the three robots above stay within 5° to 11°. Its lowest point is 0.70 of a voxel below the floor in the 2013 simulator and 0.23 in the MuJoCo engine. The bullets above describe the three robots of 24 November; their rows of the video come out exactly as they did then.
+
+Four robots are four robots. They were picked as the middle of their sets, so they show a typical loss, not the range.
 
 ### Tested on 25 November: the loss is the floor
 

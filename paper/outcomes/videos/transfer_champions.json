@@ -176,6 +176,64 @@
     "score_when_set_on_the_floor": 3.642164518191727
    },
    "heading_in_mujoco_relative_to_2013_degrees": 5.072546143049891
+  },
+  {
+   "robot": "arm A, seed 14",
+   "started": "set on the floor",
+   "voxels": 679,
+   "lowest_layer": 0,
+   "same_voxels_and_materials_in_both_simulators": true,
+   "simulator_2013": {
+    "score": 5.2311000000000005,
+    "score_in_the_recording_copy": 5.2311000000000005,
+    "heading_degrees": 26.887972557816546,
+    "body_lengths_per_cycle": [
+     0.156,
+     0.41,
+     0.556,
+     0.615,
+     0.595,
+     0.555,
+     0.554,
+     0.588,
+     0.595,
+     0.606
+    ],
+    "lowest_point_voxels": -0.6967436000000001,
+    "body_turned_degrees": {
+     "at_the_end": 48.4,
+     "at_most": 48.4
+    },
+    "moved_vertically_body_lengths": -0.072028767,
+    "all_numbers_finite": true
+   },
+   "mujoco_engine": {
+    "score": 2.7273090125798154,
+    "score_in_the_transfer_report": 2.7273090125798154,
+    "blew_up": false,
+    "ratio": 0.5213643426009472,
+    "heading_degrees": -21.305808865464574,
+    "body_lengths_per_cycle": [
+     0.165,
+     0.537,
+     0.354,
+     0.349,
+     0.159,
+     0.213,
+     0.23,
+     0.305,
+     0.291,
+     0.124
+    ],
+    "lowest_point_voxels": -0.22892418842250525,
+    "body_turned_degrees": {
+     "at_the_end": 109.5,
+     "at_most": 116.1
+    },
+    "moved_vertically_body_lengths": -0.135962814864571,
+    "all_numbers_finite": true
+   },
+   "heading_in_mujoco_relative_to_2013_degrees": -48.19378142328111
   }
  ]
 }
