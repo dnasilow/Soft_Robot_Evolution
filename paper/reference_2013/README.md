@@ -140,7 +140,7 @@ The same commands with `--arm A` (`search_arm.py`). Its runs are of another kind
 - **A run is one `run_tendon_evolution.py` process**, `--simulator voxelyze2013 --no-age-pareto --pop 30 --gen 1000 --workers 1 --seed <s> --name armA_s<s>`, with its folder in `results/`. All 35 run side by side, each simulating one robot at a time.
 - **A run can be stopped and continued without loss.** It saves a checkpoint after every generation, and the same command goes on from it. Since the correction of 23 November (protocol, section 9.3) the continued run is exactly the run it would have been. So there is no `--restart-incomplete` here: starting the arm again continues what is unfinished.
 - **The launcher owns its runs.** If it ends, however it ends, Windows ends its runs with it, and nothing is lost. A run that ends without finishing is continued by the launcher, six starts at most.
-- **The code must be the tagged one.** The launcher starts the arm only if `run_tendon_evolution.py` and `src/` are identical to the tag `campaign-v2`.
+- **The code must be the tagged one.** The launcher starts the arm only if `run_tendon_evolution.py` and `src/` are identical to the tag `campaign-v2`. Since arm A was complete, the campaign's folder holds the code of `campaign-v3` (PROTOCOL.md, section 9.5), so the launcher would now refuse to start a run of arm A; none is needed, and `--status` reads the finished arm as before.
 - **It can wait for another arm.** With `--after Rc` the launcher makes its checks at once, then waits until arm Rc's launcher has ended. It starts arm A only if arm Rc is complete; if that arm ended unfinished it starts nothing and says so. `--stop` ends the wait.
 - **Its files** are in `results/campaign/`: the launcher's log, its launch records and each run's console output.
 
@@ -151,6 +151,8 @@ Arm R ran from 21 November 23:27 to 22 November 21:40. Its outcome is in [`../ou
 The launcher without a window was tried on 23 November (`dryH_P0_s3`, `s5`): a close request to its progress window left launcher and runs alive; a second start was refused; `--stop` ended the runs and the launcher; the stopped seeds started again and gave the pilot's scores; and after the launcher alone was ended, starting again adopted the runs.
 
 Arm Rc was started on 22 November at 23:19, on the same programs, libraries and settings file as arm R. It was cut short on 23 November at 08:46 (three runs had finished) and its 32 unfinished seeds were started again from the beginning at 09:00, with the launcher described above. The cost switch (`-P 2`) was tried first, on two seeds for ten generations (`dryRc_P2_s3`, `s5`): for all 50 simulated robots of the recorded generation the adjusted fitness is the original one times one minus actuated voxels over 1000, to seven digits. That is the rule read from the 2013 source, which the deposited cost robots follow as well. Under this switch the count in a robot's file name (`numFilled_`) is its number of actuated voxels, not of all voxels.
+
+Arm A ran from 23 November 23:21, started by its launcher when arm Rc was complete, to 25 November 23:36. All 35 runs started from the beginning and ran to their 1000 generations in one piece; none was interrupted or continued. The first run was complete after 22 hours, the median one after 44.5, the last after 48.
 
 ## Files
 

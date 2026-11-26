@@ -1,0 +1,264 @@
+{
+ "made": "2026-11-25T23:53",
+ "code": "campaign-v3-dirty",
+ "logical_processors": 32,
+ "free_before_gb": 28.3,
+ "as_now": {
+  "threads": {
+   "OPENBLAS_NUM_THREADS": null,
+   "OMP_NUM_THREADS": null,
+   "MKL_NUM_THREADS": null
+  },
+  "imports": [
+   [
+    "the interpreter",
+    0.009
+   ],
+   [
+    "numpy 2.2.6",
+    0.739
+   ],
+   [
+    "scipy 1.18.1",
+    1.479
+   ],
+   [
+    "mujoco 3.4.0",
+    1.491
+   ],
+   [
+    "the search's evaluation",
+    1.523
+   ]
+  ],
+  "rows": [
+   {
+    "preset": "cheney2013",
+    "body": "arm R, seed 33 (largest body)",
+    "voxels": 764,
+    "nv": 4584,
+    "reserved_mb": 1044.0,
+    "process_before_gb": 1.527,
+    "process_loaded_gb": 2.566,
+    "score": 2.4199718562703376,
+    "blew_up": false,
+    "seconds": 18.9,
+    "used_mb": 1.165,
+    "most_contacts": 43,
+    "most_constraints": 172,
+    "warnings": 0
+   },
+   {
+    "preset": "cheney2013",
+    "body": "arm R, seed 30 (median body)",
+    "voxels": 675,
+    "nv": 4050,
+    "reserved_mb": 841.0,
+    "process_before_gb": 1.537,
+    "process_loaded_gb": 2.371,
+    "score": 2.3617088590441147,
+    "blew_up": false,
+    "seconds": 32.6,
+    "used_mb": 0.942,
+    "most_contacts": 81,
+    "most_constraints": 204,
+    "warnings": 0
+   },
+   {
+    "preset": "cheney2013",
+    "body": "arm Rc, seed 15 (median body)",
+    "voxels": 363,
+    "nv": 2178,
+    "reserved_mb": 303.0,
+    "process_before_gb": 1.539,
+    "process_loaded_gb": 1.838,
+    "score": 4.012846750974883,
+    "blew_up": false,
+    "seconds": 18.9,
+    "used_mb": 0.429,
+    "most_contacts": 16,
+    "most_constraints": 64,
+    "warnings": 0
+   },
+   {
+    "preset": "cheney2013-floor",
+    "body": "arm R, seed 33 (largest body)",
+    "voxels": 764,
+    "nv": 4584,
+    "reserved_mb": 1044.0,
+    "process_before_gb": 1.534,
+    "process_loaded_gb": 2.572,
+    "score": 4.339844676693354,
+    "blew_up": false,
+    "seconds": 21.1,
+    "used_mb": 0.262,
+    "most_contacts": 0,
+    "most_constraints": 0,
+    "warnings": 0
+   },
+   {
+    "preset": "cheney2013-floor",
+    "body": "arm R, seed 30 (median body)",
+    "voxels": 675,
+    "nv": 4050,
+    "reserved_mb": 841.0,
+    "process_before_gb": 1.54,
+    "process_loaded_gb": 2.373,
+    "score": 3.587843524340287,
+    "blew_up": false,
+    "seconds": 34.0,
+    "used_mb": 0.232,
+    "most_contacts": 0,
+    "most_constraints": 0,
+    "warnings": 0
+   },
+   {
+    "preset": "cheney2013-floor",
+    "body": "arm Rc, seed 15 (median body)",
+    "voxels": 363,
+    "nv": 2178,
+    "reserved_mb": 303.0,
+    "process_before_gb": 1.54,
+    "process_loaded_gb": 1.839,
+    "score": 4.341032087746584,
+    "blew_up": false,
+    "seconds": 21.0,
+    "used_mb": 0.125,
+    "most_contacts": 0,
+    "most_constraints": 0,
+    "warnings": 0
+   }
+  ]
+ },
+ "one_thread": {
+  "threads": {
+   "OPENBLAS_NUM_THREADS": "1",
+   "OMP_NUM_THREADS": "1",
+   "MKL_NUM_THREADS": "1"
+  },
+  "imports": [
+   [
+    "the interpreter",
+    0.009
+   ],
+   [
+    "numpy 2.2.6",
+    0.017
+   ],
+   [
+    "scipy 1.18.1",
+    0.035
+   ],
+   [
+    "mujoco 3.4.0",
+    0.043
+   ],
+   [
+    "the search's evaluation",
+    0.075
+   ]
+  ],
+  "rows": [
+   {
+    "preset": "cheney2013",
+    "body": "arm R, seed 33 (largest body)",
+    "voxels": 764,
+    "nv": 4584,
+    "reserved_mb": 1044.0,
+    "process_before_gb": 0.079,
+    "process_loaded_gb": 1.118,
+    "score": 2.4199718562703376,
+    "blew_up": false,
+    "seconds": 21.7,
+    "used_mb": 1.165,
+    "most_contacts": 43,
+    "most_constraints": 172,
+    "warnings": 0
+   },
+   {
+    "preset": "cheney2013",
+    "body": "arm R, seed 30 (median body)",
+    "voxels": 675,
+    "nv": 4050,
+    "reserved_mb": 841.0,
+    "process_before_gb": 0.089,
+    "process_loaded_gb": 0.922,
+    "score": 2.3617088590441147,
+    "blew_up": false,
+    "seconds": 33.3,
+    "used_mb": 0.942,
+    "most_contacts": 81,
+    "most_constraints": 204,
+    "warnings": 0
+   },
+   {
+    "preset": "cheney2013",
+    "body": "arm Rc, seed 15 (median body)",
+    "voxels": 363,
+    "nv": 2178,
+    "reserved_mb": 303.0,
+    "process_before_gb": 0.091,
+    "process_loaded_gb": 0.387,
+    "score": 4.012846750974883,
+    "blew_up": false,
+    "seconds": 18.7,
+    "used_mb": 0.429,
+    "most_contacts": 16,
+    "most_constraints": 64,
+    "warnings": 0
+   },
+   {
+    "preset": "cheney2013-floor",
+    "body": "arm R, seed 33 (largest body)",
+    "voxels": 764,
+    "nv": 4584,
+    "reserved_mb": 1044.0,
+    "process_before_gb": 0.087,
+    "process_loaded_gb": 1.123,
+    "score": 4.339844676693354,
+    "blew_up": false,
+    "seconds": 20.5,
+    "used_mb": 0.262,
+    "most_contacts": 0,
+    "most_constraints": 0,
+    "warnings": 0
+   },
+   {
+    "preset": "cheney2013-floor",
+    "body": "arm R, seed 30 (median body)",
+    "voxels": 675,
+    "nv": 4050,
+    "reserved_mb": 841.0,
+    "process_before_gb": 0.093,
+    "process_loaded_gb": 0.924,
+    "score": 3.587843524340287,
+    "blew_up": false,
+    "seconds": 30.8,
+    "used_mb": 0.232,
+    "most_contacts": 0,
+    "most_constraints": 0,
+    "warnings": 0
+   },
+   {
+    "preset": "cheney2013-floor",
+    "body": "arm Rc, seed 15 (median body)",
+    "voxels": 363,
+    "nv": 2178,
+    "reserved_mb": 303.0,
+    "process_before_gb": 0.093,
+    "process_loaded_gb": 0.391,
+    "score": 4.341032087746584,
+    "blew_up": false,
+    "seconds": 19.3,
+    "used_mb": 0.125,
+    "most_contacts": 0,
+    "most_constraints": 0,
+    "warnings": 0
+   }
+  ]
+ },
+ "same_score": [
+  6,
+  6
+ ]
+}

@@ -1,0 +1,42 @@
+{
+ "made": "2026-11-26T00:04",
+ "arm": "armA",
+ "no_result_score": 0.001,
+ "unusable_score": 0.0001,
+ "whole_arm": {
+  "generations": 35000,
+  "scores": 1050000,
+  "no_result": 0,
+  "unusable": 0
+ },
+ "windows": [
+  {
+   "generations": 2089,
+   "scores": 62670,
+   "no_result": 0,
+   "unusable": 0,
+   "name": "the three hours before",
+   "start": "2026-11-25 06:00",
+   "end": "2026-11-25 08:50"
+  },
+  {
+   "generations": 795,
+   "scores": 23850,
+   "no_result": 0,
+   "unusable": 0,
+   "name": "around the incident",
+   "start": "2026-11-25 08:50",
+   "end": "2026-11-25 10:15"
+  },
+  {
+   "generations": 1872,
+   "scores": 56160,
+   "no_result": 0,
+   "unusable": 0,
+   "name": "the three hours after",
+   "start": "2026-11-25 10:15",
+   "end": "2026-11-25 13:00"
+  }
+ ],
+ "seeds_with_such_a_score": {}
+}

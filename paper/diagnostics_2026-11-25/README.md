@@ -171,6 +171,47 @@ The same at 0.9 for the 140 champions, `check_time_step.py --champions` (`time_s
 
 The first run of the champions used 14 worker processes. For a body of 800 voxels MuJoCo reserves 1.2 GB, and with arm A's 31 runs on the machine the system ran out of memory it could promise: 86 of the 140 evaluations under `rule2013` failed and were recorded as scores of zero. No run of arm A was harmed. The zeros stood out in the first summary and nothing was concluded from it. The scripts now take no more workers than the free memory allows and stop instead of recording a failure as a score, and the 86 were run again.
 
+**Where a worker's memory goes, measured late the same day**, after arm A had ended (`check_memory.py`, `memory_check.json`). One process is started twice, as the runs start now and with one linear-algebra thread, and reports what it has asked the system for (its private bytes, which is what Windows counts against its limit):
+
+| After loading | As the runs start now | With one linear-algebra thread |
+|---|---|---|
+| the interpreter | 0.01 GB | 0.01 GB |
+| numpy 2.2.6 | 0.74 GB | 0.02 GB |
+| scipy 1.18.1 | 1.48 GB | 0.04 GB |
+| mujoco 3.4.0 | 1.49 GB | 0.04 GB |
+| the search's evaluation | 1.52 GB | 0.07 GB |
+
+Then three champions, chosen by size, each scored through the search's own evaluation under both presets:
+
+| Preset | Body | Voxels | MuJoCo reserves for the body | The evaluation uses at most | The process, as now | With one thread | Seconds, as now and with one thread | Score, both ways |
+|---|---|---|---|---|---|---|---|---|
+| `cheney2013` | Arm R, seed 33, the largest | 764 | 1044 MB | 1.17 MB | 2.57 GB | 1.12 GB | 18.9 and 21.7 | 2.4200 |
+| | Arm R, seed 30, the median | 675 | 841 MB | 0.94 MB | 2.37 GB | 0.92 GB | 32.6 and 33.3 | 2.3617 |
+| | Arm Rc, seed 15, the median | 363 | 303 MB | 0.43 MB | 1.84 GB | 0.39 GB | 18.9 and 18.7 | 4.0128 |
+| `cheney2013-floor` | Arm R, seed 33, the largest | 764 | 1044 MB | 0.26 MB | 2.57 GB | 1.12 GB | 21.1 and 20.5 | 4.3398 |
+| | Arm R, seed 30, the median | 675 | 841 MB | 0.23 MB | 2.37 GB | 0.92 GB | 34.0 and 30.8 | 3.5878 |
+| | Arm Rc, seed 15, the median | 363 | 303 MB | 0.12 MB | 1.84 GB | 0.39 GB | 21.0 and 19.3 | 4.3410 |
+
+- **1.5 GB of every worker is never used.** numpy and scipy each bring their own copy of the linear-algebra library OpenBLAS, and each copy sets aside working memory for every logical processor of the machine, 32 here: 0.73 GB apiece. `OPENBLAS_NUM_THREADS=1` in the process's environment is enough to prevent it.
+- **MuJoCo reserves for a body an amount that grows with the square of its size**, and an evaluation uses about a thousandth of it. A full 10×10×10 block, the largest body the search can make, gets 1687 MB; the process then asks for 3.20 GB as the runs start now and 1.75 GB with one thread (measured separately, body loaded but not scored). Under the 2013 floor rule MuJoCo's own contacts are off and the use is a quarter of what it is on the hard floor.
+- **With one linear-algebra thread the scores are the same to the last digit, 6 of 6,** and the evaluations take as long as before (146 s against 144 s for the six). MuJoCo gave no warning in either case.
+- **The six scores are also the recorded ones**: under `cheney2013` those of the transfer outcome of 24 November, under `cheney2013-floor` those of `built_in_floor_check.json`, to the last digit. They were computed in the campaign's folder after the engine change had joined it.
+- With no run of this project going, the machine could promise 30 GB more at that time (limit 81 GB, of which other programs held 51 GB). Windows manages the size of its page file itself here and enlarges it only as demand builds up, which is how requests came to fail on 25 November.
+- Nothing was changed by this measurement. What to do about it is decision 14 in the plan.
+
+**Did arm A lose an evaluation in the incident?** (`check_lost_evaluations.py`, `lost_evaluations_check.json`.) The requests failed at about 09:39 to 09:42 on 25 November (minutes 44 to 46.5 of the scoring run, whose log ends at 09:42), while 30 runs of arm A were still going. In arm A an evaluation is a run of the 2013 simulator; had one been lost, the search would have gone on with 0.001, the score the 2013 code gives a simulation that left no result. Arm A records the score of every body of every generation, so this can be counted without reading any other score and before the arm is analysed:
+
+| Generations written | Generations | Scores | Exactly 0.001 (no result) | Exactly 0.0001 (unusable) |
+|---|---|---|---|---|
+| The whole arm | 35,000 | 1,050,000 | 0 | 0 |
+| 25 November, 06:00 to 08:50 | 2,089 | 62,670 | 0 | 0 |
+| 25 November, 08:50 to 10:15, around the incident | 795 | 23,850 | 0 | 0 |
+| 25 November, 10:15 to 13:00 | 1,872 | 56,160 | 0 | 0 |
+
+No evaluation of arm A came back without a result, then or at any other time. A run that had crashed instead would have been continued by the launcher and logged; its log has no such line, and all 35 runs went from their first generation to their last in one piece.
+
+**The same failure would not show in a search in the MuJoCo engine.** There the search gives a body a score of 0 whenever its evaluation fails, whatever the reason, and a body whose simulation blew up scores 0 as well. A run that met a memory shortage would go on with false scores and could not be told from a sound one afterwards. No arm has run a search in the MuJoCo engine yet; this belongs to decision 14 and has to be settled before arm D.
+
 ## Files
 
 | File | Purpose |
@@ -182,3 +223,5 @@ The first run of the champions used 14 worker processes. For a body of 800 voxel
 | `floor_champions.txt`, `floor_champions.json` | The 140 champions on the five floors, with every robot |
 | `check_built_in_floor.py`, `built_in_floor_check.json` | The engine's own floor and start against the emulation, champion by champion |
 | `check_time_step.py`, `time_step_check.json`, `time_step_champions.json` | The pilot robots under the new preset at three time steps, and the 140 champions at the 2013 one |
+| `check_memory.py`, `memory_check.json` | What a worker process asks the system for and what an evaluation uses of it, as the runs start now and with one linear-algebra thread |
+| `check_lost_evaluations.py`, `lost_evaluations_check.json` | Arm A's recorded scores counted for the two values that mark a lost or unusable evaluation |

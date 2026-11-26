@@ -154,7 +154,7 @@ How many champions this concerns: none of the deposited no-cost champions, 1 of 
 
 - For the sets it changes little: the medians move by 0.05 and 0.03, and arm Rc against the deposit stays as unclear as before (A12 0.42, p = 0.23).
 - For single robots it matters a great deal: started at its height, a body off the bottom scores higher in half the cases and lower in the other half (8 of 16 in arm Rc, 6 of 12 in the deposit). The score changes by more than half a body length for 15 of the 29, and by as much as 2.8 (deposited run_125: 1.25 on the floor, 4.01 from one voxel up).
-- **It is a difference between the preset and the 2013 experiment that was not known before**, and it concerns the cost condition most. Whether arm D should start its bodies the way the 2013 simulator does is open and has to be settled before arm D starts (PROTOCOL.md, section 9.4, point 9; PLAN.md, decision 11).
+- **It is a difference between the preset and the 2013 experiment that was not known before**, and it concerns the cost condition most. Whether arm D should start its bodies the way the 2013 simulator does was open when this was written (PROTOCOL.md, section 9.4, point 9). It was settled on 25 November: arm D starts them where they are in the workspace, as the 2013 simulator does (PROTOCOL.md, section 9.5; PLAN.md, decision 11).
 
 ### Checks
 
