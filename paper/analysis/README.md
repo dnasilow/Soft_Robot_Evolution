@@ -43,6 +43,7 @@ The interval of the pilot is 0.86 to 1.48 here. The summary of 21 November gave 
 | `render_champions.py` | Videos of an analysed arm's median and best champion next to their 2013 counterparts, simulated in the recording copy of the 2013 simulator, with checks that the frames are the simulation that was scored |
 | `transfer_scores.py` | The transfer outcome: every final champion scored in the MuJoCo engine with the preset's settings (below) |
 | `render_transfer.py` | Videos of one champion in both simulators side by side, with checks that both hold the same body and that the frames are the evaluation that was scored |
+| `compare_presets.py` | The two transfer reports side by side, champion by champion: how many keep more of their score under the second preset, with the paired test of the floor test. Reads the reports only; nothing is simulated |
 
 ## Arm A
 

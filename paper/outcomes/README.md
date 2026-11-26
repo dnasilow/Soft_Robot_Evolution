@@ -285,10 +285,33 @@ The 2013 simulator's floor, read from its source, is a spring on the centre of e
 
 The same three robots as above: left the 2013 simulator, middle the engine on the preset's floor, right the engine under the 2013 floor rule. The first is restored (4.08 against 4.11), the second helped a little (2.93 against 4.12), the third overshoots by rolling over (5.70 against 4.82).
 
+### Under the preset of arm D: the outcome under both presets
+
+PROTOCOL.md, section 9.5, asks for the transfer outcome under both presets of the campaign. The second, `--preset cheney2013-floor`, is the engine with the 2013 simulator's floor rule and with every body started where it is in the workspace: the settings of arm D. Scored on 26 November 2026 with `transfer_scores.py --arms R Rc A --preset cheney2013-floor`, as committed in 2edab20 before its first run under this preset. The report names fa87efa, a later commit of results and documentation, and says "dirty" for the simulator log and the video tool. 200 evaluations: the 175 champions, and the time-step check.
+
+**What is a test here and what is not.** For arms R and Rc and the deposited champions these are the scores of the exploratory test above. That test is how the preset came about, so they do not confirm it. The script gives all 140 the scores they got on 25 November, to the last digit. **Arm A's champions are new to the question.** The floor rule was read from the 2013 source, emulated, built into the engine and fixed in the protocol before arm A was analysed, and none of its robots was used on the way.
+
+| Champions | Transfer ratio on the hard floor (`cheney2013`) | Under the 2013 floor and start (`cheney2013-floor`) | 95% interval of its median | Keep more under the second | Rank agreement between the simulators (95% interval) | Keep all or more |
+|---|---|---|---|---|---|---|
+| Arm R | 0.43 (0.33–0.75) | 1.02 (0.77–1.27) | 0.89–1.24 | 29 of 35 | +0.36 (+0.01 to +0.64) | 20 of 35 |
+| Deposited 2013, no cost | 0.75 (0.51–0.91) | 1.16 (0.76–1.33) | 0.96–1.29 | 28 of 35 | +0.59 (+0.30 to +0.78) | 23 of 35 |
+| Arm Rc | 0.67 (0.46–0.92) | 1.07 (0.84–1.25) | 0.94–1.21 | 29 of 35 | +0.61 (+0.32 to +0.79) | 21 of 35 |
+| Deposited 2013, actuated cost | 0.85 (0.51–1.12) | 1.15 (0.85–1.33) | 0.98–1.26 | 25 of 35 | +0.58 (+0.30 to +0.79) | 22 of 35 |
+| **Arm A** | 0.56 (0.30–0.92) | 1.10 (0.83–1.23) | 0.96–1.22 | 27 of 35 | +0.62 (+0.32 to +0.83) | 22 of 35 |
+
+- **Arm A's champions keep their score under the 2013 floor and start.** A median of 1.10, against 0.56 on the hard floor; 27 of the 35 keep more (p = 0.000002, Wilcoxon signed-rank on the paired ratios, the test used on 25 November). The two simulators now agree on which of them are the better ones: rank agreement +0.62, against +0.29 on the hard floor. This is the finding of 25 November repeated on champions that had no part in it.
+- **It holds for both searches.** On the ratio, arm A against arm R: 1.10 against 1.02, p = 0.66. Against the deposited champions: p = 0.72.
+- **Still not the 2013 simulator robot by robot.** Arm A's ratios run from 0.31 to 1.49. The typical champion is off by 22%, three keep less than half, and the engine gives a tenth more in the median. Nothing blew up. The bodies stand as deep in the floor as in the 2013 simulator: the lowest voxel sinks 0.80 of a voxel in the median.
+- **The time step.** With a quarter of the time step the score of the 25 checked champions changes by 3.9% in the median, by more than 10% for 7, and by 151% for one (arm R, seed 4: 2.07 becomes 5.20). Arm A's five change by 0.5% to 7.3%. Under this preset a shorter step is not only more accurate: the floor rule stops a voxel that the brake would stop within one step, so the step is part of the rule (PROTOCOL.md, section 9.5). A single score is as fragile here as on the hard floor.
+
+`paper/analysis/compare_presets.py` sets the two reports side by side, champion by champion, and gives the column "keep more under the second" and its test (`transfer_presets.json`). Over all five sets 138 of 175 champions keep more of their score under the second preset. These comparisons are descriptive: no criterion, p-values not corrected.
+
 | File | Content |
 |---|---|
-| `transfer.txt`, `transfer.json` | The report as printed and as data, with every champion |
+| `transfer.txt`, `transfer.json` | The report under `--preset cheney2013` as printed and as data, with every champion |
 | `transfer_champions.csv` | One row per champion: both scores, both ratios, the distance moved along each axis, how deep it sank, the time step, and the score at a quarter of the time step where it was checked |
+| `transfer_floor2013.txt`, `transfer_floor2013.json`, `transfer_floor2013_champions.csv` | The same under `--preset cheney2013-floor` |
+| `transfer_presets.json` | The two reports side by side, per set of champions (`paper/analysis/compare_presets.py`) |
 | `videos/transfer_champions.gif`, `.webp`, `.png`, `.json` | The animation, the same in full colour, five moments as a still picture, and the checks and measurements of the three robots |
 
 ## Files
@@ -299,4 +322,5 @@ The same three robots as above: left the 2013 simulator, middle the engine on th
 | `arm_R.json`, `arm_Rc.json`, `arm_A.json` | The same as data: every number, every seed's scores and champion |
 | `arm_R_champion_audit.csv`, `arm_Rc_champion_audit.csv`, `arm_A_champion_audit.csv` | The audits: recorded score and re-simulated distance of each champion |
 | `arm_A_checks.json` | The checks on arm A as data (`paper/analysis/check_arm_A.py`) |
-| `transfer.txt`, `transfer.json`, `transfer_champions.csv` | The transfer outcome (section above) |
+| `transfer.txt`, `transfer.json`, `transfer_champions.csv` | The transfer outcome under `--preset cheney2013` (section above) |
+| `transfer_floor2013.txt`, `transfer_floor2013.json`, `transfer_floor2013_champions.csv`, `transfer_presets.json` | The transfer outcome under `--preset cheney2013-floor`, and the two side by side |
