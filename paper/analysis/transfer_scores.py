@@ -8,6 +8,11 @@ usage, from the project folder:
     python paper/analysis/transfer_scores.py --arms R Rc
         the champions of the named arms and the deposited champions of their conditions.
         Refuses an arm that has not been analysed (no report in paper/outcomes/).
+    python paper/analysis/transfer_scores.py --arms R Rc A --preset cheney2013-floor
+        the same under the other preset of the campaign, the settings of arm D: the 2013
+        simulator's floor rule, and every body started where it is in the workspace
+        (PROTOCOL.md, section 9.5, which asks for the outcome under both presets). Written as
+        transfer_floor2013.*; the report under --preset cheney2013 is not touched.
     python paper/analysis/transfer_scores.py --rehearsal pilot10_P0_s --generation 10
         the same scoring for runs that are NOT an arm (pilots, trials)
 
@@ -56,13 +61,15 @@ import analyse_arm as aa                                      # noqa: E402
 import protocol_stats as ps                                   # noqa: E402
 from src.evolution import cheney2013 as c13                   # noqa: E402
 
-PRESET = 'cheney2013'
+PRESET = 'cheney2013'                     # the preset the outcome was fixed with (section 9.4)
+FLOOR_PRESET = 'cheney2013-floor'         # the other preset of the campaign, arm D's settings (section 9.5)
 SLIP_SPEED, STICK_SPEED = 0.02, 0.01      # the defaults of --slip-speed and --stick-speed
 NO_EARLY_STOP = -1e9                      # a robot is never judged a non-mover (section 9.4, point 3)
 CHECK_FRACTION = 0.25                     # the time-step check: a quarter of the engine's step
 CHECK_CHAMPIONS = 5                       # ... on the first five champions of each set
 REPLAY = os.path.join(ROOT, 'paper', 'reference_2013', 'replay_2013_simulator.csv')
 DIAGNOSTIC = os.path.join(ROOT, 'paper', 'diagnostics_2026-11-18', 'replay2_cheney_results.json')
+FLOOR_TEST = os.path.join(ROOT, 'paper', 'diagnostics_2026-11-25', 'built_in_floor_check.json')
 CACHE = os.path.join(ROOT, 'results', 'transfer', 'evaluations.json')
 CONDITIONS = {'noCost': 'no cost', 'costNumActuated': 'actuated cost'}
 
@@ -483,6 +490,24 @@ def against_diagnostic(rows_by_set, diagnostic=DIAGNOSTIC):
     return out or None
 
 
+def against_floor_test(rows_by_set, record=FLOOR_TEST):
+    """Under --preset cheney2013-floor the champions of arms R and Rc and of the deposit were scored
+    once before, on 25 November 2026, through the search's own worker function
+    (paper/diagnostics_2026-11-25/check_built_in_floor.py). Where a champion was scored then, the
+    two scores are compared."""
+    if not os.path.isfile(record):
+        return None
+    with open(record, encoding='utf-8') as f:
+        earlier = {(r['set'], r['label']): r['score'] for r in json.load(f)['rows'] if r['preset'] == 'new'}
+    out = {}
+    for name, rows in rows_by_set.items():
+        differences = [abs(r['score'] - earlier[(name, r['label'])]) for r in rows if (name, r['label']) in earlier]
+        if differences:
+            out[name] = {'compared': len(differences), 'identical': int(sum(v <= 1e-9 for v in differences)),
+                         'largest_difference': float(max(differences))}
+    return out or None
+
+
 # --------------------------------------------------------------------------------------------
 # the report
 # --------------------------------------------------------------------------------------------
@@ -491,10 +516,12 @@ def q(v, fmt='.2f'):
 
 
 def render(report):
+    preset = report.get('preset', PRESET)
+    as_fixed = preset == PRESET                  # the outcome as section 9.4 fixed it; otherwise section 9.5
     L = [report['title'],
          f"Made {report['made']} with code {report['code']}; {report['settings']['n_boot']} bootstrap resamples, seed "
          f"{report['settings']['seed']}.",
-         'Engine: this project\'s MuJoCo engine with the settings of --preset cheney2013, one evaluation of 0.25 s per '
+         f'Engine: this project\'s MuJoCo engine with the settings of --preset {preset}, one evaluation of 0.25 s per '
          'champion, early stop off.', '']
     for note in report.get('notes', []):
         L.append(f'NOTE: {note}')
@@ -524,7 +551,10 @@ def render(report):
                      f"{s['a12']:.2f} ({s['a12_interval'][0]:.2f}-{s['a12_interval'][1]:.2f})  {aa.pv(s['p']):>8}")
         return T
 
-    L += ['', 'SETS OF CHAMPIONS, every body set on the floor: the preset as it is, the outcome named in section 4']
+    L += ['', 'SETS OF CHAMPIONS, every body set on the floor: the preset as it is, the outcome named in section 4'
+          if as_fixed else
+          'SETS OF CHAMPIONS, under the 2013 floor rule and every body started where it is in the workspace: the preset '
+          'as it is, the settings of arm D (section 9.5)']
     L += table(report['sets'])
     if report.get('comparisons'):
         L += ['', '  Comparisons on the transfer ratio (descriptive: no criterion, p not corrected)']
@@ -544,8 +574,8 @@ def render(report):
         for name, s in extra:
             L.append(f"  {set_title(name):<30}  recorded {q(s['recorded_2013'])}; MuJoCo score over the recorded score "
                      f"{q(s['ratio_to_recorded_2013'])}")
-    L += ['', 'Recorded with the evaluations on the floor: how deep the lowest voxel sank below the floor (voxels), and the '
-              'vertical part of the distance moved (share of the score).']
+    L += ['', f"Recorded with {'the evaluations on the floor' if as_fixed else 'these evaluations'}: how deep the lowest "
+              'voxel sank below the floor (voxels), and the vertical part of the distance moved (share of the score).']
     for name, s in report['sets'].items():
         if 'sunk' in s:
             L.append(f"  {set_title(name):<30}  sank {q(s['sunk'])}; vertical share "
@@ -564,6 +594,10 @@ def render(report):
         if changes:
             L.append(f"  Change in absolute value: median {100 * float(np.median(changes)):.1f}%, largest "
                      f"{100 * max(changes):.1f}% ({len(changes)} champions).")
+        if not as_fixed:
+            L.append('  Under this preset the floor rule itself depends on the time step (section 9.5): it stops a voxel '
+                     'that the brake would stop within one step. A shorter step therefore changes the rule as well as the '
+                     'accuracy.')
 
     if report.get('diagnostic'):
         L += ['', 'AGAINST THE DIAGNOSTIC OF 18 NOVEMBER 2026 (the same robots, the same settings, other code)']
@@ -571,8 +605,16 @@ def render(report):
             L.append(f"  {set_title(name):<30}  {d['identical']} of {d['compared']} scores identical; largest difference "
                      f"{d['largest_difference']:.2e}")
 
+    if report.get('floor_test'):
+        L += ['', 'AGAINST THE SCORES OF 25 NOVEMBER 2026 (the same robots under the same preset, scored then through the '
+                  'search\'s own worker function)']
+        for name, d in report['floor_test'].items():
+            L.append(f"  {set_title(name):<30}  {d['identical']} of {d['compared']} scores identical; largest difference "
+                     f"{d['largest_difference']:.2e}")
+
     L += ['', 'PER CHAMPION. "placed": the score when the body is started where it is in the workspace (only bodies that '
-              'do not touch its bottom).']
+              'do not touch its bottom).' if as_fixed else
+          'PER CHAMPION. Every body is started where it is in the workspace; "lowest layer" says how many voxels up that is.']
     L.append(f"{'set':<30}  {'champion':<10}  {'voxels':>6}  {'lowest layer':>12}  {'2013 sim':>8}  {'MuJoCo':>7}  {'ratio':>6}  "
              f"{'placed':>7}  {'ratio':>6}  {'moved x':>8}  {'moved y':>8}  {'moved z':>8}  {'sank':>5}  {'time step':>9}  note")
     for r in report['champions']:
@@ -626,9 +668,10 @@ def comparisons_of(by_set, arms, n_boot=None, seed=None):
     return out
 
 
-def build_report(sets, results, keys, n_boot=None, seed=None, arms=()):
+def build_report(sets, results, keys, n_boot=None, seed=None, arms=(), preset=PRESET):
     """sets: {name: champions}; results: {key: evaluation}; keys: {(set, label, which): key} with which
-    'floor' (every champion), 'short' (the time-step check) or 'placed' (bodies off the bottom)."""
+    'floor' (every champion, under the preset as it is), 'short' (the time-step check) or 'placed'
+    (bodies off the bottom, where the preset sets every body on the floor)."""
     champions, by_set = [], {}
     for name, entries in sets.items():
         by_set[name] = []
@@ -652,15 +695,42 @@ def build_report(sets, results, keys, n_boot=None, seed=None, arms=()):
             champions.append(row)
             by_set[name].append(row)
     enough = {name: rows for name, rows in by_set.items() if len(rows) >= 3}
-    report = {'sets': {name: summarise(rows, n_boot, seed) for name, rows in enough.items()},
+    report = {'preset': preset,
+              'sets': {name: summarise(rows, n_boot, seed) for name, rows in enough.items()},
               'comparisons': comparisons_of(by_set, arms, n_boot, seed), 'champions': champions,
-              'step_check': step_check(champions), 'diagnostic': against_diagnostic(by_set),
+              'step_check': step_check(champions),
+              'diagnostic': against_diagnostic(by_set) if preset == PRESET else None,
+              'floor_test': against_floor_test(by_set) if preset == FLOOR_PRESET else None,
               'off_the_floor': {name: int(sum('placed' in r for r in rows)) for name, rows in enough.items()}}
     if any(report['off_the_floor'].values()):
         placed = {name: as_placed(rows) for name, rows in by_set.items()}
         report['sets_as_placed'] = {name: summarise(placed[name], n_boot, seed) for name in enough}
         report['comparisons_as_placed'] = comparisons_of(placed, arms, n_boot, seed)
     return report
+
+
+def plan(sets, params, code, with_step_check=True):
+    """Every evaluation a report needs. -> (jobs, keys): jobs as evaluate_all takes them, keys
+    {(set, label, which): key}. Each champion once under the preset as it is ('floor'); the first
+    CHECK_CHAMPIONS of each set once more with a shorter time step ('short'); and, where the preset
+    sets every body on the floor, each body that does not touch the bottom of the workspace once
+    more from its height ('placed'). A preset that starts bodies where they are needs no second
+    evaluation for that."""
+    set_on_the_floor = params.get('start', 'floor') == 'floor'
+    jobs, keys = [], {}
+    for set_name, champions in sets.items():
+        for i, c in enumerate(champions):
+            height = lowest_layer(c['grid']) * params['voxel_size']
+            variants = [('floor', params, 1.0, '')]
+            if i < CHECK_CHAMPIONS and with_step_check:
+                variants.append(('short', params, CHECK_FRACTION, ', short step'))
+            if height > 0 and set_on_the_floor:
+                variants.append(('placed', dict(params, initial_height=height), 1.0, ', started at its height'))
+            for which, settings, fraction, suffix in variants:
+                key = evaluation_key(c['grid'], settings, fraction, code)
+                keys[(set_name, c['label'], which)] = key
+                jobs.append((key, c['grid'], settings, fraction, f"{set_title(set_name)}, {c['label']}{suffix}"))
+    return jobs, keys
 
 
 def finish(report, name, out_dir):
@@ -686,6 +756,9 @@ def main(argv=None):
     what.add_argument('--arms', nargs='+', choices=sorted(aa.ARMS), help='analysed arms whose champions are scored')
     what.add_argument('--rehearsal', metavar='PREFIX', help='runs that are not an arm: the start of their folder names')
     ap.add_argument('--generation', type=int, help='rehearsal only: the generation whose champions are scored')
+    ap.add_argument('--preset', default=PRESET, choices=(PRESET, FLOOR_PRESET),
+                    help=f'the engine settings (default {PRESET}, the outcome as fixed in section 9.4; {FLOOR_PRESET}: '
+                         f'the settings of arm D, section 9.5)')
     ap.add_argument('--workers', type=int, default=6, help='evaluations side by side (default 6)')
     ap.add_argument('--no-step-check', action='store_true', help=argparse.SUPPRESS)
     ap.add_argument('--results-dir', help=argparse.SUPPRESS)
@@ -698,11 +771,18 @@ def main(argv=None):
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(errors='replace')
 
+    import run_tendon_evolution as runner
     import search_arm
-    # The engine must be the campaign's: the code of one of its tags. Under --preset cheney2013,
-    # which is what this outcome is scored with, every one of them computes the same scores
-    # (PROTOCOL.md, section 9.5), so evaluations are kept under the first tag's name.
+    # The engine must be the campaign's: the code of one of its tags. Under --preset cheney2013
+    # every one of them computes the same scores (PROTOCOL.md, section 9.5), so those evaluations
+    # are kept under the first tag's name. The other preset exists from the second tag on; its
+    # evaluations are kept under the tag the code is at.
     tag = search_arm.campaign_tag_of_code()
+    if a.preset not in runner._PRESETS:
+        print(f'This code has no preset {a.preset}. Nothing was computed.')
+        return 2
+    as_fixed = a.preset == PRESET
+    stem = 'transfer' if as_fixed else 'transfer_floor2013'
     differs = None if tag else ('run_tendon_evolution.py or src/ are not those of a code tag of the campaign ('
                                 + ', '.join(search_arm.ENGINE_TAGS) + ').')
     notes = []
@@ -723,8 +803,8 @@ def main(argv=None):
             if reference not in sets:
                 sets[reference] = deposited_champions(aa.ARMS[arm]['condition'], a.deposit_dir, a.replay)
         title = (f"TRANSFER: the final champions of {', '.join('arm ' + x for x in a.arms)} and the deposited 2013 "
-                 f"champions, scored in the MuJoCo engine.")
-        name = 'transfer'
+                 f"champions, scored in the MuJoCo engine{'' if as_fixed else ' under --preset ' + a.preset}.")
+        name = stem
     else:
         if not a.generation:
             ap.error('--rehearsal needs --generation')
@@ -737,24 +817,12 @@ def main(argv=None):
             return 2
         sets[f'rehearsal_{a.rehearsal}'] = champions
         title = (f"REHEARSAL, not an arm: the generation-{a.generation} champions of the runs {a.rehearsal}<seed>, "
-                 f"scored in the MuJoCo engine.")
-        name = f'transfer_rehearsal_{a.rehearsal}{a.generation}'
+                 f"scored in the MuJoCo engine{'' if as_fixed else ' under --preset ' + a.preset}.")
+        name = f'{stem}_rehearsal_{a.rehearsal}{a.generation}'
 
-    params = worker_parameters(evaluator_arguments())
-    code = search_arm.ENGINE_TAGS[0] if tag else aa.code_version()
-    jobs, keys = [], {}
-    for set_name, champions in sets.items():
-        for i, c in enumerate(champions):
-            height = lowest_layer(c['grid']) * params['voxel_size']
-            variants = [('floor', params, 1.0, '')]
-            if i < CHECK_CHAMPIONS and not a.no_step_check:
-                variants.append(('short', params, CHECK_FRACTION, ', short step'))
-            if height > 0:
-                variants.append(('placed', dict(params, initial_height=height), 1.0, ', started at its height'))
-            for which, settings, fraction, suffix in variants:
-                key = evaluation_key(c['grid'], settings, fraction, code)
-                keys[(set_name, c['label'], which)] = key
-                jobs.append((key, c['grid'], settings, fraction, f"{set_title(set_name)}, {c['label']}{suffix}"))
+    params = worker_parameters(evaluator_arguments(preset=a.preset))
+    code = (search_arm.ENGINE_TAGS[0] if as_fixed else tag) if tag else aa.code_version()
+    jobs, keys = plan(sets, params, code, not a.no_step_check)
 
     from run_tendon_evolution import _prevent_sleep
     awake = _prevent_sleep()
@@ -763,7 +831,7 @@ def main(argv=None):
     finally:
         awake()
     print()
-    report = build_report(sets, results, keys, arms=a.arms or ())
+    report = build_report(sets, results, keys, arms=a.arms or (), preset=a.preset)
     report['title'], report['notes'] = title, notes
     finish(report, name, a.out_dir)
     return 0

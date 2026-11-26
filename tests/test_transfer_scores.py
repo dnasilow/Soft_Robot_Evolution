@@ -494,5 +494,103 @@ class TestStatistics(unittest.TestCase):
             self.assertIsNone(ts.against_diagnostic({}, os.path.join(tmp, 'missing.json')))
 
 
+class TestTheOtherPreset(unittest.TestCase):
+    """PROTOCOL.md, section 9.5: the outcome is reported under both presets of the campaign. The
+    second one, the settings of arm D, is the 2013 simulator's floor rule with every body started
+    where it is in the workspace."""
+
+    def made_up(self):
+        sets, results, keys = {}, {}, {}
+        for name in ('arm_A', 'deposit_noCost'):
+            sets[name] = []
+            for i in range(3):
+                label = f'seed {i + 1}'
+                sets[name].append({'set': name, 'label': label, 'file': 'f', 'evolved': 2.0 + i, 'recorded_2013': None,
+                                   'grid': small_body(i)})
+                for which in ('floor', 'short'):
+                    key = f'{name}{i}{which}'
+                    keys[(name, label, which)] = key
+                    results[key] = {'key': key, 'score': 1.0 + i, 'blew_up': False, 'error': None,
+                                    'moved': [1.0 + i, 0.0, 0.0], 'time_step': 1e-5, 'steps': 1, 'sunk': 0.7,
+                                    'consistent': True, 'seconds': 0.0}
+        return sets, results, keys
+
+    def test_it_differs_from_the_first_in_floor_and_start_only(self):
+        a, b = ts.evaluator_arguments(), ts.evaluator_arguments(preset=ts.FLOOR_PRESET)
+        self.assertEqual({k for k in a if a[k] != b[k]}, {'floor_contact', 'start'})
+        self.assertEqual((a['floor_contact'], a['start']), ('voxelyze', 'floor'))
+        self.assertEqual((b['floor_contact'], b['start']), ('rule2013', 'workspace'))
+
+    def test_a_body_off_the_bottom_is_scored_once_where_the_preset_starts_it_there(self):
+        up = np.zeros((10, 10, 10), np.int8)
+        up[4:6, 4:6, 2:4] = 1
+        sets = {'arm_A': [{'label': 'seed 1', 'grid': small_body()}, {'label': 'seed 2', 'grid': up}]}
+        first = {'voxel_size': 0.01, 'start': 'floor'}
+        jobs, keys = ts.plan(sets, first, 'tag')
+        self.assertEqual(sorted(k[2] for k in keys), ['floor', 'floor', 'placed', 'short', 'short'])
+        placed = [j for j in jobs if j[0] == keys[('arm_A', 'seed 2', 'placed')]][0]
+        self.assertAlmostEqual(placed[2]['initial_height'], 0.02)                 # two voxels up
+        other = {'voxel_size': 0.01, 'start': 'workspace'}
+        jobs, keys = ts.plan(sets, other, 'tag')
+        self.assertEqual(sorted(k[2] for k in keys), ['floor', 'floor', 'short', 'short'])
+        self.assertEqual(len({j[0] for j in jobs}), 4)
+        self.assertEqual(sorted(k[2] for k in ts.plan(sets, other, 'tag', with_step_check=False)[1]), ['floor', 'floor'])
+        # the settings and the code tag are part of what an evaluation is
+        one = ('arm_A', 'seed 1', 'floor')
+        self.assertNotEqual(ts.plan(sets, first, 'tag')[1][one], keys[one])
+        self.assertNotEqual(ts.plan(sets, other, 'another tag')[1][one], keys[one])
+
+    def test_the_report_names_the_preset_and_has_one_table(self):
+        sets, results, keys = self.made_up()
+        report = ts.build_report(sets, results, keys, n_boot=100, arms=('A',), preset=ts.FLOOR_PRESET)
+        self.assertEqual(report['preset'], ts.FLOOR_PRESET)
+        self.assertNotIn('sets_as_placed', report)
+        self.assertIsNone(report['diagnostic'])                # the diagnostic of 18 November was under the first preset
+        report.update(title='TITLE', notes=[], made='now', code='code', settings={'n_boot': 100, 'seed': 0})
+        text = ts.render(report)
+        for expected in ('--preset cheney2013-floor,', 'under the 2013 floor rule and every body started where it is',
+                         'the floor rule itself depends on the time step', 'Recorded with these evaluations'):
+            self.assertIn(expected, text)
+        self.assertNotIn('every body set on the floor', text)
+
+    def test_the_first_presets_report_says_what_it_said(self):
+        sets, results, keys = self.made_up()
+        report = ts.build_report(sets, results, keys, n_boot=100, arms=('A',))
+        self.assertEqual(report['preset'], ts.PRESET)
+        self.assertIsNone(report['floor_test'])
+        report.update(title='TITLE', notes=[], made='now', code='code', settings={'n_boot': 100, 'seed': 0})
+        text = ts.render(report)
+        for expected in ('--preset cheney2013,', 'every body set on the floor: the preset as it is, the outcome named in '
+                         'section 4', 'Recorded with the evaluations on the floor'):
+            self.assertIn(expected, text)
+        self.assertNotIn('depends on the time step', text)
+        del report['preset']                                   # a report made before the second preset existed
+        self.assertEqual(ts.render(report), text)
+
+    def test_against_the_scores_of_25_november(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'f.json')
+            with open(path, 'w') as f:
+                json.dump({'rows': [{'preset': 'new', 'set': 'arm_R', 'label': 'seed 1', 'score': 1.0},
+                                    {'preset': 'new', 'set': 'arm_R', 'label': 'seed 2', 'score': 2.5},
+                                    {'preset': 'old', 'set': 'arm_R', 'label': 'seed 3', 'score': 9.0}]}, f)
+            found = ts.against_floor_test({'arm_R': rows([4.0, 5.0, 6.0], [1.0, 2.0, 3.0]),
+                                           'arm_A': rows([4.0], [1.0], name='arm_A')}, path)
+            self.assertEqual(found, {'arm_R': {'compared': 2, 'identical': 1, 'largest_difference': 0.5}})
+            self.assertIsNone(ts.against_floor_test({'arm_A': rows([4.0], [1.0], name='arm_A')}, path))
+            self.assertIsNone(ts.against_floor_test({}, os.path.join(tmp, 'missing.json')))
+
+    def test_code_without_the_preset_is_refused(self):
+        import run_tendon_evolution as runner
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(runner._PRESETS), contextlib.redirect_stdout(out):
+            del runner._PRESETS[ts.FLOOR_PRESET]
+            code = ts.main(['--arms', 'R', '--preset', ts.FLOOR_PRESET, '--outcomes-dir', tmp,
+                            '--out-dir', os.path.join(tmp, 'out'), '--cache', os.path.join(tmp, 'cache.json')])
+            self.assertFalse(os.path.exists(os.path.join(tmp, 'out')))
+        self.assertEqual(code, 2)
+        self.assertIn('has no preset', out.getvalue())
+
+
 if __name__ == '__main__':
     unittest.main()
