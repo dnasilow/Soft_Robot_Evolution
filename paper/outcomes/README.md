@@ -126,7 +126,7 @@ Checks made on the result, by `paper/analysis/check_arm_A.py` unless another sou
 | Check | Result |
 |---|---|
 | The scores recomputed from the raw generation files, the deposit's archive and arm R's curve files, with readers of their own | Medians 4.2083, 4.3931 and 4.4103; ratios 0.9579 and 0.9542; A12 0.3812 and 0.4245. These are the report's numbers, and every seed's score at the three generations is the report's |
-| Each run's record of itself (`manifest.json`) | All 35 were started once, at 23:21:05 on 23 November, with the same command and settings but for the seed, from commit aa83d02 (`campaign-v2` and one commit of documentation). Each has its 1000 generations, and no checkpoint is left over |
+| Each run's record of itself (`manifest.json`) | All 35 were started once, at 23:21:05 on 23 November, with the same command and settings but for the seed, from commit aa83d02. That is the code of `campaign-v2`: the one commit after the tag taught the launcher to wait for another arm and touched nothing that computes a run. Each has its 1000 generations, and no checkpoint is left over |
 | The simulator | By its checksum it is the program arms R and Rc ran with and the one on this machine today. The settings template is unchanged |
 | Seed 1 against the pilot of 21 November (`pilot_vx2013_s1`: 100 generations, 30 simulations side by side, the code before the correction of PROTOCOL.md, section 9.3) | Identical: all 30 scores in each of the 100 generations |
 | Each champion against its run | In all 35 the champion is the last point of its run's curve, the best robot of the whole run, and the robot the run itself recorded as its best |
