@@ -82,6 +82,62 @@ Checks made on the result:
 
 The transfer scores of this arm's champions are in the section "Transfer" below.
 
+## Arm A: this project's own search in the original 2013 simulator
+
+35 runs of this project's CPPN-NEAT as it is (`run_tendon_evolution.py --simulator voxelyze2013 --no-age-pareto`), with every body scored by the 2013 simulator built from the authors' source: seeds 1 to 35, population 30, 1000 generations, no cost. Against arm R only the search differs; the simulator is the same program, by its checksum. Started by its launcher on 23 November 2026 at 23:21, when arm Rc was complete; complete on 25 November at 23:36. The runs took 22 to 48 hours (median 44.5), and none was interrupted or continued. Their code is that of the tag `campaign-v2`. Analysed once, on 26 November at 17:35, after the author's go-ahead, with `analyse_arm.py` as it was committed on 23 November, before the arm started (e33bd6d). The statistics it calls are unchanged since then; their module gained two functions for the transfer outcome on 24 November. The report names commit e9d6eca and says "dirty" for `MUJOCO_LOG.TXT` only.
+
+**At generation 1000 arm A is not distinguishable from the deposited 2013 runs, and not from arm R either. Reproduction within 10% is not shown.** An independent implementation of the search reaches the 2013 scores in the 2013 simulator to within what 35 runs can resolve, but it starts more slowly and its runs end further apart.
+
+| Champion score, best so far | Arm A, median (quartiles) | Deposited 2013, median (quartiles) | Ratio of medians (95% interval) | A12 (95% interval) | p (Mann-Whitney) |
+|---|---|---|---|---|---|
+| Generation 1000, primary | 4.21 (3.54–4.86) | 4.39 (4.20–5.07) | 0.96 (0.83–1.07) | 0.38 (0.25–0.52) | 0.089 |
+| Generation 300 | 3.74 (2.95–4.26) | 3.70 (3.52–4.11) | 1.01 (0.85–1.11) | 0.45 (0.31–0.59) | 0.48 |
+| Generation 100 | 2.61 (2.19–3.26) | 3.26 (2.75–3.59) | 0.80 (0.71–0.94) | 0.29 (0.17–0.42) | 0.0024 |
+
+Against arm R, the original search in the same simulator. Generation 1000 is the fifth primary comparison of the protocol:
+
+| Champion score, best so far | Arm A, median (quartiles) | Arm R, median (quartiles) | Ratio of medians (95% interval) | A12 (95% interval) | p (Mann-Whitney) |
+|---|---|---|---|---|---|
+| Generation 1000, primary | 4.21 (3.54–4.86) | 4.41 (4.27–4.71) | 0.95 (0.84–1.07) | 0.42 (0.29–0.57) | 0.28 |
+| Generation 300 | 3.74 (2.95–4.26) | 3.91 (3.49–4.19) | 0.96 (0.82–1.07) | 0.44 (0.30–0.58) | 0.39 |
+| Generation 100 | 2.61 (2.19–3.26) | 3.31 (2.81–3.78) | 0.79 (0.69–0.92) | 0.30 (0.18–0.42) | 0.0034 |
+
+- **Primary outcome, against the deposit.** Ratio of medians 0.958, 95% interval 0.834 to 1.068. It contains 1 and is not inside 0.90 to 1.10. A perfect reproduction would have met the criterion in 66% of cases (PROTOCOL.md, section 9.2). Arm R, the original code, met it (1.004, 0.942 to 1.048).
+- **Primary outcome, against arm R.** Ratio of medians 0.954, 95% interval 0.843 to 1.065.
+- **What "not distinguishable" leaves open.** The data fit a search that is as good as the original one, and they fit one that ends up to a sixth lower. They do not show that the two are equal.
+- **Holm.** Final only when arm D is in. For the comparison with the deposit it will lie between 0.089 and 0.44, for the one with arm R between 0.28 and 1. None of the four comparisons made so far can fall below 0.05 after the correction: their smallest uncorrected p is 0.089.
+- **A slower start.** At generation 100 arm A stands at 0.80 of the deposited runs (interval 0.71 to 0.94, which excludes 1; p = 0.0024) and at 0.79 of arm R. By generation 300 the medians have met (ratio 1.01). These are secondary outcomes, and their p-values are not corrected.
+- **A wider spread at the end.** The middle half of arm A's runs spans 1.32 (3.54 to 4.86), against 0.87 in the deposit and 0.45 in arm R. Seven of the 35 runs end below the lowest deposited run (3.39), and none ends above the highest (5.95). This is a description: the protocol has no test of spread.
+
+The body of each run's final champion:
+
+| Measure | Arm A, median (quartiles) | Deposited 2013, median (quartiles) | A12 (95% interval) | p | p (Holm, five measures) |
+|---|---|---|---|---|---|
+| Voxels | 683 (566–703) | 652 (594–698) | 0.49 (0.35–0.62) | 0.84 | 1.00 |
+| Footprint, cells | 26 (10–40) | 26 (14–40) | 0.49 (0.36–0.63) | 0.90 | 1.00 |
+| Fill of the bounding box | 0.69 (0.59–0.70) | 0.65 (0.59–0.70) | 0.52 (0.38–0.66) | 0.79 | 1.00 |
+| Muscle fraction | 0.97 (0.92–0.99) | 1.00 (0.96–1.00) | 0.32 (0.20–0.45) | 0.0073 | 0.036 |
+| Two or more separate feet | 5 of 35 | 1 of 35 | | 0.20 (Fisher) | 0.79 |
+
+The champions are the kind of body the 2013 runs produced: compact blocks of about 680 voxels, nearly all muscle, most of them standing on one foot. One measure differs after the correction: arm A's champions carry a little passive tissue where the 2013 champions carry almost none (muscle fraction 0.97 against 1.00, corrected p = 0.036).
+
+Checks made on the result, by `paper/analysis/check_arm_A.py` unless another source is named:
+
+| Check | Result |
+|---|---|
+| The scores recomputed from the raw generation files, the deposit's archive and arm R's curve files, with readers of their own | Medians 4.2083, 4.3931 and 4.4103; ratios 0.9579 and 0.9542; A12 0.3812 and 0.4245. These are the report's numbers, and every seed's score at the three generations is the report's |
+| Each run's record of itself (`manifest.json`) | All 35 were started once, at 23:21:05 on 23 November, with the same command and settings but for the seed, from commit aa83d02 (`campaign-v2` and one commit of documentation). Each has its 1000 generations, and no checkpoint is left over |
+| The simulator | By its checksum it is the program arms R and Rc ran with and the one on this machine today. The settings template is unchanged |
+| Seed 1 against the pilot of 21 November (`pilot_vx2013_s1`: 100 generations, 30 simulations side by side, the code before the correction of PROTOCOL.md, section 9.3) | Identical: all 30 scores in each of the 100 generations |
+| Each champion against its run | In all 35 the champion is the last point of its run's curve, the best robot of the whole run, and the robot the run itself recorded as its best |
+| Audit: each champion written to a robot file as the search wrote it, and simulated again in the 2013 simulator (`arm_A_champion_audit.csv`) | All 35 reproduce their recorded score, to the six digits the simulator prints |
+| Evaluations lost in the memory shortage of 25 November, counted before the analysis without reading any other score (`../diagnostics_2026-11-25/check_lost_evaluations.py`) | None. Of the arm's 1,050,000 recorded scores none has the value a simulation without a result is given |
+| Ties for the champion | In one run (seed 30) two different bodies share the top score, 2.552; both give it again when simulated. The first is taken, as the rule says (PROTOCOL.md, section 9.1, point 2) |
+
+What it changes in the reading so far. The pilot of 21 November, one run of this search in the 2013 simulator, stood at 2.05 at generation 100, where the deposited median is 3.26. Seed 1 of arm A is that run, score for score, and it is the fourth-lowest of the 35 at generation 100. The arm as a whole is slower at first (2.61 against 3.26) and has caught up within the uncertainty by generation 1000. On the ladder of the protocol, replacing the search moves the median final score by −5% against arm R, with an interval from −16% to +7%. What replacing the simulator does is the question of arm D.
+
+The video of this arm's champions and their transfer scores are in the sections below.
+
 ## What the champions do: videos
 
 Made on 24 November 2026 as a check that the scores describe real locomotion. `paper/analysis/render_champions.py` simulates each robot again in a copy of the 2013 simulator that also records where every voxel is, and draws the frames. For each arm: the champion with the median score and the champion with the best score, below the 2013 champions chosen by the same rule. A robot is 1 cm long and an evaluation lasts a quarter of a second, so the motion is slowed 24 times. The floor's squares are one body length wide, the unit of the score. Red and green are the two muscle types, light blue is soft passive tissue, dark blue stiff.
@@ -221,7 +277,8 @@ The same three robots as above: left the 2013 simulator, middle the engine on th
 
 | File | Content |
 |---|---|
-| `arm_R.txt`, `arm_Rc.txt` | The reports as printed, with every seed |
-| `arm_R.json`, `arm_Rc.json` | The same as data: every number, every seed's scores and champion |
-| `arm_R_champion_audit.csv`, `arm_Rc_champion_audit.csv` | The audits: recorded score and re-simulated distance of each champion |
+| `arm_R.txt`, `arm_Rc.txt`, `arm_A.txt` | The reports as printed, with every seed |
+| `arm_R.json`, `arm_Rc.json`, `arm_A.json` | The same as data: every number, every seed's scores and champion |
+| `arm_R_champion_audit.csv`, `arm_Rc_champion_audit.csv`, `arm_A_champion_audit.csv` | The audits: recorded score and re-simulated distance of each champion |
+| `arm_A_checks.json` | The checks on arm A as data (`paper/analysis/check_arm_A.py`) |
 | `transfer.txt`, `transfer.json`, `transfer_champions.csv` | The transfer outcome (section above) |

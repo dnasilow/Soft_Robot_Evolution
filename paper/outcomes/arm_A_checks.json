@@ -1,0 +1,832 @@
+{
+ "arm": "A",
+ "by_hand": {
+  "runs": {
+   "arm_A": 35,
+   "deposited": 35,
+   "arm_R": 35
+  },
+  "generations": {
+   "1000": {
+    "arm_median": 4.2083,
+    "deposited_median": 4.39313,
+    "arm_R_median": 4.41029,
+    "ratio_to_deposited": 0.9579274913330587,
+    "ratio_to_arm_R": 0.9542002906838327,
+    "a12_against_deposited": 0.3812244897959184,
+    "a12_against_arm_R": 0.42448979591836733,
+    "largest_difference_from_the_report": 0.0
+   },
+   "300": {
+    "arm_median": 3.74436,
+    "deposited_median": 3.69618,
+    "arm_R_median": 3.90587,
+    "ratio_to_deposited": 1.013035079460416,
+    "ratio_to_arm_R": 0.958649417415326,
+    "a12_against_deposited": 0.4506122448979592,
+    "a12_against_arm_R": 0.44,
+    "largest_difference_from_the_report": 0.0
+   },
+   "100": {
+    "arm_median": 2.61379,
+    "deposited_median": 3.26171,
+    "arm_R_median": 3.31227,
+    "ratio_to_deposited": 0.8013557305830377,
+    "ratio_to_arm_R": 0.7891234712146051,
+    "a12_against_deposited": 0.2889795918367347,
+    "a12_against_arm_R": 0.2963265306122449,
+    "largest_difference_from_the_report": 0.0
+   }
+  },
+  "seeds_whose_scores_agree_with_the_report": 35,
+  "agrees_with_the_report": true
+ },
+ "runs": {
+  "runs": 35,
+  "problems": [],
+  "first_start": "2026-11-23 23:21:05",
+  "last_start": "2026-11-23 23:21:05",
+  "code_commit": "aa83d02966bebe3759e3435d512f31d6f1722ce8",
+  "files_that_differed_from_the_commit": [
+   "MUJOCO_LOG.TXT"
+  ],
+  "code_described_by_the_launcher": "campaign-v2-1-gaa83d02",
+  "launches": 1,
+  "simulator_sha256": "853ead817a0f0cd928db08859aebedcc0b8293297ce5843d519b2dce3667d190",
+  "simulator_of_arms_R_and_Rc": {
+   "R": [
+    "853ead817a0f0cd928db08859aebedcc0b8293297ce5843d519b2dce3667d190"
+   ],
+   "Rc": [
+    "853ead817a0f0cd928db08859aebedcc0b8293297ce5843d519b2dce3667d190"
+   ]
+  },
+  "simulator_on_this_machine_now": "853ead817a0f0cd928db08859aebedcc0b8293297ce5843d519b2dce3667d190",
+  "template_sha256": "a20e64395009807e62adf5b730fbdb5fa31f720fc1f68ea0713683fd3591a025",
+  "template_now": "a20e64395009807e62adf5b730fbdb5fa31f720fc1f68ea0713683fd3591a025",
+  "same_simulator": true,
+  "same_template": true
+ },
+ "pilot": {
+  "pilot": "pilot_vx2013_s1",
+  "pilot_command": [
+   "run_tendon_evolution.py",
+   "--simulator",
+   "voxelyze2013",
+   "--no-age-pareto",
+   "--pop",
+   "30",
+   "--gen",
+   "100",
+   "--workers",
+   "30",
+   "--seed",
+   "1",
+   "--name",
+   "pilot_vx2013_s1"
+  ],
+  "generations_in_the_pilot": 100,
+  "generations_with_all_scores_identical": 100,
+  "scores_compared": 3000,
+  "identical": true
+ },
+ "champions": [
+  {
+   "seed": 1,
+   "individual": 0,
+   "fitness": 3.4599499999999996,
+   "voxels": 432,
+   "file": "armA_s1--Gen_1000--Ind_00--adjFit_3.45995000--numFilled_0432--origFit_3.45995000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 2
+  },
+  {
+   "seed": 2,
+   "individual": 0,
+   "fitness": 2.35512,
+   "voxels": 205,
+   "file": "armA_s2--Gen_1000--Ind_00--adjFit_2.35512000--numFilled_0205--origFit_2.35512000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 3,
+   "individual": 0,
+   "fitness": 3.61898,
+   "voxels": 392,
+   "file": "armA_s3--Gen_1000--Ind_00--adjFit_3.61898000--numFilled_0392--origFit_3.61898000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 2,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 4,
+   "individual": 0,
+   "fitness": 3.6526799999999997,
+   "voxels": 705,
+   "file": "armA_s4--Gen_1000--Ind_00--adjFit_3.65268000--numFilled_0705--origFit_3.65268000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 5,
+   "individual": 0,
+   "fitness": 4.93235,
+   "voxels": 76,
+   "file": "armA_s5--Gen_1000--Ind_00--adjFit_4.93235000--numFilled_0076--origFit_4.93235000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 2,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 6,
+   "individual": 0,
+   "fitness": 4.57933,
+   "voxels": 690,
+   "file": "armA_s6--Gen_1000--Ind_00--adjFit_4.57933000--numFilled_0690--origFit_4.57933000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 7,
+   "individual": 0,
+   "fitness": 4.79262,
+   "voxels": 580,
+   "file": "armA_s7--Gen_1000--Ind_00--adjFit_4.79262000--numFilled_0580--origFit_4.79262000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 8,
+   "individual": 0,
+   "fitness": 5.47484,
+   "voxels": 708,
+   "file": "armA_s8--Gen_1000--Ind_00--adjFit_5.47484000--numFilled_0708--origFit_5.47484000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 9,
+   "individual": 0,
+   "fitness": 4.30734,
+   "voxels": 697,
+   "file": "armA_s9--Gen_1000--Ind_00--adjFit_4.30734000--numFilled_0697--origFit_4.30734000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 10,
+   "individual": 0,
+   "fitness": 3.02774,
+   "voxels": 652,
+   "file": "armA_s10--Gen_1000--Ind_00--adjFit_3.02774000--numFilled_0652--origFit_3.02774000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 2,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 11,
+   "individual": 0,
+   "fitness": 4.5464400000000005,
+   "voxels": 686,
+   "file": "armA_s11--Gen_1000--Ind_00--adjFit_4.54644000--numFilled_0686--origFit_4.54644000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 12,
+   "individual": 0,
+   "fitness": 3.37559,
+   "voxels": 664,
+   "file": "armA_s12--Gen_1000--Ind_00--adjFit_3.37559000--numFilled_0664--origFit_3.37559000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 13,
+   "individual": 0,
+   "fitness": 4.08852,
+   "voxels": 702,
+   "file": "armA_s13--Gen_1000--Ind_00--adjFit_4.08852000--numFilled_0702--origFit_4.08852000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 14,
+   "individual": 0,
+   "fitness": 5.2311000000000005,
+   "voxels": 679,
+   "file": "armA_s14--Gen_1000--Ind_00--adjFit_5.23110000--numFilled_0679--origFit_5.23110000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 15,
+   "individual": 0,
+   "fitness": 3.96286,
+   "voxels": 272,
+   "file": "armA_s15--Gen_1000--Ind_00--adjFit_3.96286000--numFilled_0272--origFit_3.96286000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 2,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 1
+  },
+  {
+   "seed": 16,
+   "individual": 0,
+   "fitness": 3.0379,
+   "voxels": 819,
+   "file": "armA_s16--Gen_1000--Ind_00--adjFit_3.03790000--numFilled_0819--origFit_3.03790000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 17,
+   "individual": 0,
+   "fitness": 3.64463,
+   "voxels": 696,
+   "file": "armA_s17--Gen_1000--Ind_00--adjFit_3.64463000--numFilled_0696--origFit_3.64463000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 18,
+   "individual": 0,
+   "fitness": 4.03949,
+   "voxels": 722,
+   "file": "armA_s18--Gen_1000--Ind_00--adjFit_4.03949000--numFilled_0722--origFit_4.03949000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 19,
+   "individual": 0,
+   "fitness": 5.68149,
+   "voxels": 745,
+   "file": "armA_s19--Gen_1000--Ind_00--adjFit_5.68149000--numFilled_0745--origFit_5.68149000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 20,
+   "individual": 0,
+   "fitness": 4.54999,
+   "voxels": 689,
+   "file": "armA_s20--Gen_1000--Ind_00--adjFit_4.54999000--numFilled_0689--origFit_4.54999000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 21,
+   "individual": 0,
+   "fitness": 4.62255,
+   "voxels": 654,
+   "file": "armA_s21--Gen_1000--Ind_00--adjFit_4.62255000--numFilled_0654--origFit_4.62255000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 22,
+   "individual": 0,
+   "fitness": 4.07757,
+   "voxels": 704,
+   "file": "armA_s22--Gen_1000--Ind_00--adjFit_4.07757000--numFilled_0704--origFit_4.07757000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 23,
+   "individual": 0,
+   "fitness": 4.03883,
+   "voxels": 683,
+   "file": "armA_s23--Gen_1000--Ind_00--adjFit_4.03883000--numFilled_0683--origFit_4.03883000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 24,
+   "individual": 0,
+   "fitness": 4.2083,
+   "voxels": 690,
+   "file": "armA_s24--Gen_1000--Ind_00--adjFit_4.20830000--numFilled_0690--origFit_4.20830000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 25,
+   "individual": 0,
+   "fitness": 4.756959999999999,
+   "voxels": 673,
+   "file": "armA_s25--Gen_1000--Ind_00--adjFit_4.75696000--numFilled_0673--origFit_4.75696000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 2,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 26,
+   "individual": 0,
+   "fitness": 5.01964,
+   "voxels": 716,
+   "file": "armA_s26--Gen_1000--Ind_00--adjFit_5.01964000--numFilled_0716--origFit_5.01964000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 27,
+   "individual": 0,
+   "fitness": 4.681769999999999,
+   "voxels": 694,
+   "file": "armA_s27--Gen_1000--Ind_00--adjFit_4.68177000--numFilled_0694--origFit_4.68177000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 28,
+   "individual": 0,
+   "fitness": 3.4366099999999995,
+   "voxels": 401,
+   "file": "armA_s28--Gen_1000--Ind_00--adjFit_3.43661000--numFilled_0401--origFit_3.43661000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 29,
+   "individual": 0,
+   "fitness": 5.04879,
+   "voxels": 756,
+   "file": "armA_s29--Gen_1000--Ind_00--adjFit_5.04879000--numFilled_0756--origFit_5.04879000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 30,
+   "individual": 0,
+   "fitness": 2.552,
+   "voxels": 324,
+   "file": "armA_s30--Gen_1000--Ind_00--adjFit_2.55200000--numFilled_0324--origFit_2.55200000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 2,
+   "different_bodies_among_them": 2,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 31,
+   "individual": 0,
+   "fitness": 5.230119999999999,
+   "voxels": 738,
+   "file": "armA_s31--Gen_1000--Ind_00--adjFit_5.23012000--numFilled_0738--origFit_5.23012000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 32,
+   "individual": 0,
+   "fitness": 3.25753,
+   "voxels": 373,
+   "file": "armA_s32--Gen_1000--Ind_00--adjFit_3.25753000--numFilled_0373--origFit_3.25753000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 33,
+   "individual": 0,
+   "fitness": 5.67102,
+   "voxels": 566,
+   "file": "armA_s33--Gen_1000--Ind_00--adjFit_5.67102000--numFilled_0566--origFit_5.67102000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 34,
+   "individual": 0,
+   "fitness": 2.81337,
+   "voxels": 567,
+   "file": "armA_s34--Gen_1000--Ind_00--adjFit_2.81337000--numFilled_0567--origFit_2.81337000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 35,
+   "individual": 0,
+   "fitness": 5.16734,
+   "voxels": 608,
+   "file": "armA_s35--Gen_1000--Ind_00--adjFit_5.16734000--numFilled_0608--origFit_5.16734000_genome.vxa",
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  }
+ ],
+ "audit": [
+  {
+   "seed": 1,
+   "recorded": 3.4599499999999996,
+   "simulated_again": 3.4599499999999996,
+   "distance_as_printed": "0.0345995",
+   "identical": true
+  },
+  {
+   "seed": 2,
+   "recorded": 2.35512,
+   "simulated_again": 2.35512,
+   "distance_as_printed": "0.0235512",
+   "identical": true
+  },
+  {
+   "seed": 3,
+   "recorded": 3.61898,
+   "simulated_again": 3.61898,
+   "distance_as_printed": "0.0361898",
+   "identical": true
+  },
+  {
+   "seed": 4,
+   "recorded": 3.6526799999999997,
+   "simulated_again": 3.6526799999999997,
+   "distance_as_printed": "0.0365268",
+   "identical": true
+  },
+  {
+   "seed": 5,
+   "recorded": 4.93235,
+   "simulated_again": 4.93235,
+   "distance_as_printed": "0.0493235",
+   "identical": true
+  },
+  {
+   "seed": 6,
+   "recorded": 4.57933,
+   "simulated_again": 4.57933,
+   "distance_as_printed": "0.0457933",
+   "identical": true
+  },
+  {
+   "seed": 7,
+   "recorded": 4.79262,
+   "simulated_again": 4.79262,
+   "distance_as_printed": "0.0479262",
+   "identical": true
+  },
+  {
+   "seed": 8,
+   "recorded": 5.47484,
+   "simulated_again": 5.47484,
+   "distance_as_printed": "0.0547484",
+   "identical": true
+  },
+  {
+   "seed": 9,
+   "recorded": 4.30734,
+   "simulated_again": 4.30734,
+   "distance_as_printed": "0.0430734",
+   "identical": true
+  },
+  {
+   "seed": 10,
+   "recorded": 3.02774,
+   "simulated_again": 3.02774,
+   "distance_as_printed": "0.0302774",
+   "identical": true
+  },
+  {
+   "seed": 11,
+   "recorded": 4.5464400000000005,
+   "simulated_again": 4.5464400000000005,
+   "distance_as_printed": "0.0454644",
+   "identical": true
+  },
+  {
+   "seed": 12,
+   "recorded": 3.37559,
+   "simulated_again": 3.37559,
+   "distance_as_printed": "0.0337559",
+   "identical": true
+  },
+  {
+   "seed": 13,
+   "recorded": 4.08852,
+   "simulated_again": 4.08852,
+   "distance_as_printed": "0.0408852",
+   "identical": true
+  },
+  {
+   "seed": 14,
+   "recorded": 5.2311000000000005,
+   "simulated_again": 5.2311000000000005,
+   "distance_as_printed": "0.052311",
+   "identical": true
+  },
+  {
+   "seed": 15,
+   "recorded": 3.96286,
+   "simulated_again": 3.96286,
+   "distance_as_printed": "0.0396286",
+   "identical": true
+  },
+  {
+   "seed": 16,
+   "recorded": 3.0379,
+   "simulated_again": 3.0379,
+   "distance_as_printed": "0.030379",
+   "identical": true
+  },
+  {
+   "seed": 17,
+   "recorded": 3.64463,
+   "simulated_again": 3.64463,
+   "distance_as_printed": "0.0364463",
+   "identical": true
+  },
+  {
+   "seed": 18,
+   "recorded": 4.03949,
+   "simulated_again": 4.03949,
+   "distance_as_printed": "0.0403949",
+   "identical": true
+  },
+  {
+   "seed": 19,
+   "recorded": 5.68149,
+   "simulated_again": 5.68149,
+   "distance_as_printed": "0.0568149",
+   "identical": true
+  },
+  {
+   "seed": 20,
+   "recorded": 4.54999,
+   "simulated_again": 4.54999,
+   "distance_as_printed": "0.0454999",
+   "identical": true
+  },
+  {
+   "seed": 21,
+   "recorded": 4.62255,
+   "simulated_again": 4.62255,
+   "distance_as_printed": "0.0462255",
+   "identical": true
+  },
+  {
+   "seed": 22,
+   "recorded": 4.07757,
+   "simulated_again": 4.07757,
+   "distance_as_printed": "0.0407757",
+   "identical": true
+  },
+  {
+   "seed": 23,
+   "recorded": 4.03883,
+   "simulated_again": 4.03883,
+   "distance_as_printed": "0.0403883",
+   "identical": true
+  },
+  {
+   "seed": 24,
+   "recorded": 4.2083,
+   "simulated_again": 4.2083,
+   "distance_as_printed": "0.042083",
+   "identical": true
+  },
+  {
+   "seed": 25,
+   "recorded": 4.756959999999999,
+   "simulated_again": 4.756959999999999,
+   "distance_as_printed": "0.0475696",
+   "identical": true
+  },
+  {
+   "seed": 26,
+   "recorded": 5.01964,
+   "simulated_again": 5.01964,
+   "distance_as_printed": "0.0501964",
+   "identical": true
+  },
+  {
+   "seed": 27,
+   "recorded": 4.681769999999999,
+   "simulated_again": 4.681769999999999,
+   "distance_as_printed": "0.0468177",
+   "identical": true
+  },
+  {
+   "seed": 28,
+   "recorded": 3.4366099999999995,
+   "simulated_again": 3.4366099999999995,
+   "distance_as_printed": "0.0343661",
+   "identical": true
+  },
+  {
+   "seed": 29,
+   "recorded": 5.04879,
+   "simulated_again": 5.04879,
+   "distance_as_printed": "0.0504879",
+   "identical": true
+  },
+  {
+   "seed": 30,
+   "recorded": 2.552,
+   "simulated_again": 2.552,
+   "distance_as_printed": "0.02552",
+   "identical": true
+  },
+  {
+   "seed": 31,
+   "recorded": 5.230119999999999,
+   "simulated_again": 5.230119999999999,
+   "distance_as_printed": "0.0523012",
+   "identical": true
+  },
+  {
+   "seed": 32,
+   "recorded": 3.25753,
+   "simulated_again": 3.25753,
+   "distance_as_printed": "0.0325753",
+   "identical": true
+  },
+  {
+   "seed": 33,
+   "recorded": 5.67102,
+   "simulated_again": 5.67102,
+   "distance_as_printed": "0.0567102",
+   "identical": true
+  },
+  {
+   "seed": 34,
+   "recorded": 2.81337,
+   "simulated_again": 2.81337,
+   "distance_as_printed": "0.0281337",
+   "identical": true
+  },
+  {
+   "seed": 35,
+   "recorded": 5.16734,
+   "simulated_again": 5.16734,
+   "distance_as_printed": "0.0516734",
+   "identical": true
+  }
+ ]
+}
