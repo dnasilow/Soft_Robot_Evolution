@@ -9,6 +9,7 @@ import unittest
 import numpy as np
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, 'paper', 'analysis'))
 import render_champions as rc       # noqa: E402
 
@@ -34,12 +35,33 @@ class TestChoice(unittest.TestCase):
         median, best = rc.median_and_best([(float(s), s) for s in range(1, 36)])      # 35 runs: the 18th and the 35th
         self.assertEqual((median[0], best[0]), (18.0, 35.0))
 
-    def test_only_the_re_run_arms_have_robot_files_to_show(self):
+    def test_an_arm_that_does_not_exist_is_refused(self):
         with self.assertRaises(SystemExit):
             import contextlib
             import io
             with contextlib.redirect_stderr(io.StringIO()):
-                rc.main(['--arm', 'A'])
+                rc.main(['--arm', 'Z'])
+
+
+class TestSearchChampion(unittest.TestCase):
+    """Arm A's champions are bodies in a final population, not robot files."""
+
+    def test_the_robot_file_is_that_body_in_the_2013_template(self):
+        import pickle
+        from src.evolution import cheney2013 as c13
+        from src.evolution.voxelyze2013_evaluator import TEMPLATE
+        rng = np.random.default_rng(3)
+        bodies = [rng.integers(0, 5, (10, 10, 10)).astype(np.int8) for _ in range(3)]
+        with tempfile.TemporaryDirectory() as folder:
+            with open(os.path.join(folder, 'final_population.pkl'), 'wb') as f:
+                pickle.dump({'genomes': bodies, 'fitnesses': [1.0, 3.0, 2.0]}, f)
+            text = rc.search_robot_text(folder, 'final_population.pkl, individual 1')
+        rows = [m.group(2) for m in c13.LAYER.finditer(text)]
+        np.testing.assert_array_equal(c13.grid_from_rows(rows), bodies[1])
+        with open(TEMPLATE, encoding='iso-8859-1') as f:
+            template = f.read()
+        self.assertEqual(c13.LAYER.sub('', text), c13.LAYER.sub('', template))     # nothing but the body differs
+        self.assertEqual(text, c13.fill_template(template, bodies[1]))             # what the search writes
 
 
 class TestRecordingAsRead(unittest.TestCase):

@@ -9,6 +9,11 @@ the 2013 simulator that records every voxel's motion (build_2013_trace.sh), for 
 usage, from the project folder:
     python paper/analysis/render_champions.py --arm R
 
+Arms R and Rc are re-runs of the original program; their champions are robot files in the runs'
+archives. Arm A is this project's own search; its champions are bodies in the runs' final
+populations and are written to a robot file here exactly as the search wrote them for the
+simulator (the 2013 settings template with the body filled in).
+
 It writes into paper/outcomes/videos/:
     arm_<X>_champions.gif       the animation (a robot is 1 cm long; the motion is slowed down)
     arm_<X>_champions.webp      the same, smaller and in full colour
@@ -31,6 +36,8 @@ import argparse
 import json
 import math
 import os
+import pickle
+import re
 import subprocess
 import sys
 import tarfile
@@ -87,31 +94,54 @@ def median_and_best(champions):
     return ranked[(len(ranked) - 1) // 2], ranked[-1]
 
 
+def search_robot_text(folder, name):
+    """A champion of this project's search (arm A), as the robot file its run gave the simulator:
+    the 2013 settings template with the body of that individual of the final population."""
+    from src.evolution import cheney2013 as c13
+    from src.evolution.voxelyze2013_evaluator import TEMPLATE
+    index = int(re.search(r'individual (\d+)$', name).group(1))
+    with open(os.path.join(folder, 'final_population.pkl'), 'rb') as f:
+        population = pickle.load(f)
+    with open(TEMPLATE, encoding='iso-8859-1') as f:
+        template = f.read()
+    return c13.fill_template(template, c13.workspace_grid(np.asarray(population['genomes'][index])))
+
+
+def archived_robot_text(folder, name):
+    """A champion of a re-run of the original program, from the archive of its last generation."""
+    with tarfile.open(os.path.join(folder, 'Gen_1000.tgz')) as t:
+        return t.extractfile(t.getmember('Gen_1000/' + name)).read().decode('iso-8859-1')
+
+
+def deposited_robot_text(folder, name):
+    with open(os.path.join(folder, name), encoding='iso-8859-1') as f:
+        return f.read()
+
+
 def robots_of(arm):
     """[(row label, column label, recorded original score, robot file text), ...] for the four panels."""
     spec = aa.ARMS[arm]
     report = aa.finished_arm(arm)
     if report is None:
         raise SystemExit(f'Arm {arm} has no report in paper/outcomes yet. Videos are made of analysed arms.')
+    search = spec['kind'] == 'search'
     ours = []
     for row in report['per_seed']:
         c = row['champion']
-        ours.append((c['original'], f"seed {row['seed']}", os.path.join(aa.RERUNS, f"{spec['prefix']}{row['seed']}"), c['file']))
+        folder = os.path.join(aa.SEARCH_RUNS if search else aa.RERUNS, f"{spec['prefix']}{row['seed']}")
+        ours.append((c['original'], f"seed {row['seed']}", folder, c['file']))
     theirs = []
     for c in aa.reference_champions(spec['condition']):
         folder = os.path.join(aa.DEPOSITED_ROBOTS, f"2013-01-16-10^3-{spec['condition']}", c['run'], 'Gen_1000')
         theirs.append((c['original'], c['run'].replace('_', ' '), folder, c['file']))
+    ours_label = f'own search 2026, arm {arm}' if search else f're-run 2026, arm {arm}'
+    ours_text = search_robot_text if search else archived_robot_text
     out = []
-    for row_label, group, from_archive in (('2013 original', theirs, False), (f're-run 2026, arm {arm}', ours, True)):
+    for row_label, group, text_of, is_ours in (('2013 original', theirs, deposited_robot_text, False),
+                                               (ours_label, ours, ours_text, True)):
         for column, (score, who, folder, name) in zip(('median of 35', 'best of 35'), median_and_best(group)):
-            if from_archive:
-                with tarfile.open(os.path.join(folder, 'Gen_1000.tgz')) as t:
-                    text = t.extractfile(t.getmember('Gen_1000/' + name)).read().decode('iso-8859-1')
-            else:
-                with open(os.path.join(folder, name), encoding='iso-8859-1') as f:
-                    text = f.read()
-            out.append({'row': row_label, 'column': column, 'who': who, 'recorded': float(score), 'vxa': text,
-                        'ours': from_archive})
+            out.append({'row': row_label, 'column': column, 'who': who, 'recorded': float(score),
+                        'vxa': text_of(folder, name), 'ours': is_ours})
     return out
 
 
@@ -290,7 +320,7 @@ def assemble(panels, checks, times, slowdown):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split('\n\n', 1)[1])
-    ap.add_argument('--arm', required=True, choices=[k for k, v in aa.ARMS.items() if v['kind'] == 'rerun'])
+    ap.add_argument('--arm', required=True, choices=sorted(aa.ARMS))
     ap.add_argument('--every', type=float, default=0.0025, help='simulated seconds between frames (default 0.0025)')
     ap.add_argument('--frame-ms', type=int, default=60, help='milliseconds each frame is shown (default 60)')
     a = ap.parse_args(argv)

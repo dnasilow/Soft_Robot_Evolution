@@ -150,6 +150,10 @@ Made on 24 November 2026 as a check that the scores describe real locomotion. `p
 
 ![Champions of arm Rc and of the 2013 cost runs moving in the 2013 simulator](videos/arm_Rc_champions.gif)
 
+**Arm A, this project's own search, no cost** (added on 26 November)
+
+![Champions of arm A and of the 2013 no-cost runs moving in the 2013 simulator](videos/arm_A_champions.gif)
+
 What the frames and the numbers recorded with them (`videos/*.json`) show:
 
 - **The frames are the scored simulation.** For all eight robots the recording copy of the simulator reports the same distance as the campaign's simulator, and the first and last frame give that distance again. The four champions of this project's runs repeat their recorded scores to the last digit.
@@ -158,9 +162,16 @@ What the frames and the numbers recorded with them (`videos/*.json`) show:
 - **Something to know about the 2013 floor.** In this simulator the voxels that touch the floor sink into it: the lowest point of each of the eight bodies reaches 0.64 to 0.81 of a voxel below the floor's surface during its run, in the 2013 robots and the re-runs alike. The floor is a spring on each voxel's centre and the bodies are heavy. That is the original physics, not a fault of the reproduction; it matters when this simulator is compared with another.
 - **Single 2013 robots do not all score today what they scored in 2013.** The best deposited no-cost champion was recorded at 5.95 and scores 4.90 in today's build of the same source; the median one 4.39 and 4.22. This is the compiler difference documented for the replay of all deposited robots (reference README, section 1): typical robots agree to a fraction of a percent, about one in five differs by more than 5%. The captions give both numbers. Arm R and arm Rc compare distributions of whole runs, which is why they are the test of the experiment and single robots are not.
 
+**Arm A, added on 26 November.** Its video shows the two 2013 champions of arm R's video above arm A's median champion (seed 24, 4.21) and its best (seed 19, 5.68). An arm A champion is a body in its run's final population; it is written to a robot file exactly as the search wrote it for the simulator.
+
+- **The frames are the scored simulation.** Both arm A champions repeat their recorded scores to the last digit in the recording copy of the simulator, and the first and last frame give that distance again.
+- **It is locomotion.** After two cycles each gains a steady amount per cycle: 0.44 to 0.47 body lengths for seed 24, 0.61 to 0.66 for seed 19. Every number is finite and the bodies stay on the ground: their centres stay between 4 and 7 voxels high and nothing rises above 12.
+- **The bodies look like the 2013 ones.** Blocks of 690 and 745 voxels that rock and shuffle forward. Seed 19 is all muscle; seed 24 has 39 stiff voxels among 651 muscle voxels.
+- **They stand in the same floor.** The lowest point of seed 19 reaches 0.75 of a voxel below the floor's surface, like the robots above (0.64 to 0.81). Seed 24 reaches 0.99, deeper than any other robot shown here.
+
 | File | Content |
 |---|---|
-| `videos/arm_R_champions.gif`, `videos/arm_Rc_champions.gif` | The animations |
+| `videos/arm_R_champions.gif`, `videos/arm_Rc_champions.gif`, `videos/arm_A_champions.gif` | The animations |
 | `videos/*.webp` | The same in full colour |
 | `videos/*.png` | Five moments of each, as a still picture |
 | `videos/*.json` | The checks made on each robot shown |
