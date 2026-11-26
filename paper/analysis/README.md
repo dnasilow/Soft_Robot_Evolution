@@ -59,7 +59,8 @@ Checked on made-up runs (the deposited cost curves standing in for arm A's score
 Added on 24 November 2026. What it computes was fixed in PROTOCOL.md, section 9.4, before any champion of an arm was scored in the MuJoCo engine.
 
 ```
-python paper/analysis/transfer_scores.py --arms R Rc                           analysed arms and the deposited champions
+python paper/analysis/transfer_scores.py --arms R Rc A                         analysed arms and the deposited champions
+python paper/analysis/transfer_scores.py --arms R Rc A --preset cheney2013-floor   the same under the settings of arm D
 python paper/analysis/transfer_scores.py --rehearsal pilot10_P0_s --generation 10   runs that are not an arm
 python paper/analysis/render_transfer.py                                       the video, from the report in ../outcomes/
 ```
@@ -71,6 +72,7 @@ python paper/analysis/render_transfer.py                                       t
 - **Time-step check.** The first five champions of each set once more with a quarter of the time step.
 - **Nothing is scored twice.** Finished evaluations are kept in `results/transfer/`, keyed by body, settings and code tag. An evaluation takes one to two minutes, six with the short time step.
 - **Refused** unless `run_tendon_evolution.py` and `src/` are those of the campaign's code tag.
+- **The second preset** (added on 26 November 2026, committed before its first run). PROTOCOL.md, section 9.5, asks for the outcome under both presets of the campaign. `--preset cheney2013-floor` scores the same champions with the settings of arm D: the 2013 simulator's floor rule, and every body started where it is in the workspace. Under it no body needs a second evaluation "as placed". The report is written as `transfer_floor2013.*` and compares the champions that were scored under this preset on 25 November (`../diagnostics_2026-11-25/check_built_in_floor.py`) with the scores they got then. The default is untouched: from the kept evaluations the script gives the report under `--preset cheney2013` again, identical but for its date line.
 
 What it was checked against:
 
@@ -82,7 +84,7 @@ What it was checked against:
 | Rehearsal on the 12 pilot runs at generation 10 | Ran through; seed 1 gives 1.7753, the value measured by hand before the script existed |
 | Reading: made-up arm folders, a made-up deposit, a made-up replay table | The champions of the reports, their bodies, their scores; a body that is not the reported one stops the script |
 
-29 tests for the scoring, 7 for the video tool.
+38 tests for the scoring, 8 for its video tool, 8 for the champions' video tool.
 
 ## Not yet here
 
