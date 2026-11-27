@@ -130,6 +130,21 @@ class TestArmD(unittest.TestCase):
         self.assertIn('(MemoryError: Unable to allocate 4.91 MiB for an array)', why)
         self.assertEqual(search_arm.stopped_by('Gen  12/300  best=1.2000W / Gen  13/300  best=1.3000W'), '')
 
+    def test_the_log_never_shows_a_score(self):
+        """When a run ends early the launcher quotes the end of its output. That output has scores
+        in it, and an arm's results are read only once the arm is complete."""
+        shown = search_arm.without_scores(
+            'Evaluating initial population... / Gen   1/300  best=1.3112W  mean=0.3937W  worst=0.0000W  [478.5s]  '
+            'species=1  cppn=N10/E24 / Resumed at generation 57/300  |  best so far 2.4199m / Sanity check passed — '
+            'fitness=0.3605W  voxels=457 / EVOLUTION COMPLETE — best fitness: 2.7170W / MemoryError: Unable to allocate '
+            '4.91 MiB for an array with shape (463, 463, 3)')
+        for score in ('1.3112', '0.3937', '0.0000', '2.4199', '0.3605', '2.7170'):
+            self.assertNotIn(score, shown)
+        for kept in ('Gen   1/300', '[478.5s]', 'cppn=N10/E24', 'generation 57/300', 'voxels=457',
+                     'Unable to allocate 4.91 MiB for an array with shape (463, 463, 3)'):
+            self.assertIn(kept, shown)
+        self.assertEqual(shown.count('(not shown)'), 6)
+
     def test_a_run_without_progress_is_noticed(self):
         progress = {}
         self.assertEqual(search_arm.without_progress(progress, {1: 5, 2: 7}, now=0.0, limit=100), {})

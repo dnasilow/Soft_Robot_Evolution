@@ -44,6 +44,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 import time
@@ -158,6 +159,16 @@ def stopped_by(last_lines):
     cut = reason.find('not scored: ')
     reason = reason[cut + len('not scored: '):] if cut >= 0 else reason
     return "an evaluation failed for a reason that is not the robot's and was not scored (" + reason[:200] + ')'
+
+
+SCORE_IN_OUTPUT = re.compile(r'((?:best|mean|worst|fitness)[^0-9\n/]{0,12})[-+]?\d+\.\d+(?:[eE][-+]?\d+)?')
+
+
+def without_scores(text):
+    """Lines of a run's output with the scores taken out. The launcher's log says where the runs
+    are and why one ended, never how well a run is doing: an arm's results are read only once the
+    arm is complete (PROTOCOL.md, section 9.1, point 8)."""
+    return SCORE_IN_OUTPUT.sub(r'\1(not shown)', text)
 
 
 def without_progress(progress, generations_now, now, limit=None):
@@ -570,12 +581,13 @@ def run_launcher(core, a, arm, stem, seeds, generations):
                         why = stopped_by(last_lines(seed, 30, 600))
                         say(f'{run_name(stem, seed)}: ended with code {code} at generation {done}'
                             + (f': {why}' if why else '') + f'; continuing it from '
-                            f'its checkpoint (start {attempts[seed] + 1} of {MAX_ATTEMPTS}). Its last lines: {last_lines(seed)}')
+                            f'its checkpoint (start {attempts[seed] + 1} of {MAX_ATTEMPTS}). Its last lines: '
+                            f'{without_scores(last_lines(seed))}')
                         pending.append(seed)
                     else:
                         failed[str(seed)] = f'ended {attempts[seed]} times, last with code {code}'
                         say(f'{run_name(stem, seed)}: ended {attempts[seed]} times without finishing; left as it is. '
-                            f'Its last lines: {last_lines(seed)}')
+                            f'Its last lines: {without_scores(last_lines(seed))}')
                 if os.path.exists(stop_request):
                     say(f'Stop requested: ending {len(active)} runs. They keep their checkpoints.')
                     for process in active.values():
