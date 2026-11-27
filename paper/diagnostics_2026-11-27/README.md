@@ -123,7 +123,7 @@ Before the tag was set, the change to the three files that compute a run was rea
 
 ## Later the same day: the tools for arm D's champions, rehearsed
 
-Arm D was started at 15:03. While it ran, the audit and the transfer of its champions were fixed in the protocol (section 9.7) and built (`../analysis/check_arm_D.py`, `../analysis/transfer_to_2013.py`; described in [`../analysis/README.md`](../analysis/README.md)). They were tried on the ten trial runs of the launcher, `trialD_s101` to `trialD_s110`: seeds that belong to no arm, three generations each. What the rehearsal wrote is kept in `rehearsal_arm_D_tools/`: the pilot report of the trial runs, the checks with the audit, and the transfer. Nothing in that folder is a result of an arm.
+Arm D was started at 15:03. While it ran, the audit and the transfer of its champions were fixed in the protocol (section 9.7) and built (`../analysis/check_arm_D.py`, `../analysis/transfer_to_2013.py`; described in [`../analysis/README.md`](../analysis/README.md)). They were tried on the ten trial runs of the launcher, `trialD_s101` to `trialD_s110`: seeds that belong to no arm, three generations each. What the rehearsal wrote is kept in `rehearsal_arm_D_tools/`: the pilot report of the trial runs, the checks with the audit, the transfer, and five moments of the video that `../analysis/render_champions.py` makes of such runs, with its record of what was checked. Nothing in that folder is a result of an arm.
 
 ## Files
 

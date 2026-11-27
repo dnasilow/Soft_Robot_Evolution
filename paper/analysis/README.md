@@ -40,7 +40,7 @@ The interval of the pilot is 0.86 to 1.48 here. The summary of 21 November gave 
 | `protocol_stats.py` | The statistics, as pure functions: comparison of two sets of runs, the criterion, Holm, Fisher's exact test, and what the criterion can show |
 | `analyse_arm.py` | Reads an arm's collected runs and the deposited data and writes the report |
 | `check_arm_A.py` | Checks on arm A's report after its analysis: the scores recomputed with readers of its own, each run's record of itself, seed 1 against the pilot, and the audit of every champion (simulated again in the 2013 simulator). Written on 26 November 2026, after the arm's analysis; it changes nothing in the report |
-| `render_champions.py` | Videos of an analysed arm's median and best champion next to their 2013 counterparts, simulated in the recording copy of the 2013 simulator, with checks that the frames are the simulation that was scored |
+| `render_champions.py` | Videos of an analysed arm's median and best champion next to their 2013 counterparts, each simulated again in the simulator it was evolved in, with checks that the frames are the simulation that was scored. Arms R, Rc and A: the recording copy of the 2013 simulator. Arm D: this project's MuJoCo engine, and the same two robots once more in the 2013 simulator (below) |
 | `transfer_scores.py` | The transfer outcome: every final champion scored in the MuJoCo engine with the preset's settings (below) |
 | `render_transfer.py` | Videos of one champion in both simulators side by side, with checks that both hold the same body and that the frames are the evaluation that was scored |
 | `compare_presets.py` | The two transfer reports side by side, champion by champion: how many keep more of their score under the second preset, with the paired test of the floor test. Reads the reports only; nothing is simulated |
@@ -98,7 +98,7 @@ What it was checked against:
 | Rehearsal on the 12 pilot runs at generation 10 | Ran through; seed 1 gives 1.7753, the value measured by hand before the script existed |
 | Reading: made-up arm folders, a made-up deposit, a made-up replay table | The champions of the reports, their bodies, their scores; a body that is not the reported one stops the script |
 
-39 tests for the scoring, 8 for its video tool, 8 for the champions' video tool, 15 for the memory changes of 27 November (`tests/test_memory.py`).
+39 tests for the scoring, 8 for its video tool, 17 for the champions' video tool, 15 for the memory changes of 27 November (`tests/test_memory.py`).
 
 ## Arm D's champions: the audit and the transfer
 
@@ -140,8 +140,24 @@ What they were checked against:
 
 What the rehearsal showed about the audit's second line, on robots that belong to no arm: of the ten trial champions, robots of a third generation, seven changed their score by under 2% at a quarter of the time step and three lost 45% to 68% of it. That says nothing about arm D. It shows what the check is for, and that under this preset a single score can rest on the time step.
 
+## The video of arm D's champions
+
+Added on 27 November 2026, while arm D was running. `render_champions.py --arm D` shows six robots where the other arms have four:
+
+| Row | Robots | Simulator | What must hold, or the script stops |
+|---|---|---|---|
+| Top | The deposited 2013 champions with the median and the best score | The 2013 simulator | The recording copy gives what the campaign's simulator gives |
+| Middle | Arm D's champions with the median and the best score (of ten: the median is the fifth) | The MuJoCo engine, where they were evolved | The evaluation of the run, run again from the body the run stored, gives the recorded score to the last digit; the frames give that score |
+| Bottom | The same two robots | The 2013 simulator, which they were not evolved in | The two simulators hold the same voxels of the same materials at the same height; once the arm's transfer has been computed, the score is the one in its report |
+
+```
+python paper/analysis/render_champions.py --arm D                                   after the arm's analysis
+python paper/analysis/render_champions.py --rehearsal trialD_s --generation 3       runs that are not an arm
+```
+
+Tried on the ten trial runs with seeds 101 to 110 (three generations, not an arm): the two trial champions reproduce their recorded scores in the engine to the last digit, the same bodies are found in both simulators, and their scores in the 2013 simulator are the ones the transfer tool gave them. The still picture and the record of that rehearsal are in `../diagnostics_2026-11-27/rehearsal_arm_D_tools/`. The videos of arms R, Rc and A are made by the same code as before: arm R's video, made again with the changed tool, is the committed one in every pixel of every frame, with the same record of its checks.
+
 ## Not yet here
 
 - Arms E1 to E3, in the launcher, the analysis and the audit.
-- A video of arm D's champions in the engine they were evolved in.
 - Figures.

@@ -335,7 +335,8 @@ On your "Yes, build them". Nothing of arm D was read for this: all that was know
 - **One choice in section 9.7 that is mine**, for you to overrule before the arm is analysed: the transfer ratios of arm D's champions are set against those of the 35 deposited no-cost champions under `--preset cheney2013-floor`, not under the hard floor. Both sets then cross between the same two simulators, in opposite directions.
 - **Tried on what is on record and on runs that belong to no arm.** Arm A's 35 champions get exactly their recorded scores from the transfer tool. On the ten trial runs with seeds 101 to 110 the checks find the report's numbers, report the run that was ended on purpose as started twice, and all ten champions reproduce their recorded score to the last digit. 21 tests.
 - **A caution the rehearsal gave.** Three of the ten trial champions, robots of a third generation, lost 45% to 68% of their score at a quarter of the time step; the other seven changed by under 2%. That is not arm D. But it is the second time this preset shows that a single score can rest on the time step (section 3.21), and the audit will show how arm D's champions stand.
-- **Still missing.** A video of arm D's champions in the engine they were evolved in; arms E1 to E3 in the launcher, the analysis and the audit.
+- **The video tool** (`analysis/render_champions.py --arm D`), built the same afternoon on your "Yes, build it". Arm D's median and best champion are shown in the MuJoCo engine, below the 2013 originals and above the same two robots in the 2013 simulator. It stops unless the frames are the evaluation that was scored, to the last digit, and unless both simulators hold the same body. Tried on the trial runs.
+- **Still missing.** Arms E1 to E3 in the launcher, the analysis and the audit.
 
 ---
 

@@ -117,5 +117,176 @@ class TestRecordingAsRead(unittest.TestCase):
             self.assertEqual(rc.wsl_path(r'C:\SoftRobotEvolution\results\x.vxa'), '/mnt/c/SoftRobotEvolution/results/x.vxa')
 
 
+def small_body(variant=0):
+    g = np.zeros((10, 10, 10), np.int8)
+    g[4:6, 4:7, 0:2] = 1
+    g[4:6, 4:5, 0:2] = 2
+    g[4, 6, 1] = 3
+    if variant:
+        g[4 + variant % 2, 7, 0] = 1 + variant % 2
+        g[3, 4 + variant % 3, 0] = 1 + (variant // 3) % 2
+    return g
+
+
+def as_stored(grid):
+    """The body inside the larger array a run of the search stores."""
+    from src.evolution.genome_config import VOXEL_GRID_SHAPE, VOXEL_INTERIOR_MIN
+    big = np.zeros(VOXEL_GRID_SHAPE, np.int8)
+    i = VOXEL_INTERIOR_MIN
+    big[i:i + 10, i:i + 10, i:i + 10] = grid
+    return big
+
+
+def make_runs(results, prefix, scores, generations=2):
+    """Run folders as the search leaves them, one per seed, each with a champion of that score."""
+    import json
+    import pickle
+    for seed, score in scores.items():
+        folder = os.path.join(results, f'{prefix}{seed}')
+        os.makedirs(folder)
+        for g in range(1, generations + 1):
+            with open(os.path.join(folder, f'gen_{g:03d}.json'), 'w') as f:
+                json.dump({'generation': g, 'best_fitness': score, 'fitnesses': [score, 0.1]}, f)
+        with open(os.path.join(folder, 'final_population.pkl'), 'wb') as f:
+            pickle.dump({'genomes': [as_stored(small_body(seed + 10)), as_stored(small_body(seed))],
+                         'fitnesses': [0.1, score]}, f)
+        with open(os.path.join(folder, 'best_robot.pkl'), 'wb') as f:
+            pickle.dump({'genome': as_stored(small_body(seed)), 'fitness': score}, f)
+
+
+class TestArmsEvolvedInTheEngine(unittest.TestCase):
+    """Arm D: this project's search in its own MuJoCo engine (27 November 2026). Its champions
+    are shown in that engine, and once more in the 2013 simulator."""
+
+    DEPOSIT = [(4.2, 'run 7', 'folder', 'a.vxa'), (5.9, 'run 9', 'folder', 'b.vxa'), (3.1, 'run 2', 'folder', 'c.vxa')]
+
+    def setUp(self):
+        from unittest import mock
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        for name, value in (('deposited', lambda condition: list(self.DEPOSIT)),
+                            ('deposited_robot_text', lambda folder, name: f'<the robot file {name}>')):
+            patcher = mock.patch.object(rc, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.scores = {101: 1.3, 102: 1.7, 103: 2.4, 104: 1.5}
+        make_runs(self.tmp.name, 'trialX_s', self.scores)
+
+    def test_which_arms(self):
+        self.assertTrue(rc.evolved_in_the_engine('D'))
+        self.assertFalse(rc.evolved_in_the_engine('A'))
+        self.assertFalse(rc.evolved_in_the_engine('R'))
+
+    def test_the_median_of_an_even_number_is_the_lower_middle_one(self):
+        median, best = rc.median_and_best([(float(s), s) for s in range(1, 11)])        # arm D has ten runs
+        self.assertEqual((median[0], best[0]), (5.0, 10.0))
+
+    def test_six_robots_in_three_rows(self):
+        from src.evolution import cheney2013 as c13
+        robots = rc.rehearsal_robots('trialX_s', 2, self.tmp.name)
+        self.assertEqual([(r['simulator'], r['column']) for r in robots],
+                         [('2013', 'median of 3'), ('2013', 'best of 3'), ('mujoco', 'median of 4'), ('mujoco', 'best of 4'),
+                          ('2013', 'median of 4'), ('2013', 'best of 4')])
+        self.assertEqual([r['who'] for r in robots], ['run 7', 'run 9', 'seed 104', 'seed 103', 'seed 104', 'seed 103'])
+        self.assertEqual([r['recorded'] for r in robots[:4]], [4.2, 5.9, 1.5, 2.4])
+        self.assertIn('not an arm', robots[2]['row'])
+        # in the engine: the body as its run stored it, in the larger array
+        np.testing.assert_array_equal(robots[2]['genome'], as_stored(small_body(104)))
+        # in the 2013 simulator: the same body, written into the 2013 settings file
+        rows = [m.group(2) for m in c13.LAYER.finditer(robots[4]['vxa'])]
+        np.testing.assert_array_equal(c13.grid_from_rows(rows), small_body(104))
+        # no score in the 2013 simulator is on record before the transfer has been computed
+        self.assertEqual([(r['recorded'], r['ours'], r['evolved_score']) for r in robots[4:]],
+                         [(None, False, 1.5), (None, False, 2.4)])
+
+    def test_the_transfer_score_must_repeat_once_it_is_on_record(self):
+        ours = [(s, f'seed {k}', os.path.join(self.tmp.name, f'trialX_s{k}'), 'final_population.pkl, individual 1')
+                for k, s in self.scores.items()]
+        robots = rc.engine_robots(ours, 'own search 2026, arm D, in the MuJoCo engine', 'noCost',
+                                  transfer={'seed 104': 0.9, 'seed 103': 1.8})
+        self.assertEqual([(r['recorded'], r['ours']) for r in robots[4:]], [(0.9, True), (1.8, True)])
+        import json
+        with open(os.path.join(self.tmp.name, 'transfer_arm_D.json'), 'w') as f:
+            json.dump({'champions': [{'label': 'seed 1', 'score': 2.5}, {'label': 'seed 2', 'score': 3.5}]}, f)
+        self.assertEqual(rc.transfer_scores_of('D', self.tmp.name), {'seed 1': 2.5, 'seed 2': 3.5})
+        self.assertEqual(rc.transfer_scores_of('D', os.path.join(self.tmp.name, 'nowhere')), {})
+
+    def test_fewer_than_three_runs_are_not_shown(self):
+        with self.assertRaises(SystemExit):
+            rc.rehearsal_robots('trialX_s', 9, self.tmp.name)             # no run has nine generations
+
+    def frames_of_a_straight_walk(self, distance=0.03):
+        """Two voxels moving `distance` metres (of the 2013 scale) in 10 cycles."""
+        start = np.array([[0.0005, 0.0005, 0.0005], [0.0015, 0.0005, 0.0005]])
+        times = np.array([0.025 * k for k in range(11)])
+        frames = np.array([np.hstack([start + [distance * k / 10, 0, 0], np.tile([1.0, 0, 0, 0], (2, 1)),
+                                      np.full((2, 3), 0.001)]) for k in range(11)])
+        return np.array([1, 3]), times, frames[:, :, 0:3].mean(axis=1), frames
+
+    def test_the_frames_must_be_the_evaluation_that_was_scored(self):
+        from unittest import mock
+        materials, times, cms, frames = self.frames_of_a_straight_walk()
+        robot = {'row': 'own search 2026, arm D, in the MuJoCo engine', 'who': 'seed 4', 'column': 'median of 10',
+                 'recorded': 3.0, 'simulator': 'mujoco', 'genome': None, 'ours': True}
+        true_score = float(np.linalg.norm(cms[-1] - cms[0]) / rc.BODY)
+        with mock.patch.object(rc, 'record_in_the_engine', return_value=(true_score, False, materials, times, cms, frames)):
+            check, *_ = rc.simulate(dict(robot, recorded=true_score), 'x', 0.025)
+            self.assertTrue(check['identical_to_the_last_digit'])
+            self.assertEqual((check['voxels'], check['frames'], len(check['body_lengths_per_cycle'])), (2, 11, 10))
+            self.assertAlmostEqual(check['score_from_first_and_last_frame'], 3.0)
+            first, second = rc.captions(dict(robot, recorded=true_score), check)
+            self.assertIn('seed 4 (median of 10)', first)
+            self.assertIn('3.00 body lengths in 10 cycles (its recorded score), 2 voxels', second)
+            with self.assertRaises(SystemExit) as stop:                     # a recorded score that differs in the last digits
+                rc.simulate(dict(robot, recorded=true_score + 1e-12), 'x', 0.025)
+            self.assertIn('would not be the evaluation that was scored', str(stop.exception))
+        with mock.patch.object(rc, 'record_in_the_engine', return_value=(2.0, False, materials, times, cms, frames)):
+            with self.assertRaises(SystemExit):                             # frames that do not give the score
+                rc.simulate(dict(robot, recorded=2.0), 'x', 0.025)
+
+    def test_the_caption_of_a_robot_in_the_simulator_it_was_not_evolved_in(self):
+        check = {'score_in_the_campaign_simulator': 1.2, 'voxels': 500, 'from_a_run_of_this_project': False,
+                 'recorded_score': None, 'robot': 'x'}
+        robot = {'row': 'the same robot in the 2013 simulator', 'who': 'seed 4', 'column': 'median of 10',
+                 'simulator': '2013', 'evolved_score': 2.4}
+        first, second = rc.captions(robot, check)
+        self.assertEqual(first, 'the same robot in the 2013 simulator, seed 4')
+        self.assertIn('1.20 body lengths in 10 cycles, 0.50 of its score in the engine', second)
+        # the captions of the arms shown before are what they were
+        old = {'score_in_the_campaign_simulator': 4.22, 'voxels': 652, 'from_a_run_of_this_project': False,
+               'recorded_score': 4.39, 'robot': '2013 original, run 101 (median of 35)'}
+        self.assertEqual(rc.captions({'row': '2013 original', 'who': 'run 101', 'column': 'median of 35'}, old),
+                         ('2013 original, run 101 (median of 35)',
+                          '4.22 body lengths in 10 cycles (recorded as 4.39 by the 2013 build), 652 voxels'))
+
+    def test_three_rows_on_one_sheet(self):
+        w, h = rc.PANEL
+        blank = np.full((h, w, 3), 255, np.uint8)
+        sheets = rc.assemble([[blank, blank]] * 6, [('a', 'b')] * 6, [0.0, 0.125], 24.0)
+        self.assertEqual((len(sheets), sheets[0].size), (2, (2 * w + 6, 3 * h + 12)))
+        sheets = rc.assemble([[blank]] * 4, [('a', 'b')] * 4, [0.0], 24.0)             # four robots: as before
+        self.assertEqual(sheets[0].size, (2 * w + 6, 2 * h + 6))
+
+
+class TestRecordingTheEngine(unittest.TestCase):
+    def test_the_recorded_evaluation_is_the_one_a_run_makes(self):
+        """A small body, stored as a run stores it, through the search's own evaluation under the
+        preset of arm D and through the recording used for the video: the same score to the last
+        digit, and frames that give that score."""
+        from src.evolution import mujoco_tendon_evaluator as evaluation
+        genome = as_stored(small_body(3))
+        params = rc.engine_parameters()
+        recorded = float(evaluation._eval_worker((genome, None, None, params)))
+        self.assertGreater(recorded, 0.0)                   # a slow body: the search's early stop may end it early
+        robot = {'row': 'a small body in the MuJoCo engine', 'who': 'seed 0', 'column': 'median of 1', 'recorded': recorded,
+                 'simulator': 'mujoco', 'genome': genome, 'ours': True}
+        check, materials, times, cms, frames = rc.simulate(robot, 'x', 0.0125, params)
+        self.assertTrue(check['identical_to_the_last_digit'])
+        self.assertEqual(check['score_of_the_recorded_evaluation'], recorded)
+        self.assertAlmostEqual(check['score_from_first_and_last_frame'], recorded, places=6)
+        self.assertEqual((len(materials), frames.shape[1:]), (int((small_body(3) != 0).sum()), (len(materials), 10)))
+        self.assertFalse(check['blew_up'])
+
+
 if __name__ == '__main__':
     unittest.main()
