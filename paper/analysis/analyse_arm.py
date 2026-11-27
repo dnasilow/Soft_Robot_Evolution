@@ -34,8 +34,15 @@ Arms covered
          against the deposited runs at the same generations. Its champions are those of
          generation 300; the deposit holds robots of generation 1000 only, so the body table
          sets the one against the other and says so.
-Not yet here: arms E1 to E3. The transfer scores of the champions in the other simulator are
-transfer_scores.py.
+  E1, E2, E3
+         arm D with one setting undone each, seeds 1 to 3, 300 generations (PROTOCOL.md,
+         section 9.8; added on 27 November 2026, while arm D was running and before any of the
+         three was started). The same report as arm D's, but its comparisons are not among the
+         five primary ones (no Holm correction). It also sets the arm against arm D, the
+         comparison these arms are for, and says what three runs can show. Arm D's scores come
+         from its committed report, so these arms are analysed after arm D.
+The transfer scores of the champions in the other simulator are transfer_scores.py (arms R, Rc
+and A) and transfer_to_2013.py (arm D).
 """
 import argparse
 import datetime
@@ -82,6 +89,27 @@ ARMS = {
            'condition': 'noCost', 'score_generations': (300, 100),
            'title': "this project's CPPN-NEAT as it is, in this project's MuJoCo engine with --preset "
                     "cheney2013-floor, no cost"},
+    # Arm D with one setting undone each (PROTOCOL.md, section 9.8). 'sensitivity': their
+    # comparisons are not primary ones, and they are set against arm D as well.
+    'E1': {'kind': 'search', 'prefix': 'armE1_s', 'seeds': [1, 2, 3], 'generations': 300,
+           'condition': 'noCost', 'score_generations': (300, 100), 'against': 'D', 'sensitivity': True,
+           'undone': 'global damping back to 0.01',
+           'title': "arm D with the global damping back to 0.01: this project's CPPN-NEAT in its MuJoCo engine with "
+                    "--preset cheney2013-floor --damping-global 0.01, no cost"},
+    'E2': {'kind': 'search', 'prefix': 'armE2_s', 'seeds': [1, 2, 3], 'generations': 300,
+           'condition': 'noCost', 'score_generations': (300, 100), 'against': 'D', 'sensitivity': True,
+           'undone': 'amplitude 20% with the volumetric law',
+           'title': "arm D with the actuation back to an amplitude of 20% with the volumetric law on: this project's "
+                    "CPPN-NEAT in its MuJoCo engine with --preset cheney2013-floor --amp 0.2 --poisson on, no cost"},
+    'E3': {'kind': 'search', 'prefix': 'armE3_s', 'seeds': [1, 2, 3], 'generations': 300,
+           'condition': 'noCost', 'score_generations': (300, 100), 'against': 'D', 'sensitivity': True,
+           'undone': 'hard floor, bodies set on it',
+           'title': "arm D with the engine's hard floor and every body set on it: this project's CPPN-NEAT in its "
+                    "MuJoCo engine with --preset cheney2013, no cost"},
+}
+AGAINST = {     # what the arm an arm is also set against is, in the words of the report's heading
+    'R': 'the original search in the same simulator',
+    'D': 'the same search in the same engine with every setting of its preset',
 }
 SCORE_GENERATIONS = (1000, 300, 100)        # the first is the primary outcome; an arm may name its own
 REFERENCE_GENERATION = 1000                 # the deposit holds the robots of generation 1000 only
@@ -257,10 +285,14 @@ def finished_arm(arm, outcomes=OUTCOMES):
 # --------------------------------------------------------------------------------------------
 # the analysis
 # --------------------------------------------------------------------------------------------
-def analyse(runs, condition, generations, primary, body_generation, n_boot=None, seed=None, against=None):
+def analyse(runs, condition, generations, primary, body_generation, n_boot=None, seed=None, against=None,
+            sensitivity=False):
     """runs: the loaded runs that enter the statistics. Returns the report as a dictionary.
     against: {'arm': name, 'report': the committed report of that arm}, for the arms the
-    protocol also sets against another arm."""
+    protocol also sets against another arm.
+    sensitivity: an arm of section 9.8 (E1 to E3). Its comparison at the generation `primary` is
+    its outcome but not one of the protocol's primary comparisons, so the report has an
+    'outcome' in place of a 'primary', without a Holm range, and says what so few runs can show."""
     ref = reference_scores(condition)
     report = {'reference': f'the {len(ref)} deposited 2013 runs, condition {condition}', 'scores': {}}
     for g in generations:
@@ -271,11 +303,14 @@ def analyse(runs, condition, generations, primary, body_generation, n_boot=None,
         report['scores'][str(g)] = ps.compare(x, y, n_boot, seed)
     if str(primary) in report['scores']:
         s = report['scores'][str(primary)]
-        report['primary'] = {
-            'generation': primary, 'verdict': ps.verdict(s['ratio_interval']), 'window': list(ps.CRITERION),
-            'attainability': ps.attainability([float(c[primary - 1]) for c in ref], s['n_arm'], seed=seed),
-            'holm_range': list(ps.holm_range(s['p'])), 'holm_family': ps.FAMILY,
-        }
+        block = {'generation': primary, 'verdict': ps.verdict(s['ratio_interval']), 'window': list(ps.CRITERION),
+                 'attainability': ps.attainability([float(c[primary - 1]) for c in ref], s['n_arm'], seed=seed)}
+        if sensitivity:
+            block['smallest_p'] = ps.smallest_p(s['n_arm'], s['n_reference'])
+            report['outcome'] = block
+        else:
+            block.update(holm_range=list(ps.holm_range(s['p'])), holm_family=ps.FAMILY)
+            report['primary'] = block
 
     if against:
         other = against['report']
@@ -285,13 +320,30 @@ def analyse(runs, condition, generations, primary, body_generation, n_boot=None,
             y = [float(row['scores'][str(g)]) for row in other['per_seed'] if str(g) in row['scores']]
             if len(x) >= 3 and len(y) >= 3:
                 block['scores'][str(g)] = ps.compare(x, y, n_boot, seed)
-        if str(primary) in block['scores']:
-            block['generation'] = primary
-            block['holm_range'] = list(ps.holm_range(block['scores'][str(primary)]['p']))
-        if other.get('primary'):
-            s = other['scores'][str(other['primary']['generation'])]
-            block['floor'] = {'generation': other['primary']['generation'], 'verdict': other['primary']['verdict'],
-                              'ratio_of_medians': s['ratio_of_medians'], 'ratio_interval': s['ratio_interval']}
+        at = other.get('primary')
+        measured = None
+        if at:
+            s = other['scores'][str(at['generation'])]
+            measured = {'generation': at['generation'], 'verdict': at['verdict'],
+                        'ratio_of_medians': s['ratio_of_medians'], 'ratio_interval': s['ratio_interval']}
+        if sensitivity:
+            # the comparison these arms are for (section 9.8, point 4): read by whether the interval
+            # of the ratio contains 1; no criterion, no correction
+            block['what'] = AGAINST.get(against['arm'], '')
+            if str(primary) in block['scores']:
+                s = block['scores'][str(primary)]
+                block['generation'] = primary
+                block['reading'] = 'not distinguishable' if s['ratio_interval'][0] <= 1.0 <= s['ratio_interval'][1] else 'differs'
+                block['smallest_p'] = ps.smallest_p(s['n_arm'], s['n_reference'])
+                report['few_runs'] = what_few_runs_can_show(s['n_arm'], s['n_reference'], primary, condition, seed)
+            if measured:
+                block['baseline'] = measured          # the other arm's own result against the deposit
+        else:
+            if str(primary) in block['scores']:
+                block['generation'] = primary
+                block['holm_range'] = list(ps.holm_range(block['scores'][str(primary)]['p']))
+            if measured:
+                block['floor'] = measured
         report['against'] = block
 
     champions = [r['champion'] for r in runs if r.get('champion') and r['champion']['body']]
@@ -345,22 +397,42 @@ SENSITIVITY_AGAINST = 'D'                   # the arm they are also set against 
 SHIFTS = (1.0, 0.9, 0.75, 0.5)              # true ratios of the scores for which section 9.8 gives figures
 
 
-def what_three_runs_can_show(seed=None, trials=None, n_boot=None):
-    """PROTOCOL.md, section 9.8, point 5, from the deposited no-cost runs alone: three runs drawn
-    from them at generation 300 and multiplied by a factor, set against the deposited runs and
-    against as many more drawn runs as arm D has, the way an E arm is. How often is that read as
-    a difference?"""
-    y = [float(c[SENSITIVITY_GENERATION - 1]) for c in reference_scores('noCost')]
-    n_other = len(ARMS[SENSITIVITY_AGAINST]['seeds'])
+def what_few_runs_can_show(n_arm, n_other, generation, condition='noCost', seed=None, trials=None, n_boot=None):
+    """From the deposited runs alone: n_arm runs drawn from them at that generation and multiplied
+    by a factor, set against the deposited runs and against n_other more drawn runs, the way an
+    arm of few runs is set against the deposit and against another arm. How often is that read
+    as a difference?"""
+    y = [float(c[generation - 1]) for c in reference_scores(condition)]
     rows = []
     for shift in SHIFTS:
         rows.append({'true_ratio': shift,
-                     'against_the_deposit': ps.read_as_different(y, SENSITIVITY_RUNS, None, shift, trials, n_boot, seed),
-                     'against_another_arm': ps.read_as_different(y, SENSITIVITY_RUNS, n_other, shift, trials, n_boot, seed)})
-    return {'runs': SENSITIVITY_RUNS, 'generation': SENSITIVITY_GENERATION, 'deposited_runs': len(y),
-            'runs_of_the_other_arm': n_other, 'rows': rows,
-            'smallest_p_against_the_deposit': ps.smallest_p(SENSITIVITY_RUNS, len(y)),
-            'smallest_p_against_the_other_arm': ps.smallest_p(SENSITIVITY_RUNS, n_other)}
+                     'against_the_deposit': ps.read_as_different(y, n_arm, None, shift, trials, n_boot, seed),
+                     'against_another_arm': ps.read_as_different(y, n_arm, n_other, shift, trials, n_boot, seed)})
+    return {'runs': n_arm, 'generation': generation, 'deposited_runs': len(y), 'runs_of_the_other_arm': n_other,
+            'rows': rows, 'smallest_p_against_the_deposit': ps.smallest_p(n_arm, len(y)),
+            'smallest_p_against_the_other_arm': ps.smallest_p(n_arm, n_other)}
+
+
+def what_three_runs_can_show(seed=None, trials=None, n_boot=None):
+    """PROTOCOL.md, section 9.8, point 5: the design of arms E1 to E3. Three runs at generation
+    300, against the deposit and against an arm of arm D's ten."""
+    return what_few_runs_can_show(SENSITIVITY_RUNS, len(ARMS[SENSITIVITY_AGAINST]['seeds']), SENSITIVITY_GENERATION,
+                                  seed=seed, trials=trials, n_boot=n_boot)
+
+
+def few_runs_lines(few):
+    """The table of what_few_runs_can_show as text."""
+    other = few['runs_of_the_other_arm']
+    L = [f"  {'true ratio of the scores':<26}  {'against the deposit':>26}  {'against a ' + str(other) + '-run arm':>26}",
+         f"  {'':<26}  {'interval':>12}  {'p < 0.05':>12}  {'interval':>12}  {'p < 0.05':>12}"]
+    for row in few['rows']:
+        a, b = row['against_the_deposit'], row['against_another_arm']
+        L.append(f"  {str(row['true_ratio']) + (' (no difference)' if row['true_ratio'] == 1.0 else ''):<26}  "
+                 f"{100 * a['interval_excludes_1']:>11.1f}%  {100 * a['p_below_0.05']:>11.1f}%  "
+                 f"{100 * b['interval_excludes_1']:>11.1f}%  {100 * b['p_below_0.05']:>11.1f}%")
+    L.append(f"  The smallest p the exact test can give: {pv(few['smallest_p_against_the_deposit'])} against the deposit, "
+             f"{pv(few['smallest_p_against_the_other_arm'])} against the other arm.")
+    return L
 
 
 # --------------------------------------------------------------------------------------------
@@ -388,37 +460,45 @@ def render(report):
     L.append(f"{'generation':>10}  {'':9}  {'runs':>4}  {'arm median (quartiles)':>24}  {'deposited median (quartiles)':>28}  "
              f"{'ratio':>5}  {'95% interval':>12}  {'A12 (95% interval)':>19}  {'p':>7}")
     primary = report.get('primary', {})
+    outcome = report.get('outcome', {})         # an arm of section 9.8: its outcome is not a primary comparison
+    chief = primary or outcome
     for g, s in report['scores'].items():
-        role = '' if not primary else 'primary' if int(g) == primary['generation'] else 'secondary'
+        role = '' if not chief else ('primary' if primary else 'outcome') if int(g) == chief['generation'] else 'secondary'
         L.append(f"{g:>10}  {role:9}  {s['n_arm']:>4}  {med(s['arm_median'], s['arm_q25'], s['arm_q75']):>24}  "
                  f"{med(s['reference_median'], s['reference_q25'], s['reference_q75']):>28}  "
                  f"{s['ratio_of_medians']:>5.2f}  {s['ratio_interval'][0]:>5.2f}-{s['ratio_interval'][1]:<5.2f}   "
                  f"{s['a12']:.2f} ({s['a12_interval'][0]:.2f}-{s['a12_interval'][1]:.2f})  {pv(s['p']):>8}")
-    if primary:
-        s = report['scores'][str(primary['generation'])]
-        lo, hi = primary['window']
+    if chief:
+        s = report['scores'][str(chief['generation'])]
+        lo, hi = chief['window']
         L.append('')
-        L.append(f"Primary outcome, generation {primary['generation']}: ratio of medians {s['ratio_of_medians']:.3f}, "
+        L.append(f"{'Primary outcome' if primary else 'Outcome of this arm'}, generation {chief['generation']}: ratio of "
+                 f"medians {s['ratio_of_medians']:.3f}, "
                  f"95% interval {s['ratio_interval'][0]:.3f} to {s['ratio_interval'][1]:.3f}.")
         L.append({
             'reproduces': f"  REPRODUCES: the interval lies inside {lo:.2f} to {hi:.2f}, the criterion fixed in advance.",
             'not distinguishable': f"  NOT DISTINGUISHABLE from the deposited runs (the interval contains 1), but reproduction "
                                    f"within the criterion is not shown (the interval is not inside {lo:.2f} to {hi:.2f}).",
             'differs': "  DIFFERS from the deposited runs: the interval excludes 1.",
-        }[primary['verdict']])
+        }[chief['verdict']])
         L.append(f"  What the criterion can show here: a perfect reproduction with {s['n_arm']} runs would meet it in "
-                 f"{100 * primary['attainability']:.0f}% of cases (estimated from the deposited runs alone).")
-        L.append(f"  Mann-Whitney p = {pv(s['p'])}. Holm over the {primary['holm_family']} primary comparisons is final only "
-                 f"when all arms are in; until then it lies between {pv(primary['holm_range'][0])} and {pv(primary['holm_range'][1])}.")
+                 f"{100 * chief['attainability']:.0f}% of cases (estimated from the deposited runs alone).")
+        if primary:
+            L.append(f"  Mann-Whitney p = {pv(s['p'])}. Holm over the {primary['holm_family']} primary comparisons is final only "
+                     f"when all arms are in; until then it lies between {pv(primary['holm_range'][0])} and {pv(primary['holm_range'][1])}.")
+        else:
+            L.append(f"  Mann-Whitney p = {pv(s['p'])}, uncorrected: this comparison is not one of the {ps.FAMILY} primary ones "
+                     f"(PROTOCOL.md, section 9.8). The smallest p {s['n_arm']} runs can give against {s['n_reference']} is "
+                     f"{pv(outcome['smallest_p'])}.")
 
     against = report.get('against')
     if against:
         other = f"arm {against['arm']}"
-        L += ['', f"AGAINST ARM {against['arm']}, the original search in the same simulator ({against['n_other']} runs)"]
+        L += ['', f"AGAINST ARM {against['arm']}, {against.get('what') or AGAINST['R']} ({against['n_other']} runs)"]
         L.append(f"{'generation':>10}  {'':9}  {'runs':>4}  {'arm median (quartiles)':>24}  {other + ' median (quartiles)':>28}  "
                  f"{'ratio':>5}  {'95% interval':>12}  {'A12 (95% interval)':>19}  {'p':>7}")
         for g, s in against['scores'].items():
-            role = 'primary' if int(g) == against.get('generation') else 'secondary'
+            role = ('outcome' if 'reading' in against else 'primary') if int(g) == against.get('generation') else 'secondary'
             L.append(f"{g:>10}  {role:9}  {s['n_arm']:>4}  {med(s['arm_median'], s['arm_q25'], s['arm_q75']):>24}  "
                      f"{med(s['reference_median'], s['reference_q25'], s['reference_q75']):>28}  "
                      f"{s['ratio_of_medians']:>5.2f}  {s['ratio_interval'][0]:>5.2f}-{s['ratio_interval'][1]:<5.2f}   "
@@ -432,6 +512,33 @@ def render(report):
             L.append(f"  The floor, measured for the original code itself: arm {against['arm']} against the deposited runs at "
                      f"generation {f_['generation']} has a ratio of medians of {f_['ratio_of_medians']:.3f}, 95% interval "
                      f"{f_['ratio_interval'][0]:.3f} to {f_['ratio_interval'][1]:.3f} ({f_['verdict']}).")
+        if 'reading' in against:
+            s = against['scores'][str(against['generation'])]
+            L.append(f"  Generation {against['generation']}: ratio of medians, this arm over {other}, {s['ratio_of_medians']:.3f}, "
+                     f"95% interval {s['ratio_interval'][0]:.3f} to {s['ratio_interval'][1]:.3f}.")
+            L.append({
+                'not distinguishable': f"  NOT DISTINGUISHABLE from {other} (the interval contains 1). That is no evidence that the "
+                                       f"setting does not matter: see below what {s['n_arm']} runs can show.",
+                'differs': f"  DIFFERS from {other}: the interval excludes 1. See below how often {s['n_arm']} runs give that "
+                           f"without a difference.",
+            }[against['reading']])
+            L.append(f"  Mann-Whitney p = {pv(s['p'])}, uncorrected. The smallest p {s['n_arm']} runs can give against "
+                     f"{s['n_reference']} is {pv(against['smallest_p'])}.")
+        if 'baseline' in against:
+            b = against['baseline']
+            L.append(f"  Arm {against['arm']} itself against the deposited runs at generation {b['generation']}: ratio of medians "
+                     f"{b['ratio_of_medians']:.3f}, 95% interval {b['ratio_interval'][0]:.3f} to {b['ratio_interval'][1]:.3f} "
+                     f"({b['verdict']}).")
+
+    few = report.get('few_runs')
+    if few:
+        L += ['', f"WHAT {few['runs']} RUNS CAN SHOW (PROTOCOL.md, section 9.8), estimated from the deposited runs alone: "
+                  f"{few['runs']} runs drawn from the {few['deposited_runs']} deposited runs at generation {few['generation']} "
+                  f"and multiplied by a factor,",
+              f"set against the deposited runs, or against {few['runs_of_the_other_arm']} more runs drawn the same way. How "
+              f"often that is read as a difference: the 95% interval of the ratio of medians excludes 1, or Mann-Whitney "
+              f"p < 0.05."]
+        L += few_runs_lines(few)
 
     body = report.get('body')
     if body:
@@ -519,16 +626,7 @@ def main(argv=None):
               f"{few['deposited_runs']} deposited no-cost runs at generation {few['generation']} and\nmultiplied by a factor, set "
               f"against the deposited runs, or against {few['runs_of_the_other_arm']} more runs drawn the same way. How often is "
               f"that read\nas a difference: the 95% interval of the ratio of medians excludes 1, or Mann-Whitney p < 0.05?")
-        print(f"  {'true ratio of the scores':<26}  {'against the deposit':>26}  "
-              f"{'against a ' + str(few['runs_of_the_other_arm']) + '-run arm':>26}")
-        print(f"  {'':<26}  {'interval':>12}  {'p < 0.05':>12}  {'interval':>12}  {'p < 0.05':>12}")
-        for row in few['rows']:
-            a, b = row['against_the_deposit'], row['against_another_arm']
-            print(f"  {str(row['true_ratio']) + (' (no difference)' if row['true_ratio'] == 1.0 else ''):<26}  "
-                  f"{100 * a['interval_excludes_1']:>11.1f}%  {100 * a['p_below_0.05']:>11.1f}%  "
-                  f"{100 * b['interval_excludes_1']:>11.1f}%  {100 * b['p_below_0.05']:>11.1f}%")
-        print(f"  The smallest p the exact test can give: {pv(few['smallest_p_against_the_deposit'])} against the deposit, "
-              f"{pv(few['smallest_p_against_the_other_arm'])} against the other arm.")
+        print('\n'.join(few_runs_lines(few)))
         return 0
 
     if a.arm:
@@ -558,19 +656,30 @@ def main(argv=None):
         notes = ([f"{len(given_up)} seed(s) failed for good and are left out of the statistics: {given_up}."]
                  if given_up else [])
         against = None
+        sensitivity = bool(arm.get('sensitivity'))
         if arm.get('against'):
             other = finished_arm(arm['against'], a.outcomes_dir)
+            if other is None and sensitivity:
+                # the comparison with that arm is what this arm is for: no report without it
+                print(f"Arm {a.arm} is analysed after arm {arm['against']}: the report of arm {arm['against']} is not in "
+                      f"{a.outcomes_dir} yet (PROTOCOL.md, section 9.8, point 4). Nothing was computed.")
+                return 2
             if other is None:
                 notes.append(f"The report of arm {arm['against']} is not in {a.outcomes_dir}, so the comparison with that "
                              f"arm is not computed here.")
             else:
                 against = {'arm': arm['against'], 'report': other}
+        if sensitivity:
+            notes.append(f"Arm {a.arm} is arm {arm['against']} with one setting undone, in {len(arm['seeds'])} runs (PROTOCOL.md, "
+                         f"section 9.8). Its comparisons are not among the {ps.FAMILY} primary ones; their p-values are not "
+                         f"corrected. The comparison it is for is the one with arm {arm['against']}.")
         if g != REFERENCE_GENERATION:
             notes.append(f"The deposit holds the robots of generation {REFERENCE_GENERATION} only: the body table sets "
                          f"this arm's champions of generation {g} against the deposited champions of generation "
                          f"{REFERENCE_GENERATION}.")
         score_generations = arm.get('score_generations', SCORE_GENERATIONS)
-        report = analyse(used, arm['condition'], score_generations, score_generations[0], g, against=against)
+        report = analyse(used, arm['condition'], score_generations, score_generations[0], g, against=against,
+                         sensitivity=sensitivity)
         report['title'] = (f"ARM {a.arm}: {arm['title']}. Seeds {arm['seeds'][0]} to {arm['seeds'][-1]}, {g} generations; "
                            f"{len(used)} of {len(arm['seeds'])} runs in the statistics.")
         report['left_out'] = [{'seed': s, 'generations': runs[s]['generations'],

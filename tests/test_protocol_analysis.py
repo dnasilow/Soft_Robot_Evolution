@@ -500,6 +500,146 @@ class TestArmDReport(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_DEPOSIT, 'deposited 2013 data not present')
+class TestArmEReports(unittest.TestCase):
+    """The reports of arms E1 to E3 on made-up runs (PROTOCOL.md, section 9.8). Ten deposited
+    no-cost runs stand in for arm D, as in TestArmDReport. Arm E1 is three other deposited runs
+    at half their scores: a setting that costs half the score. Arm E3 is three of the stand-in
+    arm D's own runs, the ones around its median: a setting that changes nothing. Written on 27
+    November 2026, while arm D was running and before any of these arms was started."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp()
+        cls.runs, cls.outcomes = os.path.join(cls.tmp, 'runs'), os.path.join(cls.tmp, 'outcomes')
+        body = np.zeros((10, 10, 10), np.int8)
+        body[1:9, 1:9, 0:5] = 1
+        curves = [[float(v) for v in c[:300]] for c in aa.reference_scores('noCost')]
+        for seed, curve in enumerate(curves[:10], start=1):
+            make_search_run(cls.runs, f'armD_s{seed}', curve, [(body, curve[299]), (body, 0.5)])
+        for seed, curve in enumerate(curves[10:13], start=1):
+            half = [0.5 * v for v in curve]
+            make_search_run(cls.runs, f'armE1_s{seed}', half, [(body, half[299]), (body, 0.1)])
+        middle = sorted(range(10), key=lambda k: max(curves[k]))[3:6]         # ranks 4 to 6 of the ten
+        for seed, k in enumerate(middle, start=1):
+            make_search_run(cls.runs, f'armE3_s{seed}', curves[k], [(body, curves[k][299]), (body, 0.5)])
+        cls.argv = lambda arm, out: ['--arm', arm, '--results-dir', cls.runs, '--out-dir', os.path.join(cls.tmp, out),
+                                     '--outcomes-dir', cls.outcomes]
+        with mock.patch.object(ps, 'N_BOOT', 600), mock.patch.object(ps, 'ATTAIN_TRIALS', 40), \
+                mock.patch.object(ps, 'ATTAIN_BOOT', 200):
+            cls.too_early = run_main(cls.argv('E1', 'too_early'))               # arm D has no report yet
+            assert run_main(cls.argv('D', 'out'))[0] == 0
+            os.makedirs(cls.outcomes)
+            shutil.copy(os.path.join(cls.tmp, 'out', 'arm_D.json'), cls.outcomes)
+            cls.code1, cls.text1 = run_main(cls.argv('E1', 'out'))
+            cls.code3, cls.text3 = run_main(cls.argv('E3', 'out'))
+            cls.code2, cls.text2 = run_main(cls.argv('E2', 'out'))              # no run of arm E2 exists
+        cls.d = load_json(os.path.join(cls.tmp, 'out', 'arm_D.json'))
+        cls.e1 = load_json(os.path.join(cls.tmp, 'out', 'arm_E1.json'))
+        cls.e3 = load_json(os.path.join(cls.tmp, 'out', 'arm_E3.json'))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, True)
+
+    def test_the_arms_are_those_of_the_protocol_and_of_the_launcher(self):
+        sys.path.insert(0, os.path.join(ROOT, 'paper', 'reference_2013'))
+        import search_arm
+        import start_arm
+        for name in ('E1', 'E2', 'E3'):
+            arm, launched = aa.ARMS[name], search_arm.ARMS[name]
+            self.assertEqual((arm['kind'], arm['seeds'], arm['generations'], arm['condition'], arm['score_generations']),
+                             ('search', [1, 2, 3], 300, 'noCost', (300, 100)))
+            self.assertEqual((arm['against'], arm['sensitivity']), ('D', True))
+            self.assertEqual(arm['prefix'], launched['tag'] + '_s')
+            self.assertEqual(arm['seeds'], start_arm.parse_seeds(launched['seeds']))
+            self.assertEqual((arm['generations'], arm['condition']), (launched['generations'], launched['condition']))
+            for word in launched['runner'][:launched['runner'].index('--no-age-pareto')]:
+                self.assertIn(word, arm['title'])                         # the title names the arm's own options
+        d = aa.ARMS['D']                                                  # and arm D is what it was
+        self.assertEqual((d['prefix'], d['seeds'], d['generations']), ('armD_s', list(range(1, 11)), 300))
+        self.assertNotIn('against', d)
+        self.assertNotIn('sensitivity', d)
+
+    def test_an_e_arm_is_not_analysed_before_arm_d(self):
+        code, text = self.too_early
+        self.assertEqual(code, 2)
+        self.assertIn('Arm E1 is analysed after arm D', text)
+        self.assertNotIn('SCORES', text)
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, 'too_early')))
+
+    def test_an_arm_without_its_runs_is_refused(self):
+        self.assertEqual(self.code2, 2)
+        self.assertIn('Arm E2 is not complete: seeds [1, 2, 3] have not finished with 300 generations', self.text2)
+
+    def test_the_outcome_is_at_generation_300_and_is_no_primary_comparison(self):
+        self.assertEqual(self.code1, 0, self.text1)
+        self.assertEqual(sorted(self.e1['scores']), ['100', '300'])
+        self.assertNotIn('primary', self.e1)
+        outcome = self.e1['outcome']
+        self.assertEqual((outcome['generation'], outcome['verdict']), (300, 'differs'))       # half the deposit's scores
+        self.assertNotIn('holm_range', outcome)
+        self.assertAlmostEqual(outcome['smallest_p'], 2 / 8436)
+        s = self.e1['scores']['300']
+        self.assertEqual((s['n_arm'], s['n_reference']), (3, 35))
+        self.assertLess(s['ratio_of_medians'], 0.7)
+        self.assertIn('Outcome of this arm, generation 300', self.text1)
+        self.assertNotIn('Primary outcome', self.text1)
+        self.assertNotIn('Holm over', self.text1)
+        self.assertIn('uncorrected: this comparison is not one of the 5 primary ones', self.text1)
+        self.assertRegex(self.text1, r'\n +300  outcome +3 ')
+        self.assertRegex(self.text1, r'\n +100  secondary +3 ')
+        self.assertIn('Arm E1 is arm D with one setting undone, in 3 runs', self.text1)
+
+    def test_against_arm_d(self):
+        block = self.e1['against']
+        self.assertEqual((block['arm'], block['n_other'], block['generation']), ('D', 10, 300))
+        self.assertEqual(sorted(block['scores']), ['100', '300'])
+        s = block['scores']['300']
+        self.assertEqual((s['n_arm'], s['n_reference']), (3, 10))
+        d_scores = [row['scores']['300'] for row in self.d['per_seed']]
+        self.assertAlmostEqual(s['reference_median'], float(np.median(d_scores)))             # arm D's own median
+        e_scores = [row['scores']['300'] for row in self.e1['per_seed']]
+        self.assertAlmostEqual(s['ratio_of_medians'], float(np.median(e_scores) / np.median(d_scores)))
+        self.assertEqual(block['reading'], 'differs')
+        self.assertAlmostEqual(block['smallest_p'], 2 / 286)
+        self.assertNotIn('holm_range', block)                             # that is arm A against arm R
+        self.assertNotIn('floor', block)
+        self.assertEqual(block['baseline']['verdict'], self.d['primary']['verdict'])
+        self.assertEqual(block['baseline']['ratio_of_medians'], self.d['scores']['300']['ratio_of_medians'])
+        self.assertIn('AGAINST ARM D, the same search in the same engine with every setting of its preset (10 runs)', self.text1)
+        self.assertIn('DIFFERS from arm D: the interval excludes 1', self.text1)
+        self.assertIn('Arm D itself against the deposited runs at generation 300', self.text1)
+        self.assertNotIn('The floor, measured for the original code itself', self.text1)
+
+    def test_a_setting_that_changes_nothing_is_not_distinguishable(self):
+        self.assertEqual(self.code3, 0, self.text3)
+        self.assertEqual(self.e3['against']['reading'], 'not distinguishable')
+        self.assertIn('NOT DISTINGUISHABLE from arm D (the interval contains 1). That is no evidence that the setting '
+                      'does not matter', self.text3)
+        self.assertGreater(self.e3['against']['scores']['300']['p'], 0.05)
+
+    def test_what_three_runs_can_show_is_in_the_report(self):
+        few = self.e1['few_runs']
+        self.assertEqual((few['runs'], few['runs_of_the_other_arm'], few['generation'], few['deposited_runs']), (3, 10, 300, 35))
+        self.assertEqual([r['true_ratio'] for r in few['rows']], [1.0, 0.9, 0.75, 0.5])
+        self.assertIn('WHAT 3 RUNS CAN SHOW (PROTOCOL.md, section 9.8)', self.text1)
+        self.assertIn('against a 10-run arm', self.text1)
+        self.assertIn('a perfect reproduction with 3 runs would meet it in', self.text1)
+
+    def test_bodies_and_every_seed(self):
+        body = self.e1['body']
+        self.assertEqual((body['generation'], body['reference_generation'], body['n_arm'], body['n_reference']), (300, 1000, 3, 35))
+        self.assertEqual([r['seed'] for r in self.e1['per_seed']], [1, 2, 3])
+        self.assertTrue(all(r['generations'] == 300 and r['champion']['curve_agrees'] for r in self.e1['per_seed']))
+        self.assertIn('Seeds 1 to 3, 300 generations; 3 of 3 runs in the statistics', self.text1)
+
+    def test_arm_d_s_own_report_is_untouched_by_all_this(self):
+        self.assertEqual(self.d['primary']['generation'], 300)
+        for key in ('against', 'outcome', 'few_runs'):
+            self.assertNotIn(key, self.d)
+
+
+@unittest.skipUnless(HAVE_DEPOSIT, 'deposited 2013 data not present')
 class TestWhatThreeRunsCanShow(unittest.TestCase):
     """PROTOCOL.md, section 9.8, point 5: from the deposited runs alone."""
 
