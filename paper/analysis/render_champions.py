@@ -23,6 +23,16 @@ arm was complete). Its two champions are shown in that engine: the evaluation of
 run again from the body the run stored, and recorded. A third row shows the same two robots in
 the 2013 simulator, which they were not evolved in. Six robots instead of four.
 
+Arms E1 to E3 are arm D with one setting undone each (PROTOCOL.md, section 9.8; added on 27
+November 2026, before any of them was started). Their video sets the arm next to arm D: the 2013
+originals, arm D's median and best champion in arm D's engine, and the arm's own median and best
+champion in the engine with its setting undone. Six robots. They are not shown in the 2013
+simulator: the protocol names no transfer outcome for these arms.
+
+    python paper/analysis/render_champions.py --arm E1
+    python paper/analysis/render_champions.py --rehearsal trialE1_s --generation 2 --settings-of E1
+        trial runs made with arm E1's command: the 2013 originals and the trial's two robots
+
 It writes into paper/outcomes/videos/:
     arm_<X>_champions.gif       the animation (a robot is 1 cm long; the motion is slowed down)
     arm_<X>_champions.webp      the same, smaller and in full colour
@@ -71,7 +81,7 @@ COLOURS = {1: (0.90, 0.12, 0.12, 1), 2: (0.25, 0.85, 0.90, 1), 3: (0.15, 0.75, 0
 PANEL = (460, 250)                             # pixels, width x height of one robot's view
 
 REFERENCE_BINARY = '~/softbots2013_ref/softbots/Voxel_Sim_NoGui/voxelize'     # the campaign's simulator
-ENGINE_PRESET = 'cheney2013-floor'             # the settings of the runs in the MuJoCo engine (arm D)
+ENGINE_ARM = 'D'                               # the arm whose engine settings a robot has unless it names another
 TRANSFER_REPORT = 'transfer_arm_{arm}.json'    # in paper/outcomes/: the arm's champions in the 2013 simulator
 
 # Simulates one robot twice: with the campaign's simulator, and with the recording copy. Prints
@@ -170,43 +180,74 @@ def transfer_scores_of(arm, outcomes=None):
         return {r['label']: float(r['score']) for r in json.load(f)['champions']}
 
 
-def engine_robots(ours, ours_label, condition, transfer=None):
+def originals(condition):
+    """The top row of every video: the deposited champions with the median and the best score,
+    in the 2013 simulator."""
+    theirs = deposited(condition)
+    return [{'row': '2013 original', 'column': column, 'who': who, 'recorded': float(score), 'simulator': '2013',
+             'vxa': deposited_robot_text(folder, name), 'ours': False}
+            for column, (score, who, folder, name) in zip((f'median of {len(theirs)}', f'best of {len(theirs)}'),
+                                                          median_and_best(theirs))]
+
+
+def in_the_engine(champions, label, engine):
+    """A row of two: the median and the best of these champions in the MuJoCo engine with the
+    settings of the arm `engine`, from the bodies their runs stored. -> (the panels, the two chosen)."""
+    chosen = list(zip((f'median of {len(champions)}', f'best of {len(champions)}'), median_and_best(champions)))
+    return [{'row': label, 'column': column, 'who': who, 'recorded': float(score), 'simulator': 'mujoco',
+             'genome': stored_body(folder, name), 'ours': True, 'engine': engine}
+            for column, (score, who, folder, name) in chosen], chosen
+
+
+def engine_robots(ours, ours_label, condition, transfer=None, engine=ENGINE_ARM, in_2013_too=True):
     """The six panels for runs in the MuJoCo engine. ours: [(recorded score, who, folder, name)].
     Top row: the 2013 originals in the 2013 simulator. Middle row: the runs' median and best
     champion in the MuJoCo engine, where they were evolved. Bottom row: the same two robots in the
-    2013 simulator; their score there is on record only once the transfer has been computed."""
+    2013 simulator; their score there is on record only once the transfer has been computed.
+    in_2013_too=False leaves the bottom row out (runs with the settings of arms E1 to E3)."""
     transfer = transfer or {}
-    theirs = deposited(condition)
-    out = []
-    for column, (score, who, folder, name) in zip((f'median of {len(theirs)}', f'best of {len(theirs)}'),
-                                                  median_and_best(theirs)):
-        out.append({'row': '2013 original', 'column': column, 'who': who, 'recorded': float(score), 'simulator': '2013',
-                    'vxa': deposited_robot_text(folder, name), 'ours': False})
-    chosen = list(zip((f'median of {len(ours)}', f'best of {len(ours)}'), median_and_best(ours)))
-    for column, (score, who, folder, name) in chosen:
-        out.append({'row': ours_label, 'column': column, 'who': who, 'recorded': float(score), 'simulator': 'mujoco',
-                    'genome': stored_body(folder, name), 'ours': True})
-    for column, (score, who, folder, name) in chosen:
+    out = originals(condition)
+    row, chosen = in_the_engine(ours, ours_label, engine)
+    out += row
+    for column, (score, who, folder, name) in chosen if in_2013_too else ():
         out.append({'row': 'the same robot in the 2013 simulator', 'column': column, 'who': who,
                     'recorded': transfer.get(who), 'simulator': '2013', 'vxa': search_robot_text(folder, name),
                     'ours': who in transfer, 'evolved_score': float(score)})
     return out
 
 
-def robots_of(arm):
-    """The panels of an analysed arm, in the order they are shown (two to a row)."""
+def sensitivity_robots(ours, arm, undone, baseline, baseline_arm, condition):
+    """The six panels of an arm that is another arm with one setting undone (E1 to E3 and arm D).
+    Top row: the 2013 originals in the 2013 simulator. Middle row: the other arm's median and best
+    champion in its engine. Bottom row: this arm's median and best champion in its own engine,
+    the one with the setting undone. Nothing is shown in a simulator it was not evolved in."""
+    return (originals(condition) + in_the_engine(baseline, f'arm {baseline_arm}', baseline_arm)[0]
+            + in_the_engine(ours, f'arm {arm}: {undone}', arm)[0])
+
+
+def champions_of(arm):
+    """[(recorded score, 'seed N', run folder, which individual)] from an arm's committed report."""
     spec = aa.ARMS[arm]
     report = aa.finished_arm(arm)
     if report is None:
         raise SystemExit(f'Arm {arm} has no report in paper/outcomes yet. Videos are made of analysed arms.')
+    folder = aa.SEARCH_RUNS if spec['kind'] == 'search' else aa.RERUNS
+    return [(row['champion']['original'], f"seed {row['seed']}", os.path.join(folder, f"{spec['prefix']}{row['seed']}"),
+             row['champion']['file']) for row in report['per_seed']]
+
+
+def robots_of(arm):
+    """The panels of an analysed arm, in the order they are shown (two to a row)."""
+    spec = aa.ARMS[arm]
     search = spec['kind'] == 'search'
-    ours = []
-    for row in report['per_seed']:
-        c = row['champion']
-        folder = os.path.join(aa.SEARCH_RUNS if search else aa.RERUNS, f"{spec['prefix']}{row['seed']}")
-        ours.append((c['original'], f"seed {row['seed']}", folder, c['file']))
+    ours = champions_of(arm)
+    if evolved_in_the_engine(arm) and spec.get('sensitivity'):
+        # arms E1 to E3: next to arm D, whose report their own analysis has already needed
+        return sensitivity_robots(ours, arm, spec['undone'], champions_of(spec['against']), spec['against'],
+                                  spec['condition'])
     if evolved_in_the_engine(arm):
-        return engine_robots(ours, f'own search, arm {arm}, MuJoCo engine', spec['condition'], transfer_scores_of(arm))
+        return engine_robots(ours, f'own search, arm {arm}, MuJoCo engine', spec['condition'], transfer_scores_of(arm),
+                             engine=arm)
     theirs = deposited(spec['condition'])
     ours_label = f'own search 2026, arm {arm}' if search else f're-run 2026, arm {arm}'
     ours_text = search_robot_text if search else archived_robot_text
@@ -220,9 +261,11 @@ def robots_of(arm):
     return out
 
 
-def rehearsal_robots(prefix, generation, results=None):
+def rehearsal_robots(prefix, generation, results=None, settings_of=ENGINE_ARM):
     """The same six panels for runs of the search in the MuJoCo engine that are not an arm: every
-    complete run <prefix><seed> with that many generations."""
+    complete run <prefix><seed> with that many generations. settings_of: the arm whose command
+    the runs were made with. With the settings of arms E1 to E3 the bottom row, the 2013
+    simulator, is left out, as it is for those arms."""
     results = results or aa.SEARCH_RUNS
     ours = []
     for d in sorted(os.listdir(results)):
@@ -236,7 +279,8 @@ def rehearsal_robots(prefix, generation, results=None):
     if len(ours) < 3:
         raise SystemExit(f'Fewer than 3 complete runs named {prefix}<seed> have {generation} generations.')
     return engine_robots(sorted(ours, key=lambda c: int(c[1].split()[1])),
-                         f'trial runs {prefix} (not an arm), MuJoCo engine', 'noCost')
+                         f'trial runs {prefix} (not an arm), MuJoCo engine', 'noCost', engine=settings_of,
+                         in_2013_too=not aa.ARMS[settings_of].get('sensitivity'))
 
 
 # --------------------------------------------------------------------------------------------
@@ -273,10 +317,14 @@ def read_trace(path):
     return materials, np.array(times), np.array(cms), np.array(frames)
 
 
-def engine_parameters(preset=ENGINE_PRESET):
-    """What a run under the preset hands its evaluation, the search's early stop included."""
+def engine_parameters(arm=ENGINE_ARM):
+    """What a run of that arm hands its evaluation, the search's early stop included: the preset
+    of the arm's command with the options the command gives next to it (arm D: --preset
+    cheney2013-floor and nothing else)."""
     import transfer_scores as ts
-    return ts.worker_parameters(ts.evaluator_arguments(early_stop=True, preset=preset))
+    import search_arm                       # on the path once transfer_scores is loaded
+    preset, given = search_arm.engine_options(search_arm.ARMS[arm])
+    return ts.worker_parameters(ts.evaluator_arguments(early_stop=True, preset=preset, given=given))
 
 
 def record_in_the_engine(robot, every, params=None):
@@ -285,7 +333,7 @@ def record_in_the_engine(robot, every, params=None):
     units so that both simulators are drawn by the same code).
     -> score, blew up, materials, times, centre of mass, voxel states."""
     import render_transfer as rt
-    return rt.mujoco_frames(robot['genome'], params or engine_parameters(), every)
+    return rt.mujoco_frames(robot['genome'], params or engine_parameters(robot.get('engine', ENGINE_ARM)), every)
 
 
 def quat_mul(a, b):
@@ -542,6 +590,8 @@ def main(argv=None):
     what.add_argument('--rehearsal', metavar='PREFIX',
                       help='runs in the MuJoCo engine that are not an arm: the start of their folder names')
     ap.add_argument('--generation', type=int, help='rehearsal only: the generations each run has')
+    ap.add_argument('--settings-of', default=ENGINE_ARM, choices=[n for n in sorted(aa.ARMS) if evolved_in_the_engine(n)],
+                    help='rehearsal only: the arm whose command the runs were made with (default D)')
     ap.add_argument('--every', type=float, default=0.0025, help='simulated seconds between frames (default 0.0025)')
     ap.add_argument('--frame-ms', type=int, default=60, help='milliseconds each frame is shown (default 60)')
     a = ap.parse_args(argv)
@@ -551,11 +601,13 @@ def main(argv=None):
     else:
         if not a.generation:
             ap.error('--rehearsal needs --generation')
-        robots, name, out_dir = rehearsal_robots(a.rehearsal, a.generation), f'rehearsal_{a.rehearsal}', WORK
-    params = engine_parameters() if any(r.get('simulator') == 'mujoco' for r in robots) else None
+        robots = rehearsal_robots(a.rehearsal, a.generation, settings_of=a.settings_of)
+        name, out_dir = f'rehearsal_{a.rehearsal}', WORK
+    # the settings of each arm whose engine a robot is shown in: an arm E next to arm D has two
+    params = {arm: engine_parameters(arm) for arm in sorted({r['engine'] for r in robots if r.get('simulator') == 'mujoco'})}
     checks, shown, recorded = [], [], []
     for i, robot in enumerate(robots):
-        check, materials, times, cms, frames = simulate(robot, f'{name}_{i}', a.every, params)
+        check, materials, times, cms, frames = simulate(robot, f'{name}_{i}', a.every, params.get(robot.get('engine')))
         checks.append(check)
         shown.append((materials, times, *for_display(cms, frames)))
         recorded.append((materials, frames))

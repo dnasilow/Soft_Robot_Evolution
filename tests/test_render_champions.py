@@ -268,7 +268,131 @@ class TestArmsEvolvedInTheEngine(unittest.TestCase):
         self.assertEqual(sheets[0].size, (2 * w + 6, 2 * h + 6))
 
 
+class TestArmsWithOneSettingUndone(unittest.TestCase):
+    """Arms E1 to E3 (27 November 2026, before any of them was started): shown next to arm D, each
+    robot in the engine of its own arm, and none in the 2013 simulator."""
+
+    DEPOSIT = [(4.2, 'run 7', 'folder', 'a.vxa'), (5.9, 'run 9', 'folder', 'b.vxa'), (3.1, 'run 2', 'folder', 'c.vxa')]
+    D_SCORES = {k: 1.0 + 0.1 * ((k * 7) % 10) for k in range(1, 11)}        # ten different scores, not in seed order
+    E_SCORES = {1: 0.9, 2: 0.4, 3: 0.6}
+
+    def setUp(self):
+        from unittest import mock
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        for name, value in (('deposited', lambda condition: list(self.DEPOSIT)),
+                            ('deposited_robot_text', lambda folder, name: f'<the robot file {name}>')):
+            patcher = mock.patch.object(rc, name, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        make_runs(self.tmp.name, 'armD_s', self.D_SCORES)
+        for arm in ('E1', 'E2', 'E3'):
+            make_runs(self.tmp.name, f'arm{arm}_s', self.E_SCORES)
+
+    def report(self, scores):
+        return {'per_seed': [{'seed': k, 'champion': {'original': v, 'file': 'final_population.pkl, individual 1'}}
+                             for k, v in scores.items()]}
+
+    def robots_of(self, arm, reports):
+        from unittest import mock
+        with mock.patch.object(rc.aa, 'finished_arm', side_effect=lambda name, *a: reports.get(name)), \
+                mock.patch.object(rc.aa, 'SEARCH_RUNS', self.tmp.name):
+            return rc.robots_of(arm)
+
+    def test_which_arms(self):
+        for arm in ('E1', 'E2', 'E3'):
+            self.assertTrue(rc.evolved_in_the_engine(arm))
+
+    def test_six_robots_the_arm_below_arm_d(self):
+        robots = self.robots_of('E1', {'D': self.report(self.D_SCORES), 'E1': self.report(self.E_SCORES)})
+        self.assertEqual([(r['simulator'], r['column'], r.get('engine')) for r in robots],
+                         [('2013', 'median of 3', None), ('2013', 'best of 3', None),
+                          ('mujoco', 'median of 10', 'D'), ('mujoco', 'best of 10', 'D'),
+                          ('mujoco', 'median of 3', 'E1'), ('mujoco', 'best of 3', 'E1')])
+        ranked = sorted(self.D_SCORES, key=self.D_SCORES.get)
+        self.assertEqual([r['who'] for r in robots],
+                         ['run 7', 'run 9', f'seed {ranked[4]}', f'seed {ranked[9]}', 'seed 3', 'seed 1'])
+        self.assertEqual([r['recorded'] for r in robots[2:]],
+                         [self.D_SCORES[ranked[4]], self.D_SCORES[ranked[9]], 0.6, 0.9])
+        self.assertEqual((robots[2]['row'], robots[4]['row']), ('arm D', 'arm E1: global damping back to 0.01'))
+        # each from the body its own run stored
+        np.testing.assert_array_equal(robots[2]['genome'], as_stored(small_body(ranked[4])))
+        np.testing.assert_array_equal(robots[5]['genome'], as_stored(small_body(1)))
+        # nothing is shown in a simulator it was not evolved in: no transfer outcome for these arms
+        self.assertFalse(any('evolved_score' in r for r in robots))
+
+    def test_every_e_arm_names_what_it_undoes(self):
+        reports = {'D': self.report(self.D_SCORES)}
+        rows = {}
+        for arm in ('E1', 'E2', 'E3'):
+            robots = self.robots_of(arm, dict(reports, **{arm: self.report(self.E_SCORES)}))
+            rows[arm] = robots[4]['row']
+            self.assertEqual({r['engine'] for r in robots[4:]}, {arm})
+        self.assertEqual(rows, {'E1': 'arm E1: global damping back to 0.01',
+                                'E2': 'arm E2: amplitude 20% with the volumetric law',
+                                'E3': 'arm E3: hard floor, bodies set on it'})
+        for row in rows.values():                                     # the longest caption fits a panel
+            line = f'{row}, seed 10 (median of 3)'
+            self.assertLessEqual(rc.fitting(line, rc.PANEL[0] - 16).getlength(line), rc.PANEL[0] - 16)
+
+    def test_an_e_arm_is_shown_only_when_both_arms_have_their_reports(self):
+        with self.assertRaises(SystemExit) as stop:
+            self.robots_of('E2', {'E2': self.report(self.E_SCORES)})
+        self.assertIn('Arm D has no report', str(stop.exception))
+        with self.assertRaises(SystemExit) as stop:
+            self.robots_of('E2', {'D': self.report(self.D_SCORES)})
+        self.assertIn('Arm E2 has no report', str(stop.exception))
+
+    def test_arm_d_s_own_video_is_what_it_was(self):
+        robots = self.robots_of('D', {'D': self.report(self.D_SCORES)})
+        self.assertEqual([(r['simulator'], r['column']) for r in robots],
+                         [('2013', 'median of 3'), ('2013', 'best of 3'), ('mujoco', 'median of 10'), ('mujoco', 'best of 10'),
+                          ('2013', 'median of 10'), ('2013', 'best of 10')])
+        self.assertEqual(robots[2]['row'], 'own search, arm D, MuJoCo engine')
+        self.assertEqual({r.get('engine') for r in robots[2:4]}, {'D'})
+        self.assertTrue(all('evolved_score' in r for r in robots[4:]))
+
+    def test_each_robot_is_simulated_with_the_settings_of_its_own_arm(self):
+        from unittest import mock
+        import render_transfer as rt
+        d = rc.engine_parameters()
+        self.assertEqual(d, rc.engine_parameters('D'))
+        differs = {arm: {k: v for k, v in rc.engine_parameters(arm).items() if d.get(k) != v} for arm in ('E1', 'E2', 'E3')}
+        self.assertEqual(differs, {'E1': {'global_damping': 0.01}, 'E2': {'actuation_amplitude': 0.2, 'poisson': True},
+                                   'E3': {'floor_contact': 'voxelyze', 'start': 'floor'}})
+        with mock.patch.object(rt, 'mujoco_frames', side_effect=lambda genome, params, every: params):
+            self.assertEqual(rc.record_in_the_engine({'genome': None, 'engine': 'E2'}, 0.01)['actuation_amplitude'], 0.2)
+            self.assertEqual(rc.record_in_the_engine({'genome': None}, 0.01), d)                  # arm D unless it says
+            self.assertEqual(rc.record_in_the_engine({'genome': None, 'engine': 'E2'}, 0.01, d), d)   # or as handed over
+
+    def test_a_rehearsal_with_an_e_arm_s_settings_has_two_rows(self):
+        make_runs(self.tmp.name, 'trialE3_s', {101: 1.3, 102: 1.7, 103: 2.4})
+        robots = rc.rehearsal_robots('trialE3_s', 2, self.tmp.name, settings_of='E3')
+        self.assertEqual([(r['simulator'], r.get('engine')) for r in robots],
+                         [('2013', None), ('2013', None), ('mujoco', 'E3'), ('mujoco', 'E3')])
+        self.assertIn('not an arm', robots[2]['row'])
+        self.assertEqual(len(rc.rehearsal_robots('trialE3_s', 2, self.tmp.name)), 6)          # arm D's settings: three rows
+
+
 class TestRecordingTheEngine(unittest.TestCase):
+    def test_under_the_settings_of_each_e_arm_too(self):
+        """The same for the three settings of arms E1 to E3: higher damping, the larger amplitude
+        with the volumetric law, and the hard floor with the body set on it."""
+        from src.evolution import mujoco_tendon_evaluator as evaluation
+        genome = as_stored(small_body(3))
+        scores = {}
+        for arm in ('D', 'E1', 'E2', 'E3'):
+            params = rc.engine_parameters(arm)
+            recorded = float(evaluation._eval_worker((genome, None, None, params)))
+            robot = {'row': f'a small body with the settings of arm {arm}', 'who': 'seed 0', 'column': 'median of 1',
+                     'recorded': recorded, 'simulator': 'mujoco', 'genome': genome, 'ours': True, 'engine': arm}
+            check, materials, times, cms, frames = rc.simulate(robot, 'x', 0.0125, params)
+            self.assertTrue(check['identical_to_the_last_digit'], arm)
+            self.assertAlmostEqual(check['score_from_first_and_last_frame'], recorded, places=6)
+            self.assertFalse(check['blew_up'])
+            scores[arm] = recorded
+        self.assertEqual(len(set(scores.values())), 4)       # four settings, four different evaluations of one body
+
     def test_the_recorded_evaluation_is_the_one_a_run_makes(self):
         """A small body, stored as a run stores it, through the search's own evaluation under the
         preset of arm D and through the recording used for the video: the same score to the last

@@ -80,15 +80,34 @@ def invocation(seed, started='2026-11-27 15:03:58', workers=3, **changed):
     return i
 
 
-def make_run(results, seed, starts=None, checkpoint=False, tie=False):
-    folder = os.path.join(results, f'{PREFIX}{seed}')
+def invocation_of(arm, prefix, seed, workers=3, **changed):
+    """What a run made with the command of that arm records of one start of itself."""
+    import run_tendon_evolution as runner
+    preset, given = search_arm.engine_options(search_arm.ARMS[arm])
+    entries = dict(runner._PRESETS[preset])
+    applied = {k: v for k, v in entries.items() if k not in given}
+    settings = dict(applied, preset=preset, pop=30, gen=GENERATIONS, workers=workers, seed=seed, name=f'{prefix}{seed}')
+    settings.update({k: type(entries[k])(v) for k, v in given.items()})
+    settings.update(changed.pop('settings', {}))
+    i = {'started': '2026-11-30 09:00:00',
+         'command': ['run_tendon_evolution.py'] + list(search_arm.ARMS[arm]['runner']) + [
+             '--gen', str(GENERATIONS), '--workers', str(workers), '--seed', str(seed), '--name', f'{prefix}{seed}'],
+         'settings': settings, 'preset_applied': applied, 'git_commit': 'a' * 40, 'git_modified': ['MUJOCO_LOG.TXT'],
+         'python': '3.13', 'mujoco': '3.4.0', 'numpy': '2.2.6', 'platform': 'Windows',
+         'threads': dict(search_arm.ONE_THREAD)}
+    i.update(changed)
+    return i
+
+
+def make_run(results, seed, starts=None, checkpoint=False, tie=False, prefix=PREFIX, scale=1.0):
+    folder = os.path.join(results, f'{prefix}{seed}')
     os.makedirs(folder)
-    curve = scores_of(seed)
+    curve = [[scale * v for v in row] for row in scores_of(seed)]
     for g, fitnesses in enumerate(curve, start=1):
         with open(os.path.join(folder, f'gen_{g:03d}.json'), 'w') as f:
             json.dump({'generation': g, 'best_fitness': max(fitnesses), 'fitnesses': fitnesses}, f)
     top = max(curve[-1])
-    population = [(genome_of(body(seed)), 0.05 * seed), (genome_of(body(seed + 10)), top)]
+    population = [(genome_of(body(seed)), scale * 0.05 * seed), (genome_of(body(seed + 10)), top)]
     if tie:
         population.append((genome_of(body(seed + 20)), top))
     with open(os.path.join(folder, 'final_population.pkl'), 'wb') as f:
@@ -203,7 +222,7 @@ class TestChecksOnMadeUpRuns(unittest.TestCase):
         self.assertIn('seed 2, start 1: thread settings', problems)
         self.assertIn('seed 3: a checkpoint is left over', problems)
         self.assertIn('seed 4, start 1: files that compute a run differed from the commit', problems)
-        self.assertIn('seed 5, start 1: the preset was not applied as it is', problems)
+        self.assertIn("seed 5, start 1: the preset was not applied as the arm's command has it", problems)
 
     def test_code_that_is_not_the_tags_is_a_problem(self):
         self.build()
@@ -312,6 +331,183 @@ class TestTheAuditOnARealRun(unittest.TestCase):
         self.assertEqual(a['difference'], 0.0)
         self.assertAlmostEqual(a['quarter_time_step'], cd.QUARTER * a['time_step'], places=12)
         self.assertTrue(a['quarter'] > 0 and a['sank'] is not None)
+
+
+E_ARMS = ('E1', 'E2', 'E3')
+
+
+def e_spec(arm, prefix, against_prefix='madeBase_s'):
+    """A made-up arm of three runs made with the command of arm E1, E2 or E3, set against a
+    made-up arm D of five."""
+    return {'name': f'made-up arm {arm}', 'prefix': prefix, 'seeds': [1, 2, 3], 'generations': GENERATIONS,
+            'checked_at': (GENERATIONS, 2), 'runner': list(search_arm.ARMS[arm]['runner']), 'code_tag': 'campaign-v4',
+            'report': None, 'stem': f'made_{arm}', 'is_arm': False,
+            'against': {'arm': 'D', 'prefix': against_prefix, 'seeds': list(SEEDS), 'generations': GENERATIONS}}
+
+
+class TestArmsE(unittest.TestCase):
+    """Arms E1 to E3 get arm D's checks and audit with their own settings (PROTOCOL.md, section
+    9.7, point 7, and section 9.8). Written on 27 November 2026, before any of them was started."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.results = self.tmp.name
+
+    def build(self, arm, prefix, starts=None, scale=0.5):
+        for s in (1, 2, 3):
+            make_run(self.results, s, prefix=prefix, scale=scale,
+                     starts=(starts or {}).get(s) or [invocation_of(arm, prefix, s)])
+
+    def test_the_arms_are_those_of_the_launcher_and_of_the_analysis(self):
+        self.assertEqual(cd.engine_arms(), ['D', 'E1', 'E2', 'E3'])
+        floors = {}
+        for arm in E_ARMS:
+            s = cd.arm_spec(arm)
+            self.assertEqual((s['prefix'], s['seeds'], s['generations'], s['checked_at'], s['code_tag'], s['stem']),
+                             (f'arm{arm}_s', [1, 2, 3], 300, (300, 100), 'campaign-v4', f'arm_{arm}'))
+            self.assertTrue(s['report'].endswith(os.path.join('paper', 'outcomes', f'arm_{arm}.json')))
+            self.assertEqual(s['against'], {'arm': 'D', 'prefix': 'armD_s', 'seeds': list(range(1, 11)), 'generations': 300})
+            self.assertEqual(cd.engine_of(s), search_arm.engine_options(search_arm.ARMS[arm]))
+            self.assertEqual(cd.expected_command(s, 2, 3)[1:-8], search_arm.ARMS[arm]['runner'])
+            floors[arm] = cd.floor_of(s)
+        self.assertEqual(floors, {'E1': 'rule2013', 'E2': 'rule2013', 'E3': 'voxelyze'})
+        d = cd.arm_spec()                                                 # arm D, the default, is what it was
+        self.assertEqual((d['prefix'], d['seeds'], cd.engine_of(d), cd.floor_of(d)),
+                         ('armD_s', list(range(1, 11)), ('cheney2013-floor', {}), 'rule2013'))
+        self.assertNotIn('against', d)
+        r = cd.rehearsal_spec('trialE2_s', [101, 102, 103], 2, arm='E2')
+        self.assertEqual((cd.engine_of(r), r['is_arm'], r['checked_at']), (('cheney2013-floor', {'amp': '0.2', 'poisson': 'on'}),
+                                                                         False, (2,)))
+        self.assertNotIn('against', r)
+
+    def test_clean_runs_of_each_arm_have_no_problems(self):
+        for arm in E_ARMS:
+            prefix = f'made{arm}_s'
+            self.build(arm, prefix)
+            r = cd.runs(e_spec(arm, prefix), self.results, same_code=lambda commit, tag: True)
+            self.assertEqual(r['problems'], [], arm)
+            self.assertEqual((r['runs'], r['evaluations_at_a_time']), (3, [3]))
+
+    def test_runs_made_with_another_arm_s_settings_are_a_problem(self):
+        # runs made with arm D's command, checked as arm E1: the command, the preset and the damping are wrong
+        self.build('D', 'madeX_s')
+        problems = ' | '.join(cd.runs(e_spec('E1', 'madeX_s'), self.results, same_code=lambda c, t: True)['problems'])
+        self.assertIn('seed 1, start 1: command', problems)
+        self.assertIn("seed 1, start 1: the preset was not applied as the arm's command has it", problems)
+        self.assertIn("seed 1, start 1: damping_global is 0.001, the arm's command says 0.01", problems)
+        # the right command, but a run whose record says the volumetric law was off
+        wrong = {2: [invocation_of('E2', 'madeY_s', 2, settings={'poisson': 'off'})]}
+        self.build('E2', 'madeY_s', starts=wrong)
+        found = cd.runs(e_spec('E2', 'madeY_s'), self.results, same_code=lambda c, t: True)['problems']
+        self.assertIn("seed 2, start 1: poisson is 'off', the arm's command says 'on'", found)
+        self.assertEqual([p for p in found if not p.startswith('seed 2,')], [])      # the other two runs are in order
+        # runs of the hard floor checked as arm D
+        self.build('E3', 'madeZ_s')
+        d_like = dict(e_spec('D', 'madeZ_s'))
+        problems = ' | '.join(cd.runs(d_like, self.results, same_code=lambda c, t: True)['problems'])
+        self.assertIn("the preset was not applied as the arm's command has it", problems)
+
+    def report_of(self, prefix, base, deposit, scale):
+        """What analyse_arm.py would report: against the deposit and against the other arm."""
+        report = {'scores': {}, 'per_seed': [], 'against': {'arm': 'D', 'scores': {}}}
+        for g in (GENERATIONS, 2):
+            x = [scale * max(max(f) for f in scores_of(s)[:g]) for s in (1, 2, 3)]
+            report['scores'][str(g)] = ps.compare(x, [max(c[:g]) for c in deposit], 200, 0)
+            report['against']['scores'][str(g)] = ps.compare(x, [max(max(f) for f in scores_of(s)[:g]) for s in SEEDS], 200, 0)
+        for s in (1, 2, 3):
+            report['per_seed'].append({'seed': s, 'scores': {str(g): scale * max(max(f) for f in scores_of(s)[:g])
+                                                             for g in (GENERATIONS, 2)}})
+        return report
+
+    def test_by_hand_sets_the_arm_against_arm_d_from_the_raw_files_of_both(self):
+        for s in SEEDS:
+            make_run(self.results, s, prefix='madeBase_s')                 # the made-up arm D
+        self.build('E1', 'madeE1_s', scale=0.5)
+        spec_ = e_spec('E1', 'madeE1_s')
+        report = self.report_of('madeE1_s', 'madeBase_s', DEPOSIT, 0.5)
+        hand, curves = cd.by_hand(spec_, report, self.results, deposit=DEPOSIT)
+        self.assertTrue(hand['agrees_with_the_report'])
+        block = hand['against']
+        self.assertEqual((block['arm'], block['runs'], block['the_report_has_this_comparison']), ('D', 5, True))
+        final = block['generations'][str(GENERATIONS)]
+        self.assertAlmostEqual(final['other_median'], 0.1 * 3 + 0.25 * GENERATIONS)        # the made-up arm D's median
+        self.assertAlmostEqual(final['arm_median'], 0.5 * (0.1 * 2 + 0.25 * GENERATIONS))
+        self.assertAlmostEqual(final['ratio_to_the_other_arm'], final['arm_median'] / final['other_median'])
+        self.assertLessEqual(final['largest_difference_from_the_report'], 1e-9)
+        # a report whose comparison with arm D is off, or is not there, does not pass
+        report['against']['scores'][str(GENERATIONS)]['reference_median'] += 0.001
+        self.assertFalse(cd.by_hand(spec_, report, self.results, deposit=DEPOSIT)[0]['agrees_with_the_report'])
+        del report['against']
+        hand, _ = cd.by_hand(spec_, report, self.results, deposit=DEPOSIT)
+        self.assertFalse(hand['agrees_with_the_report'])
+        self.assertFalse(hand['against']['the_report_has_this_comparison'])
+
+    def test_the_audit_takes_the_arm_s_own_settings(self):
+        seen = {}
+
+        def evaluate_all(jobs, workers, cache):
+            seen['params'] = jobs[0][2]
+            return {key: {'key': key, 'score': 1.0, 'blew_up': False, 'error': None, 'moved': [1.0, 0.0, 0.0],
+                          'time_step': 3e-5 * fraction, 'steps': 100, 'sunk': 0.1, 'seconds': 1.0}
+                    for key, genome, params, fraction, name in jobs}
+        expected = {'E1': {'global_damping': 0.01}, 'E2': {'actuation_amplitude': 0.2, 'poisson': True},
+                    'E3': {'floor_contact': 'voxelyze', 'start': 'floor'}}
+        base = ts.worker_parameters(ts.evaluator_arguments(early_stop=True, preset='cheney2013-floor'))
+        rows = [{'seed': 1, 'voxels': 14, 'lowest_layer': 0, 'fitness': 1.0}]
+        for arm in E_ARMS:
+            cd.audit(e_spec(arm, 'x_s'), rows, {1: genome_of(body(1))}, evaluate_all=evaluate_all,
+                     cache=os.path.join(self.results, f'{arm}.json'))
+            differs = {k: v for k, v in seen['params'].items() if base.get(k) != v}
+            self.assertEqual(differs, expected[arm], arm)
+
+
+class TestTheAuditOnRealRunsOfTheEArms(unittest.TestCase):
+    """For each of the three settings a run of the search's own command line, small enough to take
+    a minute. Its record of itself must pass the checks made of an arm's runs, and its champion,
+    evaluated again from the stored body with the settings read back from the launcher's command,
+    must get the recorded score to the last digit. That is what makes the audit of an E arm the
+    evaluation of its runs."""
+
+    def run_small(self, arm):
+        words = list(search_arm.ARMS[arm]['runner'])
+        runner = words[:words.index('--pop')] + ['--pop', '4', '--grid-size', '5']
+        s = {'name': f'a small run with the settings of arm {arm}', 'prefix': 'small_s', 'seeds': [101], 'generations': 2,
+             'checked_at': (2,), 'runner': runner, 'code_tag': 'campaign-v4', 'report': None, 'stem': 'small', 'is_arm': False}
+        with tempfile.TemporaryDirectory() as tmp:
+            command = cd.expected_command(s, 101, 1)
+            r = subprocess.run([sys.executable, os.path.join(ROOT, command[0])] + command[1:], cwd=tmp,
+                               env=search_arm.run_environment(), capture_output=True, text=True, timeout=3600)
+            self.assertEqual(r.returncode, 0, r.stdout[-2000:] + r.stderr[-2000:])
+            results = os.path.join(tmp, 'results')
+            os.makedirs(os.path.join(results, 'campaign'), exist_ok=True)
+            records = cd.runs(s, results, same_code=lambda commit, tag: True)
+            curves = {101: [max(f['fitnesses']) for _, f in sorted(cd.generation_files(os.path.join(results, 'small_s101')).items())]}
+            rows, stored = cd.champions(s, {'per_seed': []}, curves, results)
+            preset, given = search_arm.engine_options(search_arm.ARMS[arm])
+            params = ts.worker_parameters(ts.evaluator_arguments(early_stop=True, workspace=5, preset=preset, given=given))
+            audited = cd.audit(s, rows, stored, workers=1, cache=os.path.join(tmp, 'audit.json'), params=params)
+        return records, rows[0], audited[0], params
+
+    def check(self, arm, **settings):
+        records, row, a, params = self.run_small(arm)
+        self.assertEqual(records['problems'], [], arm)                    # the run recorded the arm's settings
+        for key, value in settings.items():
+            self.assertEqual(params[key], value)
+        self.assertTrue(row['is_the_last_point_of_the_curve'] and row['is_the_run_s_recorded_best_robot'])
+        self.assertGreater(a['recorded'], 0)
+        self.assertTrue(a['reproduced'], f"arm {arm}: recorded {a['recorded']!r}, evaluated again {a['again']!r}")
+        self.assertAlmostEqual(a['quarter_time_step'], cd.QUARTER * a['time_step'], places=12)
+        return a
+
+    def test_arm_e1_global_damping(self):
+        self.check('E1', global_damping=0.01, floor_contact='rule2013')
+
+    def test_arm_e2_amplitude_and_volumetric_law(self):
+        self.check('E2', actuation_amplitude=0.2, poisson=True, floor_contact='rule2013')
+
+    def test_arm_e3_hard_floor(self):
+        self.check('E3', floor_contact='voxelyze', start='floor')
 
 
 def stand_in_score(grid):

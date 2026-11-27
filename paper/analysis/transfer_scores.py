@@ -85,13 +85,24 @@ CONDITIONS = {'noCost': 'no cost', 'costNumActuated': 'actuated cost'}
 # --------------------------------------------------------------------------------------------
 # the engine: the search's own evaluation under the preset
 # --------------------------------------------------------------------------------------------
-def evaluator_arguments(early_stop=False, workspace=None, preset=PRESET):
+def evaluator_arguments(early_stop=False, workspace=None, preset=PRESET, given=None):
     """The arguments run_tendon_evolution.py gives its evaluator under a preset (--preset
     cheney2013 unless another is named), read from the preset itself. early_stop=True keeps the
     search's early stop (used only to check this function against a real run); the transfer
-    outcome switches it off."""
+    outcome switches it off.
+
+    given: {option: value} for options given on the command line next to the preset, named as
+    the search names them inside and with the values as words of the command
+    (search_arm.engine_options). As in the search, such an option replaces the preset's value.
+    Only settings the preset itself has can be given this way (arms E1 and E2, PROTOCOL.md
+    section 9.8); anything else stops here rather than being guessed at."""
     import run_tendon_evolution as runner
     name, preset = preset, dict(runner._PRESETS[preset])
+    for option, value in (given or {}).items():
+        if option not in preset or isinstance(preset[option], bool) or not isinstance(preset[option], (float, str)):
+            raise SystemExit(f'The option {option}={value} given next to the preset {name} is not a setting this script '
+                             f'can take from a command line. It must be taught it before it can speak for such a run.')
+        preset[option] = type(preset[option])(value)
     used = set()
 
     def take(key):

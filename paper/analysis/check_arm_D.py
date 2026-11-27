@@ -4,17 +4,26 @@ script changes nothing in that report. It checks the report and the runs behind 
 the audit the protocol asks of every champion (PROTOCOL.md, sections 6 and 9.7). Written on 27
 November 2026, while the arm was running and before any score of it had been read.
 
+Arms E1 to E3 are arm D with one setting undone each and get the same checks and the same audit
+with their own settings (PROTOCOL.md, section 9.7, point 7, and section 9.8; added on 27 November
+2026, before any of them was started): --arm E1, E2 or E3. An arm's settings are read from the
+launcher's command (search_arm.engine_options), so they are written in one place only.
+
 usage, from the project folder:
     python paper/analysis/check_arm_D.py
         after the arm's analysis; refuses while there is no report of the arm in paper/outcomes/
+    python paper/analysis/check_arm_D.py --arm E1
+        the same for arm E1 (E2, E3), after its analysis
     python paper/analysis/check_arm_D.py --rehearsal trialD_s --seeds 101-110 --generations 3
         the same on runs that are NOT an arm (trials), against their pilot report
-        (analyse_arm.py --pilot trialD_s --generation 3 --search --with-body)
+        (analyse_arm.py --pilot trialD_s --generation 3 --search --with-body); with --arm E1 for
+        trial runs made with arm E1's command
 
 What it checks
   by hand     the scores again from the raw files, with readers of its own: each run from its
               generation files, the deposited runs from their archive; medians, ratios of
-              medians and A12 against the report's
+              medians and A12 against the report's. For arms E1 to E3 also their comparison
+              with arm D, from the raw files of both arms
   runs        each run's record of itself (manifest.json): every start of it, with the same
               command and settings but for the seed, from code that is the arm's code tag in
               every file that computes a run, and with one linear-algebra thread; its
@@ -28,8 +37,8 @@ What it checks
               more with a quarter of the time step, and how deep its lowest voxel sank below the
               floor's surface. The audit is reported; nothing is dropped because of it
 
-It writes, in results/analysis/: arm_D_checks.json and arm_D_champion_audit.csv (for a rehearsal:
-rehearsal_<prefix>_checks.json and rehearsal_<prefix>_champion_audit.csv).
+It writes, in results/analysis/: arm_D_checks.json and arm_D_champion_audit.csv (arm_E1_... for
+arm E1; for a rehearsal: rehearsal_<prefix>_checks.json and rehearsal_<prefix>_champion_audit.csv).
 """
 import argparse
 import csv
@@ -64,18 +73,31 @@ QUARTER = 0.25                  # the audit's shorter time step, as a fraction o
 SAME = 1e-12                    # two numbers computed twice from the same data
 
 
-def arm_spec():
-    """Arm D as the launcher and the analysis have it."""
+def engine_arms():
+    """The arms whose runs score their robots in the MuJoCo engine: D, and E1 to E3."""
+    return [name for name, arm in search_arm.ARMS.items() if not search_arm.in_the_2013_simulator(arm)]
+
+
+def arm_spec(name=ARM):
+    """An arm in the MuJoCo engine (arm D unless another is named) as the launcher and the
+    analysis have it. An arm that the analysis also sets against another arm (E1 to E3 against
+    arm D) carries that arm's runs under 'against'."""
     import start_arm
-    arm = search_arm.ARMS[ARM]
+    arm, analysed = search_arm.ARMS[name], ts.aa.ARMS[name]
     seeds = start_arm.parse_seeds(arm['seeds'])
-    return {'name': f'arm {ARM}', 'prefix': arm['tag'] + '_s', 'seeds': seeds, 'generations': arm['generations'],
-            'checked_at': (300, 100), 'runner': list(arm['runner']), 'code_tag': arm['code'],
-            'report': os.path.join(OUTCOMES, f'arm_{ARM}.json'), 'stem': f'arm_{ARM}', 'is_arm': True}
+    spec = {'name': f'arm {name}', 'prefix': arm['tag'] + '_s', 'seeds': seeds, 'generations': arm['generations'],
+            'checked_at': tuple(analysed['score_generations']), 'runner': list(arm['runner']), 'code_tag': arm['code'],
+            'report': os.path.join(OUTCOMES, f'arm_{name}.json'), 'stem': f'arm_{name}', 'is_arm': True}
+    if analysed.get('against'):
+        other = search_arm.ARMS[analysed['against']]
+        spec['against'] = {'arm': analysed['against'], 'prefix': other['tag'] + '_s',
+                           'seeds': start_arm.parse_seeds(other['seeds']), 'generations': other['generations']}
+    return spec
 
 
-def rehearsal_spec(prefix, seeds, generations, report=None):
-    arm = search_arm.ARMS[ARM]
+def rehearsal_spec(prefix, seeds, generations, report=None, arm=ARM):
+    """Runs that are not an arm, made with the command of the arm named (its engine settings)."""
+    arm = search_arm.ARMS[arm]
     return {'name': f'rehearsal {prefix}', 'prefix': prefix, 'seeds': list(seeds), 'generations': int(generations),
             'checked_at': (int(generations),), 'runner': list(arm['runner']), 'code_tag': arm['code'],
             'report': report or os.path.join(OUT, f'pilot_{prefix}_gen{generations}.json'),
@@ -84,6 +106,18 @@ def rehearsal_spec(prefix, seeds, generations, report=None):
 
 def preset_of(spec):
     return spec['runner'][spec['runner'].index('--preset') + 1]
+
+
+def engine_of(spec):
+    """(the preset, {option: value given next to it}) of the runs' command (search_arm.engine_options)."""
+    return search_arm.engine_options({'runner': spec['runner']})
+
+
+def floor_of(spec):
+    """The floor the runs were evolved on: 'rule2013' (the 2013 simulator's) or 'voxelyze' (the hard floor)."""
+    import run_tendon_evolution as runner
+    preset, given = engine_of(spec)
+    return given.get('floor_contact', dict(runner._PRESETS[preset])['floor_contact'])
 
 
 # --------------------------------------------------------------------------------------------
@@ -129,17 +163,24 @@ def a12(x, y):
     return sum((a > b) + 0.5 * (a == b) for a in x for b in y) / (len(x) * len(y))
 
 
+def raw_curves(prefix, seeds, generations, results=RESULTS):
+    """{seed: the champion's score of every generation} of runs of this project's search, from
+    their numbered generation files alone."""
+    out = {}
+    for seed in seeds:
+        files = generation_files(os.path.join(results, f'{prefix}{seed}'))
+        if sorted(files) != list(range(1, generations + 1)):
+            raise SystemExit(f'{prefix}{seed}: its generation files are not 1 to {generations}.')
+        # the champion's score of a generation is the largest of that generation's scores
+        out[seed] = [max(files[g]['fitnesses']) for g in range(1, generations + 1)]
+        if any(abs(out[seed][g - 1] - files[g]['best_fitness']) > SAME for g in files):
+            raise SystemExit(f'{prefix}{seed}: a generation file states a best score that is not its largest score.')
+    return out
+
+
 def by_hand(spec, report, results=RESULTS, deposit=None):
     generations = spec['generations']
-    arm = {}
-    for seed in spec['seeds']:
-        files = generation_files(os.path.join(results, f"{spec['prefix']}{seed}"))
-        if sorted(files) != list(range(1, generations + 1)):
-            raise SystemExit(f'Seed {seed}: its generation files are not 1 to {generations}.')
-        # the champion's score of a generation is the largest of that generation's scores
-        arm[seed] = [max(files[g]['fitnesses']) for g in range(1, generations + 1)]
-        if any(abs(arm[seed][g - 1] - files[g]['best_fitness']) > SAME for g in files):
-            raise SystemExit(f'Seed {seed}: a generation file states a best score that is not its largest score.')
+    arm = raw_curves(spec['prefix'], spec['seeds'], generations, results)
     deposit = deposited_curves() if deposit is None else deposit
     out = {'runs': {'arm': len(arm), 'deposited': len(deposit)}, 'generations': {}}
     agrees = True
@@ -158,6 +199,30 @@ def by_hand(spec, report, results=RESULTS, deposit=None):
     out['seeds_whose_scores_agree_with_the_report'] = int(sum(
         s in per_seed and all(abs(max(arm[s][:g]) - per_seed[s][str(g)]) <= SAME for g in spec['checked_at'])
         for s in spec['seeds']))
+    against = spec.get('against')
+    if against:
+        # arms E1 to E3: the comparison with arm D (section 9.8, point 4), from both arms' raw files
+        block = report.get('against') or {}
+        other = raw_curves(against['prefix'], against['seeds'], against['generations'], results)
+        out['against'] = {'arm': against['arm'], 'runs': len(other), 'generations': {},
+                          'the_report_has_this_comparison': bool(block.get('arm') == against['arm'])}
+        agrees = agrees and out['against']['the_report_has_this_comparison']
+        for g in spec['checked_at']:
+            x = [max(arm[s][:g]) for s in spec['seeds']]
+            y = [max(other[s][:g]) for s in against['seeds']]
+            mine = {'arm_median': statistics.median(x), 'other_median': statistics.median(y),
+                    'ratio_to_the_other_arm': statistics.median(x) / statistics.median(y),
+                    'a12_against_the_other_arm': a12(x, y)}
+            s = (block.get('scores') or {}).get(str(g))
+            if s is None:
+                mine['largest_difference_from_the_report'] = None
+                agrees = False
+            else:
+                theirs = {'arm_median': s['arm_median'], 'other_median': s['reference_median'],
+                          'ratio_to_the_other_arm': s['ratio_of_medians'], 'a12_against_the_other_arm': s['a12']}
+                mine['largest_difference_from_the_report'] = max(abs(mine[k] - theirs[k]) for k in theirs)
+                agrees = agrees and mine['largest_difference_from_the_report'] <= 1e-9
+            out['against']['generations'][str(g)] = mine
     out['agrees_with_the_report'] = bool(agrees and out['seeds_whose_scores_agree_with_the_report'] == len(arm))
     return out, arm
 
@@ -193,9 +258,14 @@ def read_text(path):
 
 def runs(spec, results=RESULTS, same_code=same_code_as_tag, preset_entries=None):
     """Each run's record of itself, and what the launcher recorded."""
+    preset, given = engine_of(spec)
     if preset_entries is None:
         import run_tendon_evolution as runner
-        preset_entries = dict(runner._PRESETS[preset_of(spec)])
+        preset_entries = dict(runner._PRESETS[preset])
+    # An option given next to the preset replaces the preset's value (arms E1 and E2): the run
+    # then records the preset's other entries as applied, and the given value among its settings.
+    kept = {option: type(preset_entries[option])(value) for option, value in given.items()}
+    applied = {key: value for key, value in preset_entries.items() if key not in given}
     generations = spec['generations']
     first, problems, starts, commits, workers_used = None, [], {}, {}, set()
     for seed in spec['seeds']:
@@ -211,8 +281,11 @@ def runs(spec, results=RESULTS, same_code=same_code_as_tag, preset_entries=None)
                 problems.append(f"{which}: command {i['command']}")
             if i['settings'].get('seed') != seed or i['settings'].get('name') != f"{spec['prefix']}{seed}":
                 problems.append(f'{which}: its settings name another seed or run')
-            if i.get('preset_applied') != preset_entries:
-                problems.append(f'{which}: the preset was not applied as it is')
+            if i.get('preset_applied') != applied or i['settings'].get('preset') != preset:
+                problems.append(f"{which}: the preset was not applied as the arm's command has it")
+            for option, value in kept.items():
+                if i['settings'].get(option) != value:
+                    problems.append(f"{which}: {option} is {i['settings'].get(option)!r}, the arm's command says {value!r}")
             if i.get('threads') != search_arm.ONE_THREAD:
                 problems.append(f"{which}: thread settings {i.get('threads')}")
             commits.setdefault(i['git_commit'], None)
@@ -317,7 +390,8 @@ def audit(spec, rows, stored, workers=4, cache=None, evaluate_all=None, params=N
     engine's time step and at a quarter of it."""
     evaluate_all = evaluate_all or ts.evaluate_all
     if params is None:
-        params = ts.worker_parameters(ts.evaluator_arguments(early_stop=True, preset=preset_of(spec)))
+        preset, given = engine_of(spec)
+        params = ts.worker_parameters(ts.evaluator_arguments(early_stop=True, preset=preset, given=given))
     cache = cache or os.path.join(OUT, f"{spec['stem']}_audit_evaluations.json")
     jobs, keys = [], {}
     for row in rows:
@@ -373,6 +447,8 @@ def write_audit(path, rows):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split('\n\n')[0], formatter_class=argparse.RawDescriptionHelpFormatter,
                                  epilog=__doc__.split('\n\n', 1)[1])
+    ap.add_argument('--arm', default=ARM, choices=engine_arms(),
+                    help='the arm (default D). With --rehearsal: the arm whose command the runs were made with')
     ap.add_argument('--rehearsal', metavar='PREFIX', help='runs that are not an arm: the start of their folder names')
     ap.add_argument('--seeds', help='rehearsal only: the seeds, e.g. 101-110')
     ap.add_argument('--generations', type=int, help='rehearsal only: the generations each run has')
@@ -388,15 +464,18 @@ def main(argv=None):
         if not a.seeds or not a.generations:
             ap.error('--rehearsal needs --seeds and --generations')
         import start_arm
-        spec = rehearsal_spec(a.rehearsal, start_arm.parse_seeds(a.seeds), a.generations, a.report)
+        spec = rehearsal_spec(a.rehearsal, start_arm.parse_seeds(a.seeds), a.generations, a.report, a.arm)
     else:
-        spec = arm_spec()
+        spec = arm_spec(a.arm)
     if not os.path.isfile(spec['report']):
         raise SystemExit(f"There is no report of {spec['name']} at {os.path.relpath(spec['report'], ROOT)} yet. "
                          f"These checks follow the analysis.")
     with open(spec['report'], encoding='utf-8') as f:
         report = json.load(f)
-    title = f"{spec['name'].upper()}{'' if spec['is_arm'] else ' (not an arm of the campaign)'}"
+    preset, given = engine_of(spec)
+    settings = f"--preset {preset}" + ''.join(f" --{k.replace('_', '-')} {v}" for k, v in given.items())
+    title = (f"{spec['name'].upper()}{'' if spec['is_arm'] else ' (not an arm of the campaign)'}: runs in the MuJoCo engine "
+             f"with {settings}")
 
     hand, curves = by_hand(spec, report, a.results_dir)
     print(f'{title}\n\nBY HAND, from the raw files')
@@ -405,6 +484,15 @@ def main(argv=None):
               f"{v['ratio_to_deposited']:.4f}; A12 {v['a12_against_deposited']:.4f}; largest difference from the report "
               f"{v['largest_difference_from_the_report']:.1e}")
     print(f"  seeds whose scores are the report's: {hand['seeds_whose_scores_agree_with_the_report']} of {hand['runs']['arm']}")
+    if hand.get('against'):
+        other = hand['against']
+        print(f"  against arm {other['arm']} ({other['runs']} runs, from its raw files)"
+              + ('' if other['the_report_has_this_comparison'] else ': THE REPORT DOES NOT HAVE THIS COMPARISON'))
+        for g, v in other['generations'].items():
+            difference = v['largest_difference_from_the_report']
+            print(f"    generation {g:>4}: {spec['name']} {v['arm_median']:.4f}, arm {other['arm']} {v['other_median']:.4f}; ratio "
+                  f"{v['ratio_to_the_other_arm']:.4f}; A12 {v['a12_against_the_other_arm']:.4f}; largest difference from the "
+                  f"report " + ('-' if difference is None else f'{difference:.1e}'))
 
     records = runs(spec, a.results_dir)
     print('\nTHE RUNS')
@@ -433,7 +521,8 @@ def main(argv=None):
     print(f"  runs in which different bodies share the top fitness: {sum(r['different_bodies_among_them'] > 1 for r in rows)}")
     print(f"  champions that do not touch the bottom of the workspace: {sum(r['lowest_layer'] > 0 for r in rows)}")
 
-    print('\nAUDIT (PROTOCOL.md, section 9.7, point 2): each champion evaluated again in the MuJoCo engine')
+    print(f'\nAUDIT (PROTOCOL.md, section 9.7, point 2): each champion evaluated again in the MuJoCo engine with {settings}')
+    spring = floor_of(spec) == 'rule2013'           # the 2013 simulator's floor; otherwise the engine's hard floor
     os.makedirs(a.out_dir, exist_ok=True)
     audited = audit(spec, rows, stored, a.workers, os.path.join(a.out_dir, f"{spec['stem']}_audit_evaluations.json"))
     s = audit_summary(audited)
@@ -445,12 +534,16 @@ def main(argv=None):
         print(f"  A quarter of the time step: the score changes by {100 * s['quarter_change_median']:.1f}% in the median, by "
               f"more than 10% for {s['quarter_change_over_10_percent']} of {s['champions']}, and at most by "
               f"{100 * s['quarter_change_largest']:+.1f}% (seed {s['quarter_change_largest_seed']}).")
-    print('    Under this preset the floor rule itself depends on the time step (section 9.5): it stops a voxel that the '
-          'brake would stop within one step. The change is therefore not numerical error alone.')
+    if spring:
+        print('    Under this preset the floor rule itself depends on the time step (section 9.5): it stops a voxel that the '
+              'brake would stop within one step. The change is therefore not numerical error alone.')
+    else:
+        print("    The floor of this preset is the engine's hard floor, which has no rule that depends on the time step "
+              "(section 9.8, point 6).")
     if s['sank']:
         print(f"  Floor penetration: the lowest voxel sank {s['sank'][0]:.2f} of a voxel below the floor's surface in the "
-              f"median (quartiles {s['sank'][1]:.2f} to {s['sank'][2]:.2f}). The floor of this preset is the 2013 "
-              f"simulator's spring.")
+              f"median (quartiles {s['sank'][1]:.2f} to {s['sank'][2]:.2f}). The floor of this preset is "
+              + ("the 2013 simulator's spring." if spring else "the engine's hard floor."))
     print(f"  Simulations that blew up: {s['blew_up']} at the engine's time step, {s['quarter_blew_up']} at a quarter of it.")
     print(f"\n  {'seed':>4}  {'voxels':>6}  {'recorded':>9}  {'again':>9}  {'quarter step':>12}  {'change':>7}  {'sank':>5}  "
           f"{'sank, quarter':>13}")
@@ -461,7 +554,8 @@ def main(argv=None):
               f"{100 * r['quarter_change']:>+6.1f}%  {sank:>5}  {sank_q:>13}"
               f"{'  BLEW UP' if r['blew_up'] else ''}{'  BLEW UP at a quarter' if r['quarter_blew_up'] else ''}")
 
-    out = {'what': spec['name'], 'is_arm': spec['is_arm'], 'by_hand': hand, 'runs': records, 'champions': rows,
+    out = {'what': spec['name'], 'is_arm': spec['is_arm'], 'engine': {'preset': preset, 'given_next_to_it': given},
+           'by_hand': hand, 'runs': records, 'champions': rows,
            'audit': {'summary': s, 'champions': audited, 'quarter': QUARTER, 'code': ts.aa.code_version()}}
     checks = os.path.join(a.out_dir, f"{spec['stem']}_checks.json")
     with open(checks, 'w', encoding='utf-8') as f:

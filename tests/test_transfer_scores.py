@@ -547,6 +547,28 @@ class TestTheOtherPreset(unittest.TestCase):
         self.assertEqual((a['floor_contact'], a['start']), ('voxelyze', 'floor'))
         self.assertEqual((b['floor_contact'], b['start']), ('rule2013', 'workspace'))
 
+    def test_an_option_given_next_to_a_preset_replaces_its_value(self):
+        """Arms E1 and E2 (PROTOCOL.md, section 9.8): arm D's preset with one setting given on the
+        command line. The values arrive as the words of the command."""
+        base = ts.evaluator_arguments(preset=ts.FLOOR_PRESET)
+        differs = lambda given: {k: v for k, v in ts.evaluator_arguments(preset=ts.FLOOR_PRESET, given=given).items()   # noqa: E731
+                                 if base[k] != v}
+        self.assertEqual(differs({}), {})
+        self.assertEqual(differs(None), {})
+        self.assertEqual(differs({'damping_global': '0.01'}), {'global_damping': 0.01})
+        self.assertEqual(differs({'amp': '0.2', 'poisson': 'on'}), {'actuation_amplitude': 0.2, 'poisson': True})
+        self.assertEqual(differs({'poisson': 'off', 'amp': '0.14'}), {})                   # the preset's own values
+        # what this script cannot take from a command line stops it, rather than being left out silently
+        for unknown in ({'grid_size': '5'}, {'no_trim': 'False'}, {'pop': '30'}, {'gravity': '9.81'}):
+            with self.assertRaises(SystemExit, msg=unknown):
+                ts.evaluator_arguments(preset=ts.FLOOR_PRESET, given=unknown)
+        # and the launcher's commands are among what it can take
+        import search_arm
+        for name, arm in search_arm.ARMS.items():
+            preset, given = search_arm.engine_options(arm)
+            if preset:
+                ts.evaluator_arguments(early_stop=True, preset=preset, given=given)
+
     def test_a_body_off_the_bottom_is_scored_once_where_the_preset_starts_it_there(self):
         up = np.zeros((10, 10, 10), np.int8)
         up[4:6, 4:6, 2:4] = 1
