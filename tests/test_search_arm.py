@@ -155,6 +155,86 @@ class TestArmD(unittest.TestCase):
         self.assertNotIn(1, progress)                             # a run that has ended is forgotten
 
 
+class TestArmsE(unittest.TestCase):
+    """Arms E1 to E3: arm D with one setting undone each (PROTOCOL.md, section 9.8). Added on 27
+    November 2026, while arm D was running and before any of the three was started."""
+
+    RUNNERS = {
+        'E1': ['--preset', 'cheney2013-floor', '--damping-global', '0.01', '--no-age-pareto', '--pop', '30'],
+        'E2': ['--preset', 'cheney2013-floor', '--amp', '0.2', '--poisson', 'on', '--no-age-pareto', '--pop', '30'],
+        'E3': ['--preset', 'cheney2013', '--no-age-pareto', '--pop', '30'],
+    }
+
+    def test_they_are_those_of_the_protocol(self):
+        d = search_arm.ARMS['D']
+        for name, runner in self.RUNNERS.items():
+            arm = search_arm.ARMS[name]
+            self.assertEqual(arm['runner'], runner)
+            self.assertEqual((arm['generations'], arm['condition'], arm['tag'], arm['seeds'], arm['code'], arm['workers']),
+                             (300, 'noCost', 'arm' + name, '1-3', 'campaign-v4', 3))
+            self.assertFalse(search_arm.in_the_2013_simulator(arm))
+            self.assertEqual(runner[-3:], d['runner'][-3:])               # the search itself is arm D's
+        # and arm D, which is running, is what it was
+        self.assertEqual(d, {'tag': 'armD', 'generations': 300, 'condition': 'noCost', 'seeds': '1-10',
+                             'code': 'campaign-v4', 'workers': 3,
+                             'runner': ['--preset', 'cheney2013-floor', '--no-age-pareto', '--pop', '30']})
+
+    def test_the_command_of_a_run(self):
+        cmd = search_arm.runner_command(search_arm.ARMS['E2'], 'python.exe', 'armE2', 3, 300, 3)
+        self.assertEqual(cmd[2:], ['--preset', 'cheney2013-floor', '--amp', '0.2', '--poisson', 'on', '--no-age-pareto',
+                                   '--pop', '30', '--gen', '300', '--workers', '3', '--seed', '3', '--name', 'armE2_s3'])
+        cmd = search_arm.runner_command(search_arm.ARMS['E3'], 'python.exe', 'armE3', 1, 300, 3)
+        self.assertEqual(cmd[2:], ['--preset', 'cheney2013', '--no-age-pareto', '--pop', '30', '--gen', '300',
+                                   '--workers', '3', '--seed', '1', '--name', 'armE3_s1'])
+
+    def test_what_each_command_says_about_the_engine(self):
+        options = {name: search_arm.engine_options(arm) for name, arm in search_arm.ARMS.items()}
+        self.assertEqual(options, {'A': (None, {}), 'D': ('cheney2013-floor', {}),
+                                   'E1': ('cheney2013-floor', {'damping_global': '0.01'}),
+                                   'E2': ('cheney2013-floor', {'amp': '0.2', 'poisson': 'on'}),
+                                   'E3': ('cheney2013', {})})
+        with self.assertRaises(ValueError):                                # a command without a preset
+            search_arm.engine_options({'runner': ['--no-age-pareto', '--pop', '30']})
+        with self.assertRaises(ValueError):                                # an option whose value is not there
+            search_arm.engine_options({'runner': ['--preset', 'cheney2013', '--no-trim', '--no-age-pareto', '--pop', '30']})
+
+    def test_an_option_next_to_a_preset_undoes_an_entry_of_that_preset(self):
+        sys.path.insert(0, ROOT)
+        import run_tendon_evolution as runner
+        differs_from_d = {}
+        d = dict(runner._PRESETS['cheney2013-floor'])
+        for name in self.RUNNERS:
+            preset, given = search_arm.engine_options(search_arm.ARMS[name])
+            entries = dict(runner._PRESETS[preset])
+            for option, value in given.items():
+                self.assertIn(option, entries, f'arm {name}: {option} is not a setting of {preset}')
+                self.assertNotEqual(type(entries[option])(value), entries[option])
+                entries[option] = type(entries[option])(value)
+            differs_from_d[name] = sorted(k for k in set(d) | set(entries) if d.get(k) != entries.get(k))
+        # each arm differs from arm D in the one setting the protocol names, and in no other
+        self.assertEqual(differs_from_d, {'E1': ['damping_global'], 'E2': ['amp', 'poisson'],
+                                          'E3': ['floor_contact', 'start']})
+
+    def test_their_seeds_and_their_trials(self):
+        from unittest import mock
+        with mock.patch.object(search_arm, 'main', side_effect=lambda core, a, ap, seeds: seeds):
+            for name in self.RUNNERS:
+                self.assertEqual(start_arm.main(['--arm', name, '--status']), [1, 2, 3])
+            self.assertEqual(start_arm.main(['--arm', 'E1', '--tag', 'trialE1', '--seeds', '101-103', '--gens', '2']),
+                             [101, 102, 103])
+            self.assertEqual(start_arm.main(['--arm', 'D', '--status']), list(range(1, 11)))
+        for argv in (['--arm', 'E1', '--tag', 'armE1', '--gens', '2'], ['--arm', 'E2', '--tag', 'armD'],
+                     ['--arm', 'E3', '--seeds', '101'], ['--arm', 'E1', '--restart-incomplete']):
+            with self.assertRaises(SystemExit, msg=argv), contextlib.redirect_stderr(io.StringIO()):
+                start_arm.main(argv)
+
+    def test_the_three_arms_fit_in_memory_side_by_side(self):
+        per, keep = search_arm.GB_PER_PROCESS, search_arm.KEEP_FREE_GB
+        # each arm's launcher asks for its own three runs of four processes
+        self.assertEqual(search_arm.room_for(3, 3, free=64.0)[2], keep + 12 * per)
+        self.assertTrue(search_arm.room_for(3, 3, free=keep + 12 * per)[0])
+
+
 class TestRunState(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -272,6 +352,94 @@ class TestWaitingForAnotherArm(unittest.TestCase):
             self.assertEqual(calls, [])
 
 
+class TestWaitingForArmD(unittest.TestCase):
+    """--after D: an arm E waits for arm D, which is run with this project's search and whose
+    runs end with its launcher, and starts only if arm D is complete (PROTOCOL.md, section 9.8)."""
+
+    def setUp(self):
+        import types
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.results, self.out = os.path.join(self.tmp.name, 'results'), os.path.join(self.tmp.name, 'campaign')
+        os.makedirs(self.out)
+        self.said = []
+        self.core = types.SimpleNamespace(say=self.said.append, parse_seeds=start_arm.parse_seeds,
+                                          lock_held=start_arm.lock_held, complete_seeds=start_arm.complete_seeds,
+                                          progress_line=start_arm.progress_line)
+
+    def arm_d(self, unfinished=None):
+        """Arm D's ten run folders; `unfinished`: a seed that stands at generation 120."""
+        for s in range(1, 11):
+            if s == unfinished:
+                make_run(self.results, f'armD_s{s}', 120, final=False, checkpoint=True)
+            else:
+                make_run(self.results, f'armD_s{s}', 300)
+
+    def wait(self, stop=lambda: False, poll=0.05):
+        return search_arm.wait_for_search_arm(self.core, 'D', stop, poll, out=self.out, results=self.results)
+
+    @unittest.skipUnless(os.name == 'nt', 'the lock is a Windows file lock')
+    def test_it_waits_for_the_launcher_and_then_reads_the_run_folders(self):
+        import shutil
+        import threading
+        self.arm_d(unfinished=7)
+        lock = start_arm.take_lock(os.path.join(self.out, 'armD_host.lock'))          # arm D's launcher is alive
+
+        def the_arm_finishes():
+            shutil.rmtree(os.path.join(self.results, 'armD_s7'))
+            make_run(self.results, 'armD_s7', 300)
+            lock.close()
+        threading.Timer(0.6, the_arm_finishes).start()
+        self.assertEqual(self.wait(), 'complete')
+        self.assertIn('Arm D is running. Waiting for it to finish', self.said[0])
+        self.assertIn('Arm D is complete: 10 of 10 runs with 300 generations', self.said[-1])
+
+    def test_an_arm_d_that_ended_unfinished_starts_nothing(self):
+        self.arm_d(unfinished=7)                                                      # and no launcher looks after it
+        self.assertEqual(self.wait(), 'incomplete')
+        self.assertEqual(len(self.said), 1)
+        self.assertIn('Arm D has ended without being complete', self.said[0])
+        self.assertIn('interrupted: seeds [7]', self.said[0])
+
+    def test_an_arm_d_that_is_complete_already_is_seen_at_once(self):
+        self.arm_d()
+        self.assertEqual(self.wait(), 'complete')
+
+    @unittest.skipUnless(os.name == 'nt', 'the lock is a Windows file lock')
+    def test_a_stop_while_waiting(self):
+        self.arm_d(unfinished=2)
+        lock = start_arm.take_lock(os.path.join(self.out, 'armD_host.lock'))
+        try:
+            asked = iter([False, False, True])
+            self.assertEqual(self.wait(stop=lambda: next(asked), poll=0.01), 'stopped')
+        finally:
+            lock.close()
+        self.assertEqual(len(self.said), 1)                                           # it never said how arm D ended
+
+    def test_the_launcher_hands_a_search_arm_to_this_wait(self):
+        from unittest import mock
+        stop = lambda: False                                                          # noqa: E731
+        with mock.patch.object(search_arm, 'wait_for_search_arm', return_value='complete') as wait:
+            self.assertEqual(search_arm.wait_for_other_arm(self.core, 'D', stop, poll=1.5), 'complete')
+        wait.assert_called_once_with(self.core, 'D', stop, 1.5)
+
+    def test_through_the_command_line(self):
+        from unittest import mock
+        seen = []
+        with mock.patch.object(search_arm, 'main', side_effect=lambda core, a, ap, seeds: seen.append((a.arm, a.after))):
+            start_arm.main(['--arm', 'E1', '--after', 'D'])
+            start_arm.main(['--arm', 'E3', '--after', 'D', '--interval', '5'])
+        self.assertEqual(seen, [('E1', 'D'), ('E3', 'D')])
+        import argparse
+        a = argparse.Namespace(seeds=None, gens=None, tag=None, interval=10.0, jobs=None, workers=None, after='D',
+                               restart_incomplete=False)
+        self.assertEqual(start_arm.passthrough(a, True), ['--interval', '10.0', '--after', 'D'])   # the launcher gets it
+        self.assertEqual(start_arm.passthrough(a, False), [])                                      # the view does not
+        for argv in (['--arm', 'E1', '--after', 'E1'], ['--arm', 'D', '--after', 'D'], ['--arm', 'R', '--after', 'D']):
+            with self.assertRaises(SystemExit, msg=argv), contextlib.redirect_stderr(io.StringIO()):
+                start_arm.main(argv)
+
+
 class TestThroughStartArm(unittest.TestCase):
     def fails(self, argv):
         with self.assertRaises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
@@ -283,8 +451,8 @@ class TestThroughStartArm(unittest.TestCase):
         self.fails(['--arm', 'A', '--seeds', '1-2'])             # nor change the arm without a tag
         self.fails(['--arm', 'A', '--workers', '0'])
         self.fails(['--arm', 'R', '--workers', '2', '--status'])  # --workers means nothing for the re-runs
-        self.fails(['--arm', 'R', '--after', 'Rc', '--status'])   # only arm A waits for another arm
-        self.fails(['--arm', 'A', '--after', 'A'])                # and only for a re-run arm
+        self.fails(['--arm', 'R', '--after', 'Rc', '--status'])   # a re-run arm waits for no other arm
+        self.fails(['--arm', 'A', '--after', 'A'])                # and no arm waits for itself
 
     @unittest.skipUnless(os.name == 'nt', 'Windows job objects')
     def test_the_job_object_can_be_created(self):

@@ -10,6 +10,13 @@ Used through start_arm.py, which hands itself over as `core`:
          no cost, seeds 1 to 35, 1000 generations, population 30 (paper/PROTOCOL.md)
     D    the same search in this project's MuJoCo engine with --preset cheney2013-floor,
          no cost, seeds 1 to 10, 300 generations, population 30 (PROTOCOL.md, sections 2 and 9.5)
+    E1   arm D with one setting undone, seeds 1 to 3, 300 generations (PROTOCOL.md, section 9.8):
+         global damping back to 0.01 (--damping-global 0.01)
+    E2   the same with the actuation back to +-20% with the volumetric law (--amp 0.2 --poisson on)
+    E3   the same with the engine's hard floor and bodies set on it (--preset cheney2013)
+
+    python paper/reference_2013/start_arm.py --arm E1 --after D
+         start arm E1 as soon as arm D is complete; if arm D ends unfinished, start nothing
 
 How these arms differ from the re-runs of the original program (R, Rc)
   - A run is one `python run_tendon_evolution.py ... --seed <s> --name armA_s<s>` process. It
@@ -23,14 +30,16 @@ How these arms differ from the re-runs of the original program (R, Rc)
   - The code that computes a run (run_tendon_evolution.py and src/) must be the code of the
     arm's tag; the launcher refuses to start an arm otherwise. Arm A: campaign-v2, which is
     campaign-v1 with one correction (PROTOCOL.md section 9.3: a continued run now repeats the
-    uninterrupted one exactly). Arm D: campaign-v4 (sections 9.5 and 9.6).
+    uninterrupted one exactly). Arms D and E1 to E3: campaign-v4 (sections 9.5 and 9.6).
   - Runs side by side: all of them by default. In arm A each simulates one robot at a time, the
     pattern of arm R, which keeps every core busy with 35 runs. Arm D has 10 runs, so each
-    simulates three robots at a time (--workers); the scores do not depend on that number.
+    simulates three robots at a time (--workers); the scores do not depend on that number. Arms
+    E1 to E3 have 3 runs each, with three robots at a time; the three arms can run side by side,
+    each with its own launcher (9 runs, 27 simulations at a time).
   - Every run is started with one linear-algebra thread (PROTOCOL.md section 9.6).
-  - Arm D, memory: a run is started only while the system can still promise the memory its
-    processes may ask for. A run that an error stopped is continued like any other; the
-    launcher's log says what stopped it.
+  - The arms in the MuJoCo engine (D, E1 to E3), memory: a run is started only while the system
+    can still promise the memory its processes may ask for. A run that an error stopped is
+    continued like any other; the launcher's log says what stopped it.
   - A run that records no new generation for two hours of the launcher's running time has its
     processes ended and is continued from its checkpoint, like any run that ends unfinished.
     (A worker process that dies outright leaves its run waiting for a result that never comes.)
@@ -62,7 +71,20 @@ ARMS = {
           'workers': 1, 'runner': ['--simulator', 'voxelyze2013', '--no-age-pareto', '--pop', '30']},
     'D': {'tag': 'armD', 'generations': 300, 'condition': 'noCost', 'seeds': '1-10', 'code': 'campaign-v4',
           'workers': 3, 'runner': ['--preset', 'cheney2013-floor', '--no-age-pareto', '--pop', '30']},
+    # Arm D with one setting undone each (PROTOCOL.md, section 9.8). An option given next to a
+    # preset replaces the preset's value; engine_options() reads it back for the audit.
+    'E1': {'tag': 'armE1', 'generations': 300, 'condition': 'noCost', 'seeds': '1-3', 'code': 'campaign-v4',
+           'workers': 3, 'runner': ['--preset', 'cheney2013-floor', '--damping-global', '0.01',
+                                    '--no-age-pareto', '--pop', '30']},
+    'E2': {'tag': 'armE2', 'generations': 300, 'condition': 'noCost', 'seeds': '1-3', 'code': 'campaign-v4',
+           'workers': 3, 'runner': ['--preset', 'cheney2013-floor', '--amp', '0.2', '--poisson', 'on',
+                                    '--no-age-pareto', '--pop', '30']},
+    'E3': {'tag': 'armE3', 'generations': 300, 'condition': 'noCost', 'seeds': '1-3', 'code': 'campaign-v4',
+           'workers': 3, 'runner': ['--preset', 'cheney2013', '--no-age-pareto', '--pop', '30']},
 }
+# The options of an arm's command that set the search and not the engine, with the number of
+# values each takes. Every other option of the command is an engine option.
+SEARCH_OPTIONS = {'--no-age-pareto': 0, '--pop': 1}
 CODE_TAG = 'campaign-v2'            # the code arm A ran from; every arm names its own under 'code'
 # Every code tag of the campaign that this project's search has run or will run from, oldest
 # first. campaign-v3 adds the 2013 simulator's floor and start to the engine as options
@@ -114,6 +136,33 @@ def in_the_2013_simulator(arm):
     """Does this arm's search score its robots in the original 2013 simulator (arm A)? The other
     arms score them in this project's MuJoCo engine, in processes of their own."""
     return 'voxelyze2013' in arm['runner']
+
+
+def engine_options(arm):
+    """What an arm's command says about the MuJoCo engine: (the preset, {option: the value given
+    next to the preset}). The options are named as the search names them inside ('--damping-global'
+    is 'damping_global') and the values are the words of the command. An option given next to a
+    preset replaces the preset's value: the search's own rule. The options that set the search
+    (SEARCH_OPTIONS) are left out. (None, {}) for an arm in the 2013 simulator, whose command
+    says nothing about the engine."""
+    if in_the_2013_simulator(arm):
+        return None, {}
+    words, preset, given, i = list(arm['runner']), None, {}, 0
+    while i < len(words):
+        word = words[i]
+        if word in SEARCH_OPTIONS:
+            i += 1 + SEARCH_OPTIONS[word]
+        elif word.startswith('--') and i + 1 < len(words) and not words[i + 1].startswith('--'):
+            if word == '--preset':
+                preset = words[i + 1]
+            else:
+                given[word[2:].replace('-', '_')] = words[i + 1]
+            i += 2
+        else:
+            raise ValueError(f'cannot read the engine options of the command {words}: {word}')
+    if preset is None:
+        raise ValueError(f'the command {words} names no preset')
+    return preset, given
 
 
 def free_commit_gb():
@@ -268,7 +317,12 @@ def wait_for_other_arm(core, name, stop_requested, poll=5.0):
 
     That arm's runs are looked at only once its launcher has ended (two programs must not copy
     its results out at the same time). If its launcher is gone but runs of it are still alive,
-    the wait goes on until they have ended."""
+    the wait goes on until they have ended.
+
+    An arm that is itself run with this project's search (arm D, for which arms E1 to E3 may
+    wait) is waited for by wait_for_search_arm."""
+    if name in ARMS:
+        return wait_for_search_arm(core, name, stop_requested, poll)
     say = core.say
     other = core.ARMS[name]
     stem = f"{other['tag']}_P{other['penalty']}"
@@ -292,6 +346,33 @@ def wait_for_other_arm(core, name, stop_requested, poll=5.0):
                 return 'stopped'
             time.sleep(poll)
             waited += poll
+    done = core.complete_seeds(st, generations)
+    if len(done) == len(seeds):
+        say(f'Arm {name} is complete: {len(done)} of {len(seeds)} runs with {generations} generations.')
+        return 'complete'
+    say(f'Arm {name} has ended without being complete. ' + core.progress_line(st, generations))
+    return 'incomplete'
+
+
+def wait_for_search_arm(core, name, stop_requested, poll=5.0, out=None, results=None):
+    """Wait until the launcher of the search arm `name` (arm D) has ended, then say how the arm
+    ended: 'complete', 'incomplete', or 'stopped' if a stop of THIS launcher was asked for while
+    it waited. The runs of such an arm belong to its launcher and end with it, so once the
+    launcher is gone the run folders say all there is to say. If that arm has no launcher when
+    the wait begins, the answer is given at once, from the run folders as they are.
+
+    Only the other arm's lock and the names of its files are looked at: how many generations each
+    run has on record, never a score."""
+    say = core.say
+    other = ARMS[name]
+    stem, generations = other['tag'], other['generations']
+    seeds = core.parse_seeds(other['seeds'])
+    lock = os.path.join(out or OUT, f'{stem}_host.lock')
+    if core.lock_held(lock):
+        say(f'Arm {name} is running. Waiting for it to finish; nothing is started before that.')
+    if wait_until_free(lambda: core.lock_held(lock), stop_requested, say, f'arm {name}', poll) == 'stopped':
+        return 'stopped'
+    st = statuses(stem, seeds, generations, results=results)
     done = core.complete_seeds(st, generations)
     if len(done) == len(seeds):
         say(f'Arm {name} is complete: {len(done)} of {len(seeds)} runs with {generations} generations.')
