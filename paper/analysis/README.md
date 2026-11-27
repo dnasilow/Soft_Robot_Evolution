@@ -29,7 +29,7 @@ An arm is analysed only as a whole: while one of its seeds is unfinished the scr
 | The deposited cost runs dressed up as an arm, against the no-cost runs | Ratio 0.78 (0.72 to 0.90), "differs"; smaller bodies with less muscle |
 | An arm with a seed short of its generations, unfinished, failed, or missing | Refused, nothing computed |
 
-The rehearsals are in `tests/test_protocol_analysis.py` (31 tests with those for arm A). They need the deposited data, which is kept out of git.
+The rehearsals are in `tests/test_protocol_analysis.py` (36 tests with those for arms A and D). They need the deposited data, which is kept out of git.
 
 The interval of the pilot is 0.86 to 1.48 here. The summary of 21 November gave 0.86 to 1.50: it took the runs in folder-name order, this analysis takes them in seed order, and with 12 runs the resampling differs that much. `summarise_reruns.py` now uses seed order too, so the launcher's closing summary and this analysis give the same interval.
 
@@ -55,6 +55,16 @@ Added on 23 November 2026, before any run of arm A existed. `--arm A` reads the 
 
 Checked on made-up runs (the deposited cost curves standing in for arm A's scores): the report against the deposit, the comparison with arm R and the floor come out as they must, and an arm with one unfinished run is refused.
 
+## Arm D
+
+Added on 27 November 2026, before any run of arm D existed. `--arm D` reads its run folders the way arm A's are read. What is its own:
+
+- **Ten seeds and 300 generations** (PROTOCOL.md, section 2). The primary outcome is the champion score at generation 300, the secondary one at generation 100, each against the deposited runs at the same generation (section 4). Its scores are the ones this project's MuJoCo engine gave under `--preset cheney2013-floor`.
+- **The body table** sets the arm's champions of generation 300 against the deposited champions of generation 1000, the only robots the deposit holds, and the report says so in a note.
+- **No second comparison.** The fifth primary comparison of the protocol is arm A against arm R; arm D is set against the deposit only.
+
+Checked on made-up runs (the first 300 generations of ten deposited no-cost runs standing in for its scores): the primary outcome is read at generation 300, the deposit's median at that generation is the one the report gives, the note about the body table is there, every seed is listed, and an arm with one run a generation short is refused.
+
 ## The transfer outcome
 
 Added on 24 November 2026. What it computes was fixed in PROTOCOL.md, section 9.4, before any champion of an arm was scored in the MuJoCo engine.
@@ -71,8 +81,9 @@ python paper/analysis/render_transfer.py                                       t
 - **Two starts.** The 2013 simulator starts a body where it is in the workspace, in the air if it does not touch the bottom; the MuJoCo engine sets every body on the floor. A champion that does not touch the bottom is scored both ways, and the statistics are given both ways. On the floor is the preset as it is.
 - **The ratio.** Score in the MuJoCo engine over the score in this campaign's build of the 2013 simulator. For deposited champions that score comes from the replay of all deposited robots; the 2013 figure is reported next to it.
 - **Time-step check.** The first five champions of each set once more with a quarter of the time step.
-- **Nothing is scored twice.** Finished evaluations are kept in `results/transfer/`, keyed by body, settings and code tag. An evaluation takes one to two minutes, six with the short time step.
+- **Nothing is scored twice.** Finished evaluations are kept in `results/transfer/`, keyed by body, settings and code tag. An evaluation takes one to two minutes, six with the short time step. Every code tag of the campaign computes the same scores under a preset it has, so an evaluation is kept under the first tag that has the preset (`campaign-v2` for `cheney2013`, `campaign-v3` for `cheney2013-floor`) and is found again under a later one.
 - **Refused** unless `run_tendon_evolution.py` and `src/` are those of the campaign's code tag.
+- **Memory, and an evaluation that fails** (27 November 2026; PROTOCOL.md, section 9.6). The script sets one linear-algebra thread for itself and its worker processes before it loads numpy, as the launcher does for a run. A worker then asks the system for about 0.1 GB instead of up to 3.2, so the number of workers is no longer held down by memory (0.5 GB is allowed for each, 6 GB are left free). And it follows the search's rule for an evaluation that ends in an error: a body gets 0 only for an error that is its own (`ValueError` or `ArithmeticError`, not about memory), with the error recorded; any other error stops the scoring. All 431 evaluations behind the two reports were computed again that day and gave the recorded scores (`../diagnostics_2026-11-27/check_same_scores.py`).
 - **The second preset** (added on 26 November 2026, committed before its first run). PROTOCOL.md, section 9.5, asks for the outcome under both presets of the campaign. `--preset cheney2013-floor` scores the same champions with the settings of arm D: the 2013 simulator's floor rule, and every body started where it is in the workspace. Under it no body needs a second evaluation "as placed". The report is written as `transfer_floor2013.*` and compares the champions that were scored under this preset on 25 November (`../diagnostics_2026-11-25/check_built_in_floor.py`) with the scores they got then. The default is untouched: from the kept evaluations the script gives the report under `--preset cheney2013` again, identical but for its date line.
 
 What it was checked against:
@@ -85,9 +96,9 @@ What it was checked against:
 | Rehearsal on the 12 pilot runs at generation 10 | Ran through; seed 1 gives 1.7753, the value measured by hand before the script existed |
 | Reading: made-up arm folders, a made-up deposit, a made-up replay table | The champions of the reports, their bodies, their scores; a body that is not the reported one stops the script |
 
-38 tests for the scoring, 8 for its video tool, 8 for the champions' video tool.
+39 tests for the scoring, 8 for its video tool, 8 for the champions' video tool, 15 for the memory changes of 27 November (`tests/test_memory.py`).
 
 ## Not yet here
 
-- Arms D and E, and arm D's transfer in the other direction (its champions in the 2013 simulator).
+- Arms E1 to E3. Arm D's transfer in the other direction (its champions in the 2013 simulator) and the audit of its champions (reproduced score, a quarter of the time step, floor penetration).
 - Figures.

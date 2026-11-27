@@ -140,11 +140,23 @@ The same commands with `--arm A` (`search_arm.py`). Its runs are of another kind
 - **A run is one `run_tendon_evolution.py` process**, `--simulator voxelyze2013 --no-age-pareto --pop 30 --gen 1000 --workers 1 --seed <s> --name armA_s<s>`, with its folder in `results/`. All 35 run side by side, each simulating one robot at a time.
 - **A run can be stopped and continued without loss.** It saves a checkpoint after every generation, and the same command goes on from it. Since the correction of 23 November (protocol, section 9.3) the continued run is exactly the run it would have been. So there is no `--restart-incomplete` here: starting the arm again continues what is unfinished.
 - **The launcher owns its runs.** If it ends, however it ends, Windows ends its runs with it, and nothing is lost. A run that ends without finishing is continued by the launcher, six starts at most.
-- **The code must be the tagged one.** The launcher starts the arm only if `run_tendon_evolution.py` and `src/` are identical to the tag `campaign-v2`. Since arm A was complete, the campaign's folder holds the code of `campaign-v3` (PROTOCOL.md, section 9.5), so the launcher would now refuse to start a run of arm A; none is needed, and `--status` reads the finished arm as before.
+- **The code must be the tagged one.** The launcher starts the arm only if `run_tendon_evolution.py` and `src/` are identical to the tag `campaign-v2`. Since arm A was complete, the campaign's folder holds later code (`campaign-v3` since 25 November, `campaign-v4` since 27 November; PROTOCOL.md, sections 9.5 and 9.6), so the launcher would now refuse to start a run of arm A; none is needed, and `--status` reads the finished arm as before.
 - **It can wait for another arm.** With `--after Rc` the launcher makes its checks at once, then waits until arm Rc's launcher has ended. It starts arm A only if arm Rc is complete; if that arm ended unfinished it starts nothing and says so. `--stop` ends the wait.
 - **Its files** are in `results/campaign/`: the launcher's log, its launch records and each run's console output.
 
 Tried on 23 November with short trial runs (`dryQ`, `dryS`, `dryT`, `dryU`): three runs side by side to the end; the launcher ended alone, and its runs ended with it; a stop on request; continuation after both; seed 1 identical to the pilot of 21 November in every case with the corrected code.
+
+### Arm D: this project's search in its own MuJoCo engine
+
+The same commands with `--arm D`, through the same `search_arm.py`. Prepared on 27 November 2026; **not started**: it waits for the go-ahead.
+
+- **A run** is `run_tendon_evolution.py --preset cheney2013-floor --no-age-pareto --pop 30 --gen 300 --workers 3 --seed <s> --name armD_s<s>`, seeds 1 to 10 (PROTOCOL.md, sections 2 and 9.5). All ten run side by side, each simulating three robots at a time in worker processes of its own, which keeps the machine's 24 cores busy. The scores do not depend on that number (`../diagnostics_2026-11-27/`).
+- **The code must be that of the tag `campaign-v4`** (section 9.6), which is what the campaign's folder holds.
+- **One linear-algebra thread in every process**, set by the launcher and recorded in each run's manifest. With it, and with the memory MuJoCo sets aside now stated by the engine, a process asks the system for about 0.1 GB; before, it was up to 3.2 GB.
+- **Memory is looked at before a run is started.** The launcher starts the arm only if the system can still promise 0.2 GB for each process of the runs it is about to start, with 4 GB left free (12 GB for the whole arm, which then asks for about 4), and it holds a run back while that is not so.
+- **A run that an error stops is continued**, like any run that ends unfinished: six starts at most. If the run stopped itself because an evaluation failed for a reason that is not the robot's (section 9.6), the launcher's log says so and gives the error.
+- **A run that records no new generation for two hours** of the launcher's running time has its processes ended and is continued from its checkpoint, with a line in the log. A worker process that died outright leaves its run waiting for a result that never comes; this is what gets it going again.
+- Everything else is as for arm A: the launcher owns its runs, a run is continued from its checkpoint and is then the run it would have been, and the files are in `results/campaign/`.
 
 Arm R ran from 21 November 23:27 to 22 November 21:40. Its outcome is in [`../outcomes/README.md`](../outcomes/README.md).
 

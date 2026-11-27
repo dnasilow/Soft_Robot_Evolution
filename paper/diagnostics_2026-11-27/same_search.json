@@ -1,0 +1,496 @@
+{
+ "made": "2026-11-27T04:31",
+ "old_code": "campaign-v3",
+ "new_code": "campaign-v3-8-gcf7a643-dirty",
+ "new_code_differs_from_old_in": [
+  "run_tendon_evolution.py                  |  6 +++",
+  " src/evolution/mujoco_tendon_evaluator.py | 70 +++++++++++++++++++++++++++++++-",
+  " src/physics/mujoco_beam_physics.py       | 45 +++++++++++++++++++-",
+  " 3 files changed, 118 insertions(+), 3 deletions(-)"
+ ],
+ "search": [
+  "--no-age-pareto",
+  "--pop",
+  "30",
+  "--seed",
+  "101"
+ ],
+ "runs": {
+  "base_floor_s101": {
+   "generations": [
+    {
+     "generation": 1,
+     "scores": 30,
+     "identical": 30,
+     "largest_difference": 0.0,
+     "best": 1.3059396216168988,
+     "zero_scores": 2
+    },
+    {
+     "generation": 2,
+     "scores": 30,
+     "identical": 30,
+     "largest_difference": 0.0,
+     "best": 1.3059396216168988,
+     "zero_scores": 1
+    },
+    {
+     "generation": 3,
+     "scores": 30,
+     "identical": 30,
+     "largest_difference": 0.0,
+     "best": 1.3059396216168988,
+     "zero_scores": 1
+    },
+    {
+     "generation": 4,
+     "scores": 30,
+     "identical": 30,
+     "largest_difference": 0.0,
+     "best": 1.4238594265741937,
+     "zero_scores": 0
+    },
+    {
+     "generation": 5,
+     "scores": 30,
+     "identical": 30,
+     "largest_difference": 0.0,
+     "best": 1.4238594265741937,
+     "zero_scores": 0
+    }
+   ],
+   "scores": 150,
+   "identical": 150,
+   "final_bodies": 30,
+   "final_bodies_identical": 30,
+   "final_scores_identical": true,
+   "voxels_of_final_bodies": [
+    336,
+    890
+   ],
+   "settings": [
+    "--preset",
+    "cheney2013-floor",
+    "--gen",
+    "5",
+    "--workers",
+    "3"
+   ],
+   "old_starts": [
+    {
+     "started": "2026-11-27 03:06:02",
+     "code": "173a510186a51b37f1d718db1fe69804a5999767",
+     "modified": [],
+     "threads": null,
+     "command": [
+      "run_tendon_evolution.py",
+      "--preset",
+      "cheney2013-floor",
+      "--gen",
+      "5",
+      "--workers",
+      "3",
+      "--no-age-pareto",
+      "--pop",
+      "30",
+      "--seed",
+      "101",
+      "--name",
+      "base_floor_s101"
+     ]
+    }
+   ],
+   "new_starts": [
+    {
+     "started": "2026-11-27 03:53:44",
+     "code": "cf7a643cc9a59a7d14ed302fb125ad1e7528e63a",
+     "modified": [
+      "MUJOCO_LOG.TXT",
+      "paper/PLAN.md",
+      "paper/PROTOCOL.md",
+      "paper/analysis/README.md",
+      "paper/analysis/analyse_arm.py",
+      "paper/analysis/transfer_scores.py",
+      "paper/reference_2013/README.md",
+      "paper/reference_2013/search_arm.py",
+      "paper/reference_2013/start_arm.py",
+      "run_tendon_evolution.py",
+      "src/evolution/mujoco_tendon_evaluator.py",
+      "src/physics/mujoco_beam_physics.py",
+      "tests/test_protocol_analysis.py",
+      "tests/test_search_arm.py",
+      "tests/test_transfer_scores.py"
+     ],
+     "threads": {
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1"
+     },
+     "command": [
+      "run_tendon_evolution.py",
+      "--preset",
+      "cheney2013-floor",
+      "--gen",
+      "5",
+      "--workers",
+      "3",
+      "--no-age-pareto",
+      "--pop",
+      "30",
+      "--seed",
+      "101",
+      "--name",
+      "base_floor_s101"
+     ]
+    }
+   ]
+  },
+  "base_hard_s101": {
+   "generations": [
+    {
+     "generation": 1,
+     "scores": 30,
+     "identical": 30,
+     "largest_difference": 0.0,
+     "best": 1.7906321946346786,
+     "zero_scores": 2
+    },
+    {
+     "generation": 2,
+     "scores": 30,
+     "identical": 30,
+     "largest_difference": 0.0,
+     "best": 1.7906321946346786,
+     "zero_scores": 0
+    },
+    {
+     "generation": 3,
+     "scores": 30,
+     "identical": 30,
+     "largest_difference": 0.0,
+     "best": 1.9805448171976576,
+     "zero_scores": 0
+    }
+   ],
+   "scores": 90,
+   "identical": 90,
+   "final_bodies": 30,
+   "final_bodies_identical": 30,
+   "final_scores_identical": true,
+   "voxels_of_final_bodies": [
+    346,
+    817
+   ],
+   "settings": [
+    "--preset",
+    "cheney2013",
+    "--gen",
+    "3",
+    "--workers",
+    "3"
+   ],
+   "old_starts": [
+    {
+     "started": "2026-11-27 03:44:02",
+     "code": "173a510186a51b37f1d718db1fe69804a5999767",
+     "modified": [],
+     "threads": null,
+     "command": [
+      "run_tendon_evolution.py",
+      "--preset",
+      "cheney2013",
+      "--gen",
+      "3",
+      "--workers",
+      "3",
+      "--no-age-pareto",
+      "--pop",
+      "30",
+      "--seed",
+      "101",
+      "--name",
+      "base_hard_s101"
+     ]
+    }
+   ],
+   "new_starts": [
+    {
+     "started": "2026-11-27 03:53:44",
+     "code": "cf7a643cc9a59a7d14ed302fb125ad1e7528e63a",
+     "modified": [
+      "MUJOCO_LOG.TXT",
+      "paper/PLAN.md",
+      "paper/PROTOCOL.md",
+      "paper/analysis/README.md",
+      "paper/analysis/analyse_arm.py",
+      "paper/analysis/transfer_scores.py",
+      "paper/reference_2013/README.md",
+      "paper/reference_2013/search_arm.py",
+      "paper/reference_2013/start_arm.py",
+      "run_tendon_evolution.py",
+      "src/evolution/mujoco_tendon_evaluator.py",
+      "src/physics/mujoco_beam_physics.py",
+      "tests/test_protocol_analysis.py",
+      "tests/test_search_arm.py",
+      "tests/test_transfer_scores.py"
+     ],
+     "threads": {
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1"
+     },
+     "command": [
+      "run_tendon_evolution.py",
+      "--preset",
+      "cheney2013",
+      "--gen",
+      "3",
+      "--workers",
+      "3",
+      "--no-age-pareto",
+      "--pop",
+      "30",
+      "--seed",
+      "101",
+      "--name",
+      "base_hard_s101"
+     ]
+    }
+   ]
+  }
+ },
+ "one_at_a_time_against_three": {
+  "generations": 2,
+  "identical": 60,
+  "scores": 60,
+  "starts": [
+   {
+    "started": "2026-11-27 03:53:44",
+    "code": "cf7a643cc9a59a7d14ed302fb125ad1e7528e63a",
+    "modified": [
+     "MUJOCO_LOG.TXT",
+     "paper/PLAN.md",
+     "paper/PROTOCOL.md",
+     "paper/analysis/README.md",
+     "paper/analysis/analyse_arm.py",
+     "paper/analysis/transfer_scores.py",
+     "paper/reference_2013/README.md",
+     "paper/reference_2013/search_arm.py",
+     "paper/reference_2013/start_arm.py",
+     "run_tendon_evolution.py",
+     "src/evolution/mujoco_tendon_evaluator.py",
+     "src/physics/mujoco_beam_physics.py",
+     "tests/test_protocol_analysis.py",
+     "tests/test_search_arm.py",
+     "tests/test_transfer_scores.py"
+    ],
+    "threads": {
+     "OPENBLAS_NUM_THREADS": "1",
+     "OMP_NUM_THREADS": "1",
+     "MKL_NUM_THREADS": "1"
+    },
+    "command": [
+     "run_tendon_evolution.py",
+     "--preset",
+     "cheney2013-floor",
+     "--gen",
+     "2",
+     "--workers",
+     "1",
+     "--no-age-pareto",
+     "--pop",
+     "30",
+     "--seed",
+     "101",
+     "--name",
+     "base_floor_s101_w1"
+    ]
+   }
+  ]
+ },
+ "stopped_and_continued": {
+  "generations": [
+   {
+    "generation": 1,
+    "scores": 30,
+    "identical": 30,
+    "largest_difference": 0.0,
+    "best": 1.3059396216168988,
+    "zero_scores": 2
+   },
+   {
+    "generation": 2,
+    "scores": 30,
+    "identical": 30,
+    "largest_difference": 0.0,
+    "best": 1.3059396216168988,
+    "zero_scores": 1
+   },
+   {
+    "generation": 3,
+    "scores": 30,
+    "identical": 30,
+    "largest_difference": 0.0,
+    "best": 1.3059396216168988,
+    "zero_scores": 1
+   },
+   {
+    "generation": 4,
+    "scores": 30,
+    "identical": 30,
+    "largest_difference": 0.0,
+    "best": 1.4238594265741937,
+    "zero_scores": 0
+   },
+   {
+    "generation": 5,
+    "scores": 30,
+    "identical": 30,
+    "largest_difference": 0.0,
+    "best": 1.4238594265741937,
+    "zero_scores": 0
+   }
+  ],
+  "scores": 150,
+  "identical": 150,
+  "final_bodies": 30,
+  "final_bodies_identical": 30,
+  "final_scores_identical": true,
+  "voxels_of_final_bodies": [
+   336,
+   890
+  ],
+  "starts": [
+   {
+    "started": "2026-11-27 03:53:44",
+    "code": "cf7a643cc9a59a7d14ed302fb125ad1e7528e63a",
+    "modified": [
+     "MUJOCO_LOG.TXT",
+     "paper/PLAN.md",
+     "paper/PROTOCOL.md",
+     "paper/analysis/README.md",
+     "paper/analysis/analyse_arm.py",
+     "paper/analysis/transfer_scores.py",
+     "paper/reference_2013/README.md",
+     "paper/reference_2013/search_arm.py",
+     "paper/reference_2013/start_arm.py",
+     "run_tendon_evolution.py",
+     "src/evolution/mujoco_tendon_evaluator.py",
+     "src/physics/mujoco_beam_physics.py",
+     "tests/test_protocol_analysis.py",
+     "tests/test_search_arm.py",
+     "tests/test_transfer_scores.py"
+    ],
+    "threads": {
+     "OPENBLAS_NUM_THREADS": "1",
+     "OMP_NUM_THREADS": "1",
+     "MKL_NUM_THREADS": "1"
+    },
+    "command": [
+     "run_tendon_evolution.py",
+     "--preset",
+     "cheney2013-floor",
+     "--gen",
+     "5",
+     "--workers",
+     "3",
+     "--no-age-pareto",
+     "--pop",
+     "30",
+     "--seed",
+     "101",
+     "--name",
+     "cont_floor_s101"
+    ]
+   },
+   {
+    "started": "2026-11-27 04:11:56",
+    "code": "cf7a643cc9a59a7d14ed302fb125ad1e7528e63a",
+    "modified": [
+     "MUJOCO_LOG.TXT",
+     "paper/PLAN.md",
+     "paper/PROTOCOL.md",
+     "paper/analysis/README.md",
+     "paper/analysis/analyse_arm.py",
+     "paper/analysis/transfer_scores.py",
+     "paper/reference_2013/README.md",
+     "paper/reference_2013/search_arm.py",
+     "paper/reference_2013/start_arm.py",
+     "run_tendon_evolution.py",
+     "src/evolution/mujoco_tendon_evaluator.py",
+     "src/physics/mujoco_beam_physics.py",
+     "tests/test_protocol_analysis.py",
+     "tests/test_search_arm.py",
+     "tests/test_transfer_scores.py"
+    ],
+    "threads": {
+     "OPENBLAS_NUM_THREADS": "1",
+     "OMP_NUM_THREADS": "1",
+     "MKL_NUM_THREADS": "1"
+    },
+    "command": [
+     "run_tendon_evolution.py",
+     "--preset",
+     "cheney2013-floor",
+     "--gen",
+     "5",
+     "--workers",
+     "3",
+     "--no-age-pareto",
+     "--pop",
+     "30",
+     "--seed",
+     "101",
+     "--name",
+     "cont_floor_s101"
+    ]
+   },
+   {
+    "started": "2026-11-27 04:21:03",
+    "code": "cf7a643cc9a59a7d14ed302fb125ad1e7528e63a",
+    "modified": [
+     "MUJOCO_LOG.TXT",
+     "paper/PLAN.md",
+     "paper/PROTOCOL.md",
+     "paper/analysis/README.md",
+     "paper/analysis/analyse_arm.py",
+     "paper/analysis/transfer_scores.py",
+     "paper/reference_2013/README.md",
+     "paper/reference_2013/search_arm.py",
+     "paper/reference_2013/start_arm.py",
+     "run_tendon_evolution.py",
+     "src/evolution/mujoco_tendon_evaluator.py",
+     "src/physics/mujoco_beam_physics.py",
+     "tests/test_protocol_analysis.py",
+     "tests/test_search_arm.py",
+     "tests/test_transfer_scores.py"
+    ],
+    "threads": {
+     "OPENBLAS_NUM_THREADS": "1",
+     "OMP_NUM_THREADS": "1",
+     "MKL_NUM_THREADS": "1"
+    },
+    "command": [
+     "run_tendon_evolution.py",
+     "--preset",
+     "cheney2013-floor",
+     "--gen",
+     "5",
+     "--workers",
+     "3",
+     "--no-age-pareto",
+     "--pop",
+     "30",
+     "--seed",
+     "101",
+     "--name",
+     "cont_floor_s101"
+    ]
+   }
+  ],
+  "stopped_after_generation": [
+   2,
+   3
+  ]
+ }
+}
