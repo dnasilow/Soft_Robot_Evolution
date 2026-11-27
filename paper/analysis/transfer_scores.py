@@ -49,13 +49,21 @@ import sys
 import tarfile
 import time
 
-import numpy as np
-
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(ROOT, 'paper', 'reference_2013'))
+
+import search_arm                                             # noqa: E402
+
+# One linear-algebra thread in this process and in every worker process it starts, as the
+# campaign's launcher gives its runs (PROTOCOL.md, section 9.6). It must be set before numpy is
+# loaded: left to itself each process sets memory aside for one thread per logical processor,
+# 1.5 GB on this machine, and uses none of it. The scores do not depend on it.
+os.environ.update(search_arm.ONE_THREAD)
+
+import numpy as np                                            # noqa: E402
 
 import analyse_arm as aa                                      # noqa: E402
 import protocol_stats as ps                                   # noqa: E402
@@ -125,27 +133,14 @@ def worker_parameters(arguments):
         evaluator.close()
 
 
-GB_PER_WORKER = 3.0      # a worker scoring champion-sized bodies: the libraries take 1.5 GB and MuJoCo reserves
-                         # 1.2 GB for a loaded body of 800 voxels (measured 25 November 2026)
+GB_PER_WORKER = 0.5      # allowed for a worker. With one linear-algebra thread and MuJoCo's memory stated
+                         # (27 November 2026) a process with a full workspace of 1000 voxels asks the system for
+                         # 0.1 GB; before that it was 1.5 GB for the libraries' threads and up to 1.7 GB that
+                         # MuJoCo reserved, and this allowance was 3 GB
 KEEP_FREE_GB = 6.0       # left for everything else on the machine, the running arm above all
 
 
-def free_commit_gb():
-    """How much memory Windows can still promise to programs, in GB (None where it cannot be asked).
-    When this runs out, any program on the machine can fail, also a campaign run."""
-    if not sys.platform.startswith('win'):
-        return None
-    import ctypes
-
-    class Status(ctypes.Structure):
-        _fields_ = [('dwLength', ctypes.c_ulong), ('dwMemoryLoad', ctypes.c_ulong)] + [
-            (name, ctypes.c_ulonglong) for name in ('ullTotalPhys', 'ullAvailPhys', 'ullTotalPageFile', 'ullAvailPageFile',
-                                                    'ullTotalVirtual', 'ullAvailVirtual', 'ullAvailExtendedVirtual')]
-    status = Status()
-    status.dwLength = ctypes.sizeof(status)
-    if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
-        return None
-    return status.ullAvailPageFile / 2 ** 30
+free_commit_gb = search_arm.free_commit_gb      # how much memory Windows can still promise to programs, in GB
 
 
 def workers_that_fit(wanted, free=None, say=print):
@@ -155,8 +150,8 @@ def workers_that_fit(wanted, free=None, say=print):
         return wanted
     fit = int((free - KEEP_FREE_GB) / GB_PER_WORKER)
     if fit < 1:
-        raise SystemExit(f'Only {free:.0f} GB of memory are left to promise to programs; one evaluation can need '
-                         f'{GB_PER_WORKER:.0f} GB and {KEEP_FREE_GB:.0f} GB stay free for the rest. Nothing was started.')
+        raise SystemExit(f'Only {free:.1f} GB of memory are left to promise to programs; {GB_PER_WORKER:g} GB are '
+                         f'allowed for an evaluation and {KEEP_FREE_GB:g} GB stay free for the rest. Nothing was started.')
     if fit < wanted:
         say(f'{free:.0f} GB of memory are left to promise to programs: {fit} worker processes instead of {wanted}.')
     return min(wanted, fit)
@@ -178,9 +173,9 @@ def score_one(job):
            'normal_time_step': None, 'steps': None, 'sunk': None, 'consistent': None,
            'step_fraction': float(step_fraction)}
     engine = None
+    from src.evolution import mujoco_tendon_evaluator as evaluation
+    import src.physics.mujoco_beam_physics as beam
     try:
-        from src.evolution import mujoco_tendon_evaluator as evaluation
-        import src.physics.mujoco_beam_physics as beam
         engine = evaluation._make_engine(params)
         if step_fraction != 1.0:
             usual = beam.DT_FRAC_VX if engine.dt_rule == 'voxelyze' else beam.DT_FRAC
@@ -214,9 +209,13 @@ def score_one(job):
                 out['consistent'] = bool(abs(float(np.linalg.norm(moved)) - out['score']) <= 1e-9)
         if np.isfinite(lowest[0]):
             out['sunk'] = float((size / 2 - lowest[0]) / size)
-    except Exception as exc:                                  # noqa: BLE001  (the search scores such a body 0)
-        if out_of_memory(exc):
-            raise RuntimeError(f'out of memory while scoring ({type(exc).__name__}: {exc})') from exc
+    except Exception as exc:                                  # noqa: BLE001
+        # The search's own rule (mujoco_tendon_evaluator.is_the_bodys_own, since 27 November 2026):
+        # only an error that is the body's own is a score of 0. Any other is the machine's or the
+        # code's and stops the scoring, as it stops a run of the search.
+        if not evaluation.is_the_bodys_own(exc):
+            what = 'out of memory while scoring' if out_of_memory(exc) else 'an error that is not a result of the robot'
+            raise RuntimeError(f'{what} ({type(exc).__name__}: {exc})') from exc
         out['error'] = f'{type(exc).__name__}: {exc}'
     finally:
         # The watched step refers to the engine and the engine to it; taken apart here so that the
@@ -772,11 +771,10 @@ def main(argv=None):
         sys.stdout.reconfigure(errors='replace')
 
     import run_tendon_evolution as runner
-    import search_arm
-    # The engine must be the campaign's: the code of one of its tags. Under --preset cheney2013
-    # every one of them computes the same scores (PROTOCOL.md, section 9.5), so those evaluations
-    # are kept under the first tag's name. The other preset exists from the second tag on; its
-    # evaluations are kept under the tag the code is at.
+    # The engine must be the campaign's: the code of one of its tags. Every one of them computes
+    # the same scores under a preset it has (PROTOCOL.md, sections 9.5 and 9.6), so evaluations
+    # are kept under the name of the first tag that has the preset: campaign-v2 for --preset
+    # cheney2013, campaign-v3 for the other.
     tag = search_arm.campaign_tag_of_code()
     if a.preset not in runner._PRESETS:
         print(f'This code has no preset {a.preset}. Nothing was computed.')
@@ -821,7 +819,7 @@ def main(argv=None):
         name = f'{stem}_rehearsal_{a.rehearsal}{a.generation}'
 
     params = worker_parameters(evaluator_arguments(preset=a.preset))
-    code = (search_arm.ENGINE_TAGS[0] if as_fixed else tag) if tag else aa.code_version()
+    code = search_arm.ENGINE_TAGS[0 if as_fixed else 1] if tag else aa.code_version()
     jobs, keys = plan(sets, params, code, not a.no_step_check)
 
     from run_tendon_evolution import _prevent_sleep

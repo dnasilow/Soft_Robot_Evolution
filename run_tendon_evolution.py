@@ -319,6 +319,11 @@ _PRESETS['cheney2013-floor'] = [(d, 'rule2013' if d == 'floor_contact' else v)
 # Set by the command-line entry point; written into the run folder once the overwrite guard has
 # passed. Library callers (tests, notebooks) that never set it get no manifest.
 _RUN_MANIFEST = None
+# The settings that decide how many threads the linear-algebra libraries of numpy and scipy start
+# in a process. The manifest records them as the run was started with (None: the library's own
+# default, one thread per logical processor, each with memory set aside for it). The campaign's
+# launcher starts every run with one thread; the scores do not depend on it.
+_THREAD_SETTINGS = ('OPENBLAS_NUM_THREADS', 'OMP_NUM_THREADS', 'MKL_NUM_THREADS')
 
 
 def _apply_preset(args, given: set) -> list:
@@ -1869,6 +1874,7 @@ if __name__ == "__main__":
         'mujoco':         mujoco.__version__,
         'numpy':          np.__version__,
         'platform':       platform.platform(),
+        'threads':        {v: os.environ.get(v) for v in _THREAD_SETTINGS},
     }
 
     if args.map_elites:

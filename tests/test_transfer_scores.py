@@ -240,7 +240,7 @@ class TestReadingChampions(unittest.TestCase):
         return code, out.getvalue()
 
     def test_an_arm_that_was_not_analysed_is_refused(self):
-        for tag in ('campaign-v2', 'campaign-v3'):            # the engine of either code tag is the campaign's
+        for tag in ('campaign-v2', 'campaign-v3', 'campaign-v4'):     # the engine of each code tag is the campaign's
             code, said = self.run_main('Rc', tag)
             self.assertEqual(code, 2)
             self.assertIn('has not been analysed', said)
@@ -249,8 +249,34 @@ class TestReadingChampions(unittest.TestCase):
     def test_an_engine_that_is_not_the_campaigns_is_refused(self):
         code, said = self.run_main('R', None)
         self.assertEqual(code, 2)
-        self.assertIn('not those of a code tag of the campaign (campaign-v2, campaign-v3)', said)
+        self.assertIn('not those of a code tag of the campaign (campaign-v2, campaign-v3, campaign-v4)', said)
         self.assertIn('Nothing was computed', said)
+
+    def test_what_was_scored_under_an_earlier_tag_is_found_under_a_later_one(self):
+        """Every code tag computes the same scores under a preset it has (PROTOCOL.md, sections 9.5
+        and 9.6), so an evaluation is kept under the name of the first tag that has the preset:
+        the hard floor since campaign-v2, the 2013 floor since campaign-v3."""
+        self.assertEqual(search_arm.ENGINE_TAGS, ('campaign-v2', 'campaign-v3', 'campaign-v4'))
+        seen = []
+        real = ts.plan
+
+        def spy(sets, params, code, *more):
+            seen.append((params['floor_contact'], code))
+            return real(sets, params, code, *more)
+
+        class Enough(Exception):
+            """Raised in place of the scoring itself: the test is over once the evaluations are planned."""
+
+        for preset in (ts.PRESET, ts.FLOOR_PRESET):
+            for tag in ('campaign-v3', 'campaign-v4'):
+                with mock.patch('search_arm.campaign_tag_of_code', return_value=tag), mock.patch.object(ts, 'plan', spy), \
+                        mock.patch.object(ts, 'evaluate_all', side_effect=Enough), \
+                        contextlib.redirect_stdout(io.StringIO()):
+                    with self.assertRaises(Enough):
+                        ts.main(['--arms', 'R', '--preset', preset, '--results-dir', self.results, '--outcomes-dir',
+                                 self.outcomes, '--deposit-dir', self.deposit, '--replay', self.replay, '--out-dir',
+                                 os.path.join(self.tmp.name, 'out'), '--cache', os.path.join(self.tmp.name, 'cache.json')])
+        self.assertEqual(seen, [('voxelyze', 'campaign-v2')] * 2 + [('rule2013', 'campaign-v3')] * 2)
 
     def test_which_code_tag_the_code_is_at(self):
         """A made-up repository with two tags: the newest tag the files equal is named, and none
@@ -303,7 +329,7 @@ class TestKeepingWhatWasScored(unittest.TestCase):
         memory that is free, and a failed allocation stops a run instead of counting as a score."""
         quiet = lambda *_: None
         per, keep = ts.GB_PER_WORKER, ts.KEEP_FREE_GB
-        self.assertEqual(ts.workers_that_fit(10, free=keep + 4 * per + 0.5, say=quiet), 4)
+        self.assertEqual(ts.workers_that_fit(10, free=keep + 4.5 * per, say=quiet), 4)
         self.assertEqual(ts.workers_that_fit(3, free=keep + 40 * per, say=quiet), 3)
         with mock.patch.object(ts, 'free_commit_gb', return_value=None):      # a system that cannot be asked
             self.assertEqual(ts.workers_that_fit(5, say=quiet), 5)

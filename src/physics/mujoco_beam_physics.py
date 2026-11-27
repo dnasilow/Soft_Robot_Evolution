@@ -61,6 +61,17 @@ Floor of the 2013 simulator (`floor_contact='rule2013'`, added 2026-11-25): the 
          cancelled, until the pull on it exceeds uStatic*N. Under a body's weight this floor gives
          (a 650-voxel body on 26 voxels rests 0.14 of a voxel deep) and it pins slow contact
          voxels; the 2013 champions rely on both (paper/diagnostics_2026-11-25).
+Memory (stated since 2026-11-27): MuJoCo's working memory for a body, its "arena" (contacts,
+         constraint rows, the solver's scratch space), is stated in the model: 8 MB plus 16 kB per
+         voxel (`arena_bytes`). Left to itself MuJoCo reserves about 40 bytes x (degrees of
+         freedom)^2: 0.8 GB for a 675-voxel body, 1.7 GB for a full 10^3 workspace, and Windows
+         counts all of it against what it can promise to programs, touched or not. What a body can
+         use is bounded: its only MuJoCo constraints are the floor pairs, at most one contact per
+         voxel with four rows each. With EVERY voxel on the floor that is 2.9 kB per voxel, and
+         0.4 kB with the 2013 floor rule, which has no MuJoCo contact (measured with MuJoCo 3.4.0;
+         tests/test_memory.py). The statement changes no number an evaluation computes. Should the
+         stated memory ever run out, MuJoCo would drop contacts and go on with a warning; `step`
+         turns that into a MemoryError, so that such a simulation is never scored.
 
 Forces are applied through xfrc_applied between mj_step1 and mj_step2: after a plain mj_step,
 xpos/xquat/cvel still describe the PREVIOUS state, and bond forces computed from one-step-old
@@ -102,8 +113,19 @@ FLOOR_TIMECONST  = 5e-4                              # --floor-contact voxelyze:
 FLOOR2013_MU_STATIC  = 1.0
 FLOOR2013_MU_DYNAMIC = 0.5
 FLOOR_CONTACTS = ("mujoco", "voxelyze", "rule2013")
+# MuJoCo's working memory for one body, stated in its model (see "Memory" in the module docstring).
+ARENA_BYTES_FIXED     = 8 * 2 ** 20                  # 8 MB for any body ...
+ARENA_BYTES_PER_VOXEL = 16 * 2 ** 10                 # ... plus 16 kB per voxel; a body can use 2.9 kB
+# What MuJoCo counts a warning for when that memory has run out; it then drops the contacts or the
+# constraints it had no room for and goes on.
+_ARENA_FULL = (int(mujoco.mjtWarning.mjWARN_CONTACTFULL), int(mujoco.mjtWarning.mjWARN_CNSTRFULL))
 _COLORS = {1: '0 1 0 1', 2: '1 0 0 1', 3: '0 1 1 1', 4: '0 0 1 1'}
 _AXES = np.eye(3)
+
+
+def arena_bytes(n_voxels: int) -> int:
+    """The working memory stated to MuJoCo for a body of n_voxels voxels, in bytes."""
+    return ARENA_BYTES_FIXED + ARENA_BYTES_PER_VOXEL * int(n_voxels)
 
 
 def _qmul(a, b):
@@ -326,7 +348,8 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
                  else float(self.gravity))
         self.g_acc = g_acc
         x = [f'<mujoco model="voxel_beam_robot">'
-             f'<option timestep="0.0005" gravity="0 0 -{g_acc:.6g}"/>',
+             f'<option timestep="0.0005" gravity="0 0 -{g_acc:.6g}"/>'
+             f'<size memory="{arena_bytes(n)}"/>',
              '<visual><global offwidth="1920" offheight="1080"/><quality shadowsize="4096"/>'
              '<map znear="0.01"/></visual>',
              '<asset><texture name="grid" type="2d" builtin="checker" width="512" height="512" '
@@ -411,6 +434,7 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
                 self._floor_mu_k = float(fr['mu'] if fr['mode'] == 'single' else fr['mu_k'])
         self.external = None
         mujoco.mj_forward(self.model, self.data)
+        self._stop_if_arena_ran_out()
         if gait_params is not None:
             # A control CPPN (per-voxel evolvable phase) exposes evaluate_batch; a 4-tuple is
             # the global traveling wave. Same dispatch as the tendon engine.
@@ -719,10 +743,29 @@ class MuJoCoBeamPhysics(MuJoCoTendonPhysics):
         if self._ss_sliding is not None:
             self._update_floor_friction()
         mujoco.mj_step1(self.model, self.data)
+        self._stop_if_arena_ran_out()           # contacts and constraints are made in mj_step1
         F, T = self.forces(s)
         self.data.xfrc_applied[1:, :3] = F
         self.data.xfrc_applied[1:, 3:] = T
         if self.external is not None:
             self.data.xfrc_applied[1:] += self.external
         mujoco.mj_step2(self.model, self.data)
+        self._stop_if_arena_ran_out()
         self.current_time += self.default_timestep
+
+    def _stop_if_arena_ran_out(self) -> None:
+        """MuJoCo does not stop when the memory stated for a body has run out: it drops the
+        contacts or constraints it had no room for, counts a warning and goes on, so that a body
+        can sink through the floor unnoticed. That is a failure of the machine's set-up, not a
+        result of the robot, and must never become a score. Checked in every step, and before
+        the step is completed, because MuJoCo forgets its warnings when it resets a simulation
+        that blew up, which it does at the end of a step."""
+        counted = self.data.warning.number          # MuJoCo's own counters, read where they live
+        if counted[_ARENA_FULL[0]] or counted[_ARENA_FULL[1]]:
+            raise MemoryError(
+                f"MuJoCo ran out of the working memory stated for this body ({len(self.cells)} voxels, "
+                f"{self.model.narena} bytes; most used {self.data.maxuse_arena}) and dropped contacts "
+                f"or constraints. The simulation is not valid and is not scored. This is not a shortage "
+                f"of the machine: the same body fails the same way each time. What is stated is "
+                f"arena_bytes() in mujoco_beam_physics.py; stating more changes no number that an "
+                f"evaluation computes.")

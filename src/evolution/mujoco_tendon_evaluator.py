@@ -19,6 +19,22 @@ Pass n_workers > 1 to evaluate_batch to use multiprocessing.Pool.
 Each worker spawns its own MuJoCoTendonPhysics instance (MuJoCo is
 process-safe but not thread-safe).  The _eval_worker function must
 stay at module level for pickling on Windows (spawn mode).
+
+An evaluation that ends in an error (since 2026-11-27)
+------------------------------------------------------
+Until then ANY error while a body was built or simulated gave that body a score
+of 0 and the search went on. A machine that has run out of memory produces such
+errors, and a run that scored them would no longer be the run its seed defines,
+with nothing to show for it afterwards. Now only an error that is taken to be
+the body's own is scored 0 (see `is_the_bodys_own`), and the run's output says
+so each time ("failed and scores 0"); every other error raises
+EvaluationStopped, nothing of the unfinished generation is recorded, and the
+run ends. Started again with the same command, a run of the search
+(run_tendon_evolution.run_evolution, which every arm of the campaign uses)
+continues from its last recorded generation and computes what it would have
+computed without the stop; the MAP-Elites loop of the same script does not
+continue exactly. A simulation that blows up is not an error: the engine scores
+it 0, as before.
 """
 import os
 import numpy as np
@@ -88,6 +104,50 @@ def _fitness_kw(params):
 
 
 # ------------------------------------------------------------------
+# An evaluation that ends in an error
+# ------------------------------------------------------------------
+class EvaluationStopped(RuntimeError):
+    """An evaluation ended in an error that is not a result of the robot (the machine had no
+    memory to give, for one). The body was NOT scored and the run must not go on as if it had
+    been: nothing of the generation is recorded, and the run is continued from its checkpoint."""
+
+
+# An error message with one of these in it is about memory, whatever its type. MuJoCo reports a
+# shortage of its own working memory while it compiles a model as a ValueError ("engine error:
+# mj_stackAlloc: out of memory, stack overflow").
+_MEMORY_WORDS = ('memory', 'alloc', 'stack overflow', 'paging file', 'arena')
+
+
+def is_the_bodys_own(exc: BaseException) -> bool:
+    """True if an error raised while a body was built or simulated is a property of that body,
+    so that scoring the body 0 is a result and the same body would fail the same way again.
+
+    That is taken to be so only for the two kinds of error a body can cause: a ValueError (the
+    engine refuses the body: an empty grid, a model MuJoCo cannot build) and an ArithmeticError
+    (its numbers fail), and only if the message does not speak of memory. Everything else is the
+    machine's or the code's and must stop the run: a MemoryError, MuJoCo's fatal error, an error
+    of the operating system, a module that would not load, a fault in the code that shows as any
+    other kind of error.
+
+    The rule goes by the kind of error, so it cannot tell a body's own ValueError or
+    ArithmeticError from a fault in the code or in the settings that raises one of the same
+    kind (arrays that do not fit each other, a body outside its workspace). Such a body scores
+    0, as it did before this rule, and the run's output says so."""
+    if not isinstance(exc, (ValueError, ArithmeticError)):
+        return False
+    text = str(exc).lower()
+    return not any(word in text for word in _MEMORY_WORDS)
+
+
+def _stopped(exc: BaseException, what: str = 'An evaluation') -> EvaluationStopped:
+    """The error to raise in place of one that is not the body's own. It carries the original as
+    text, so that it can cross from a worker process to the run whatever the original was."""
+    return EvaluationStopped(
+        f"{what} ended in an error that is not a result of the robot, so it was not scored: "
+        f"{type(exc).__name__}: {exc}")
+
+
+# ------------------------------------------------------------------
 # Module-level worker (must be top-level for Windows spawn pickling)
 # ------------------------------------------------------------------
 def _eval_worker(args):
@@ -116,7 +176,11 @@ def _eval_worker(args):
             return_descriptors = want_desc,
             **_fitness_kw(params),
         )
-    except Exception:
+    except Exception as exc:
+        if not is_the_bodys_own(exc):
+            raise _stopped(exc) from exc
+        # said in the run's own output, which a worker process shares with the run
+        print(f"  [Evaluator] A robot failed and scores 0: {type(exc).__name__}: {exc}", flush=True)
         return (0.0, (0.0, 0.0)) if want_desc else 0.0
 
 
@@ -288,7 +352,9 @@ class MuJoCoTendonEvaluator:
                 else:
                     fitnesses.append(res)
             except Exception as exc:
-                print(f"  [Evaluator] Robot {i} failed: {exc}")
+                if not is_the_bodys_own(exc):
+                    raise _stopped(exc, f'The evaluation of robot {i}') from exc
+                print(f"  [Evaluator] Robot {i} failed and scores 0: {type(exc).__name__}: {exc}", flush=True)
                 fitnesses.append(0.0); descs.append((0.0, 0.0))
 
         if with_descriptors:

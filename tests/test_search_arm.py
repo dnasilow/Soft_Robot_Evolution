@@ -80,6 +80,66 @@ class TestArmA(unittest.TestCase):
             self.assertIn('differ from the code tagged campaign-v9', search_arm.code_differs_from_tag(tag='campaign-v9', root=d))
 
 
+class TestArmD(unittest.TestCase):
+    """Arm D: this project's search in its MuJoCo engine (PROTOCOL.md, sections 2, 9.5 and 9.6)."""
+
+    def test_arm_d_is_the_one_of_the_protocol(self):
+        arm = search_arm.ARMS['D']
+        self.assertEqual(arm['runner'], ['--preset', 'cheney2013-floor', '--no-age-pareto', '--pop', '30'])
+        self.assertEqual((arm['generations'], arm['condition'], arm['tag'], arm['seeds']), (300, 'noCost', 'armD', '1-10'))
+        self.assertEqual(start_arm.parse_seeds(arm['seeds']), list(range(1, 11)))
+        self.assertEqual(arm['code'], 'campaign-v4')              # v3 (the 2013 floor and start) plus section 9.6
+        self.assertFalse(search_arm.in_the_2013_simulator(arm))
+        a = search_arm.ARMS['A']                                  # and arm A is what it was
+        self.assertEqual((a['code'], a['seeds'], a['workers']), ('campaign-v2', start_arm.PROTOCOL_SEEDS, 1))
+        self.assertTrue(search_arm.in_the_2013_simulator(a))
+
+    def test_the_command_of_a_run(self):
+        cmd = search_arm.runner_command(search_arm.ARMS['D'], 'python.exe', 'armD', 4, 300, 3)
+        self.assertEqual(cmd[2:], ['--preset', 'cheney2013-floor', '--no-age-pareto', '--pop', '30', '--gen', '300',
+                                   '--workers', '3', '--seed', '4', '--name', 'armD_s4'])
+
+    def test_each_arm_has_its_own_seeds(self):
+        from unittest import mock
+        with mock.patch.object(search_arm, 'main', side_effect=lambda core, a, ap, seeds: seeds):
+            self.assertEqual(start_arm.main(['--arm', 'D', '--status']), list(range(1, 11)))
+            self.assertEqual(start_arm.main(['--arm', 'A', '--status']), list(range(1, 36)))
+            self.assertEqual(start_arm.main(['--arm', 'D', '--tag', 'trialD', '--seeds', '101-102', '--gens', '3']),
+                             [101, 102])
+
+    def test_runs_start_only_with_room_in_memory(self):
+        from unittest import mock
+        per, keep = search_arm.GB_PER_PROCESS, search_arm.KEEP_FREE_GB
+        self.assertEqual((search_arm.processes_of_a_run(1), search_arm.processes_of_a_run(3)), (1, 4))
+        fits, free, wanted = search_arm.room_for(10, 3, free=keep + 40 * per)
+        self.assertTrue(fits)
+        self.assertEqual(wanted, keep + 40 * per)
+        self.assertFalse(search_arm.room_for(10, 3, free=keep + 40 * per - 0.1)[0])
+        self.assertTrue(search_arm.room_for(1, 3, free=keep + 4 * per)[0])
+        with mock.patch.object(search_arm, 'free_commit_gb', return_value=None):      # a system that cannot be asked
+            self.assertTrue(search_arm.room_for(10, 3)[0])
+        if os.name == 'nt':
+            self.assertGreater(search_arm.free_commit_gb(), 0)
+
+    def test_what_stopped_a_run(self):
+        tail = ('Traceback (most recent call last): / raise _stopped(exc) from exc / '
+                'src.evolution.mujoco_tendon_evaluator.EvaluationStopped: An evaluation ended in an error that is not a '
+                'result of the robot, so it was not scored: MemoryError: Unable to allocate 4.91 MiB for an array')
+        why = search_arm.stopped_by(tail)
+        self.assertIn("not the robot's", why)
+        self.assertIn('(MemoryError: Unable to allocate 4.91 MiB for an array)', why)
+        self.assertEqual(search_arm.stopped_by('Gen  12/300  best=1.2000W / Gen  13/300  best=1.3000W'), '')
+
+    def test_a_run_without_progress_is_noticed(self):
+        progress = {}
+        self.assertEqual(search_arm.without_progress(progress, {1: 5, 2: 7}, now=0.0, limit=100), {})
+        self.assertEqual(search_arm.without_progress(progress, {1: 5, 2: 8}, now=90.0, limit=100), {})
+        self.assertEqual(search_arm.without_progress(progress, {1: 5, 2: 8}, now=150.0, limit=100), {1: 150.0})
+        self.assertEqual(search_arm.without_progress(progress, {1: 6, 2: 8}, now=200.0, limit=100), {2: 110.0})
+        self.assertEqual(search_arm.without_progress(progress, {2: 8}, now=210.0, limit=100), {2: 120.0})
+        self.assertNotIn(1, progress)                             # a run that has ended is forgotten
+
+
 class TestRunState(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

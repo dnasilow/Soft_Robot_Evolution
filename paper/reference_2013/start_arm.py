@@ -178,7 +178,8 @@ def trial_args(a):
     """The extra arguments that name a trial, for the commands this program suggests."""
     if not a.tag:
         return ''
-    return f' --tag {a.tag} --seeds {a.seeds or PROTOCOL_SEEDS}' + (f' --gens {a.gens}' if a.gens else '')
+    seeds = a.seeds or getattr(a, 'arm_seeds', PROTOCOL_SEEDS)
+    return f' --tag {a.tag} --seeds {seeds}' + (f' --gens {a.gens}' if a.gens else '')
 
 
 def window_command_text(arm_name, host_args, watch_args, python=None, pythonw=None, script=None):
@@ -675,12 +676,13 @@ def main(argv=None):
     ap.add_argument('--restart-incomplete', action='store_true',
                     help='start unfinished seeds again from the beginning (their folders are moved aside)')
     ap.add_argument('--jobs', type=int, help='runs side by side (default: all seeds at once; each uses one core)')
-    ap.add_argument('--workers', type=int, help='arm A only: simulations at a time within one run (default 1)')
-    ap.add_argument('--after', choices=sorted(ARMS), help='arm A only: wait until that arm has finished completely, '
-                                                          'then start; if it ends unfinished, start nothing')
+    ap.add_argument('--workers', type=int, help="arms A and D only: simulations at a time within one run "
+                                                "(default: the arm's own, 1 for arm A and 3 for arm D)")
+    ap.add_argument('--after', choices=sorted(ARMS), help='arms A and D only: wait until that arm has finished '
+                                                          'completely, then start; if it ends unfinished, start nothing')
     ap.add_argument('--interval', type=float, default=10.0, help='minutes between progress lines (default 10)')
-    ap.add_argument('--seeds', help=f'trial only: seeds, e.g. 1-2 (the arm uses {PROTOCOL_SEEDS})')
-    ap.add_argument('--gens', type=int, help='trial only: generations (the arm uses the settings file, 1000)')
+    ap.add_argument('--seeds', help=f'trial only: seeds, e.g. 1-2 (arms R, Rc and A use {PROTOCOL_SEEDS}, arm D 1-10)')
+    ap.add_argument('--gens', type=int, help='trial only: generations (arms R, Rc and A have 1000, arm D 300)')
     ap.add_argument('--tag', help='trial only: name of the trial; required with --seeds or --gens')
     ap.add_argument('--from-byte', type=int, help=argparse.SUPPRESS)              # --watch: where to begin in the log
     a = ap.parse_args(argv)
@@ -692,8 +694,10 @@ def main(argv=None):
         ap.error('--tag must be letters and digits, and not the name of a campaign arm')
     if a.jobs is not None and a.jobs < 1:
         ap.error('--jobs must be at least 1')
+    # the seeds of the arm as the protocol has them: 1 to 35, or the arm's own (arm D: 1 to 10)
+    a.arm_seeds = search_arm.ARMS[a.arm].get('seeds', PROTOCOL_SEEDS) if a.arm in search_arm.ARMS else PROTOCOL_SEEDS
     try:
-        seeds = parse_seeds(a.seeds or PROTOCOL_SEEDS)
+        seeds = parse_seeds(a.seeds or a.arm_seeds)
     except ValueError as e:
         ap.error(str(e))
     if hasattr(sys.stdout, 'reconfigure'):
@@ -701,9 +705,9 @@ def main(argv=None):
     if a.arm in search_arm.ARMS:
         return search_arm.main(sys.modules[__name__], a, ap, seeds)
     if a.workers is not None:
-        ap.error('--workers is for arm A; a run of arms R and Rc uses one core')
+        ap.error('--workers is for arms A and D; a run of arms R and Rc uses one core')
     if a.after:
-        ap.error('--after is for arm A')
+        ap.error('--after is for arms A and D')
     arm = ARMS[a.arm]
     with open(SETTINGS, encoding='utf-8', errors='replace') as f:
         generations = a.gens or settings_generations(f.read())
