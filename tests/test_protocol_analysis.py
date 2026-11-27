@@ -400,6 +400,73 @@ class TestArmAReport(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_DEPOSIT, 'deposited 2013 data not present')
+class TestArmDReport(unittest.TestCase):
+    """Arm D's report on made-up runs: the first 300 generations of ten deposited no-cost runs
+    stand in for its scores. Written on 27 November 2026, before the arm was started."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp()
+        body = np.zeros((10, 10, 10), np.int8)
+        body[1:9, 1:9, 0:5] = 1
+        for seed, curve in enumerate(aa.reference_scores('noCost')[:10], start=1):
+            make_search_run(os.path.join(cls.tmp, 'runs'), f'armD_s{seed}', [float(v) for v in curve[:300]],
+                            [(body, float(curve[299])), (body, 0.5)])
+        with mock.patch.object(ps, 'N_BOOT', 600), mock.patch.object(ps, 'ATTAIN_TRIALS', 50), \
+                mock.patch.object(ps, 'ATTAIN_BOOT', 300):
+            cls.code, cls.text = run_main(['--arm', 'D', '--results-dir', os.path.join(cls.tmp, 'runs'),
+                                           '--out-dir', os.path.join(cls.tmp, 'out')])
+        cls.report = load_json(os.path.join(cls.tmp, 'out', 'arm_D.json'))
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmp, True)
+
+    def test_the_arm_is_the_one_of_the_protocol(self):
+        arm = aa.ARMS['D']
+        self.assertEqual((arm['kind'], arm['prefix'], arm['seeds'], arm['generations'], arm['condition']),
+                         ('search', 'armD_s', list(range(1, 11)), 300, 'noCost'))
+        self.assertEqual(arm['score_generations'], (300, 100))            # primary at 300, secondary at 100
+        self.assertNotIn('against', arm)                                  # the fifth primary comparison is A against R
+
+    def test_the_primary_outcome_is_at_generation_300(self):
+        self.assertEqual(self.code, 0, self.text)
+        self.assertEqual(sorted(self.report['scores']), ['100', '300'])
+        self.assertEqual(self.report['primary']['generation'], 300)
+        s = self.report['scores']['300']
+        self.assertEqual((s['n_arm'], s['n_reference']), (10, 35))
+        reference = sorted(float(c[299]) for c in aa.reference_scores('noCost'))
+        self.assertAlmostEqual(s['reference_median'], reference[17], places=9)     # the deposit at generation 300
+        self.assertTrue(0.8 < s['ratio_of_medians'] < 1.25)               # ten of the deposit's own runs
+        self.assertIn(self.report['primary']['verdict'], ('reproduces', 'not distinguishable', 'differs'))
+        self.assertIn('Primary outcome, generation 300', self.text)
+        self.assertNotIn('AGAINST ARM', self.text)
+        self.assertNotIn('against', self.report)
+
+    def test_the_body_table_says_which_generations_it_sets_against_each_other(self):
+        body = self.report['body']
+        self.assertEqual((body['generation'], body['reference_generation'], body['n_arm'], body['n_reference']),
+                         (300, 1000, 10, 35))
+        self.assertEqual(body['measures']['voxels']['arm_median'], 320)
+        self.assertIn("this arm's champions of generation 300 against the deposited champions of generation 1000", self.text)
+        self.assertIn('BODY of each run\'s champion at generation 300 (10 runs)', self.text)
+
+    def test_every_seed_is_there(self):
+        self.assertEqual([r['seed'] for r in self.report['per_seed']], list(range(1, 11)))
+        self.assertTrue(all(r['generations'] == 300 and r['champion']['curve_agrees'] for r in self.report['per_seed']))
+        self.assertIn('Seeds 1 to 10, 300 generations; 10 of 10 runs in the statistics', self.text)
+
+    def test_an_unfinished_arm_d_is_refused(self):
+        runs = os.path.join(self.tmp, 'short')
+        for seed in range(1, 11):
+            make_search_run(runs, f'armD_s{seed}', [1.0] * (300 if seed != 4 else 299))
+        code, text = run_main(['--arm', 'D', '--results-dir', runs, '--out-dir', os.path.join(self.tmp, 'out_short')])
+        self.assertEqual(code, 2)
+        self.assertIn('seeds [4] have not finished with 300 generations', text)
+        self.assertNotIn('SCORES', text)
+
+
+@unittest.skipUnless(HAVE_DEPOSIT, 'deposited 2013 data not present')
 class TestDressRehearsalOnTheDeposit(unittest.TestCase):
     """Arms built from the deposited runs themselves: the whole path, with answers known in advance."""
 

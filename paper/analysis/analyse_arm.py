@@ -12,9 +12,10 @@ usage, from the project folder:
 
 What an arm's report contains
   scores   the champion's original score, best so far, at generations 1000 (primary), 300 and
-           100: medians, ratio of medians with its bootstrapped 95% interval, A12 with its
-           interval, two-sided Mann-Whitney U, and the reproduction criterion (interval of the
-           ratio inside 0.90-1.10) for the primary outcome
+           100 (arm D, which has 300 generations: 300 (primary) and 100): medians, ratio of
+           medians with its bootstrapped 95% interval, A12 with its interval, two-sided
+           Mann-Whitney U, and the reproduction criterion (interval of the ratio inside
+           0.90-1.10) for the primary outcome
   body     each run's final champion measured with morphology_scorecard.body_metrics, the code
            used on the deposited robots: voxels, footprint, fill, muscle fraction (Mann-Whitney,
            A12) and two or more separate feet (Fisher's exact test), Holm-corrected within the arm
@@ -27,7 +28,14 @@ Arms covered
   A      this project's search in the 2013 simulator (run folders of run_tendon_evolution.py).
          Its report also sets it against arm R, the fifth primary comparison of the protocol,
          and repeats arm R's own result, the floor measured for the original code.
-Not yet here: arms D and E, and the transfer scores of the champions in the other simulator.
+  D      this project's search in its own MuJoCo engine under --preset cheney2013-floor, seeds
+         1 to 10, 300 generations (PROTOCOL.md, sections 2, 4 and 9.5; added on 27 November
+         2026, before the arm was started). Its scores are those the engine gave; they are set
+         against the deposited runs at the same generations. Its champions are those of
+         generation 300; the deposit holds robots of generation 1000 only, so the body table
+         sets the one against the other and says so.
+Not yet here: arms E1 to E3. The transfer scores of the champions in the other simulator are
+transfer_scores.py.
 """
 import argparse
 import datetime
@@ -70,8 +78,12 @@ ARMS = {
     'A':  {'kind': 'search', 'prefix': 'armA_s', 'seeds': list(range(1, 36)), 'generations': 1000,
            'condition': 'noCost', 'against': 'R',
            'title': "this project's CPPN-NEAT as it is, in the original 2013 simulator, no cost"},
+    'D':  {'kind': 'search', 'prefix': 'armD_s', 'seeds': list(range(1, 11)), 'generations': 300,
+           'condition': 'noCost', 'score_generations': (300, 100),
+           'title': "this project's CPPN-NEAT as it is, in this project's MuJoCo engine with --preset "
+                    "cheney2013-floor, no cost"},
 }
-SCORE_GENERATIONS = (1000, 300, 100)        # the first is the primary outcome
+SCORE_GENERATIONS = (1000, 300, 100)        # the first is the primary outcome; an arm may name its own
 REFERENCE_GENERATION = 1000                 # the deposit holds the robots of generation 1000 only
 BODY_MEASURES = (('voxels', 'voxels', '.0f'), ('footprint', 'footprint (cells)', '.0f'),
                  ('fill', 'fill of bounding box', '.2f'), ('muscle', 'muscle fraction', '.2f'))
@@ -513,7 +525,12 @@ def main(argv=None):
                              f"arm is not computed here.")
             else:
                 against = {'arm': arm['against'], 'report': other}
-        report = analyse(used, arm['condition'], SCORE_GENERATIONS, SCORE_GENERATIONS[0], g, against=against)
+        if g != REFERENCE_GENERATION:
+            notes.append(f"The deposit holds the robots of generation {REFERENCE_GENERATION} only: the body table sets "
+                         f"this arm's champions of generation {g} against the deposited champions of generation "
+                         f"{REFERENCE_GENERATION}.")
+        score_generations = arm.get('score_generations', SCORE_GENERATIONS)
+        report = analyse(used, arm['condition'], score_generations, score_generations[0], g, against=against)
         report['title'] = (f"ARM {a.arm}: {arm['title']}. Seeds {arm['seeds'][0]} to {arm['seeds'][-1]}, {g} generations; "
                            f"{len(used)} of {len(arm['seeds'])} runs in the statistics.")
         report['left_out'] = [{'seed': s, 'generations': runs[s]['generations'],
