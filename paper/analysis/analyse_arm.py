@@ -328,7 +328,8 @@ def analyse(runs, condition, generations, primary, body_generation, n_boot=None,
 def what_the_criterion_can_show(seed=None):
     designs = (('R and A: 35 runs, generation 1000, no cost', 'noCost', 1000, 35),
                ('Rc: 35 runs, generation 1000, actuated cost', 'costNumActuated', 1000, 35),
-               ('D: 10 runs, generation 300, no cost', 'noCost', 300, 10))
+               ('D: 10 runs, generation 300, no cost', 'noCost', 300, 10),
+               ('E1 to E3: 3 runs, generation 300, no cost', 'noCost', 300, 3))
     rows = []
     for title, condition, g, n in designs:
         y = [float(c[g - 1]) for c in reference_scores(condition)]
@@ -336,6 +337,30 @@ def what_the_criterion_can_show(seed=None):
         rows.append({'design': title, 'attainability': ps.attainability(y, n, seed=seed),
                      'reference_against_itself': list(same)})
     return rows
+
+
+SENSITIVITY_RUNS = 3                        # the runs of each of the arms E1 to E3
+SENSITIVITY_GENERATION = 300
+SENSITIVITY_AGAINST = 'D'                   # the arm they are also set against (PROTOCOL.md, section 9.8)
+SHIFTS = (1.0, 0.9, 0.75, 0.5)              # true ratios of the scores for which section 9.8 gives figures
+
+
+def what_three_runs_can_show(seed=None, trials=None, n_boot=None):
+    """PROTOCOL.md, section 9.8, point 5, from the deposited no-cost runs alone: three runs drawn
+    from them at generation 300 and multiplied by a factor, set against the deposited runs and
+    against as many more drawn runs as arm D has, the way an E arm is. How often is that read as
+    a difference?"""
+    y = [float(c[SENSITIVITY_GENERATION - 1]) for c in reference_scores('noCost')]
+    n_other = len(ARMS[SENSITIVITY_AGAINST]['seeds'])
+    rows = []
+    for shift in SHIFTS:
+        rows.append({'true_ratio': shift,
+                     'against_the_deposit': ps.read_as_different(y, SENSITIVITY_RUNS, None, shift, trials, n_boot, seed),
+                     'against_another_arm': ps.read_as_different(y, SENSITIVITY_RUNS, n_other, shift, trials, n_boot, seed)})
+    return {'runs': SENSITIVITY_RUNS, 'generation': SENSITIVITY_GENERATION, 'deposited_runs': len(y),
+            'runs_of_the_other_arm': n_other, 'rows': rows,
+            'smallest_p_against_the_deposit': ps.smallest_p(SENSITIVITY_RUNS, len(y)),
+            'smallest_p_against_the_other_arm': ps.smallest_p(SENSITIVITY_RUNS, n_other)}
 
 
 # --------------------------------------------------------------------------------------------
@@ -489,6 +514,21 @@ def main(argv=None):
         for row in what_the_criterion_can_show():
             print(f"  {row['design']:<46} {100 * row['attainability']:>4.0f}%   (deposit against itself: interval "
                   f"{row['reference_against_itself'][0]:.2f} to {row['reference_against_itself'][1]:.2f})")
+        few = what_three_runs_can_show()
+        print(f"\nWhat {few['runs']} runs can show (PROTOCOL.md, section 9.8): {few['runs']} runs drawn from the "
+              f"{few['deposited_runs']} deposited no-cost runs at generation {few['generation']} and\nmultiplied by a factor, set "
+              f"against the deposited runs, or against {few['runs_of_the_other_arm']} more runs drawn the same way. How often is "
+              f"that read\nas a difference: the 95% interval of the ratio of medians excludes 1, or Mann-Whitney p < 0.05?")
+        print(f"  {'true ratio of the scores':<26}  {'against the deposit':>26}  "
+              f"{'against a ' + str(few['runs_of_the_other_arm']) + '-run arm':>26}")
+        print(f"  {'':<26}  {'interval':>12}  {'p < 0.05':>12}  {'interval':>12}  {'p < 0.05':>12}")
+        for row in few['rows']:
+            a, b = row['against_the_deposit'], row['against_another_arm']
+            print(f"  {str(row['true_ratio']) + (' (no difference)' if row['true_ratio'] == 1.0 else ''):<26}  "
+                  f"{100 * a['interval_excludes_1']:>11.1f}%  {100 * a['p_below_0.05']:>11.1f}%  "
+                  f"{100 * b['interval_excludes_1']:>11.1f}%  {100 * b['p_below_0.05']:>11.1f}%")
+        print(f"  The smallest p the exact test can give: {pv(few['smallest_p_against_the_deposit'])} against the deposit, "
+              f"{pv(few['smallest_p_against_the_other_arm'])} against the other arm.")
         return 0
 
     if a.arm:

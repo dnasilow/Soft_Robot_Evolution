@@ -71,7 +71,7 @@ The draft of this protocol left three points open and one rule imprecise. They w
 
 ## 9. Changes after the freeze
 
-No change to the outcomes, the tests or the criterion, and none to arms R, Rc and A. The engine settings of arms D and E were changed once, before either had started (section 9.5). Their code was changed once more, also before either had started, without changing what an evaluation computes (section 9.6).
+No change to the outcomes, the tests or the criterion, and none to arms R, Rc and A. The engine settings of arms D and E were changed once, before either had started (section 9.5). Their code was changed once more, also before either had started, without changing what an evaluation computes (section 9.6). For arms E1 to E3 one comparison was added, with arm D, before any of them had started (section 9.8).
 
 ### 9.1 Details of the analysis, fixed on 22 November 2026
 
@@ -170,3 +170,33 @@ Section 6 asks for an audit of every champion (reproduced score, and for MuJoCo 
 5. **Statistics, all descriptive,** as in section 9.4, point 5: how many champions, and how many without a usable result; median and quartiles of the score in the 2013 simulator; median and quartiles of the transfer ratio, with the bootstrapped 95% interval of that median; Spearman's rank correlation between the two simulators' scores, with the same bootstrap. The comparison that point asks for, each arm against the deposited champions of its condition on the transfer ratio, is made against the ratios of the 35 deposited no-cost champions under `--preset cheney2013-floor`, as committed on 26 November 2026 (`paper/outcomes/transfer_floor2013.json`). Both sets then cross between the same two simulators, in opposite directions. A12 with its bootstrapped interval and the two-sided Mann-Whitney test; no criterion; the p-value is not part of the Holm family and is reported uncorrected.
 6. **Recorded with it, not used in the statistics:** each champion's number of voxels and the lowest layer of the workspace it occupies, and from the audit the distance its centre of mass moved along each axis, the time step and the number of steps.
 7. **Arms E1 to E3** get the audit of point 2 with their own settings. Section 4 names no transfer outcome for them.
+
+### 9.8 Arms E1 to E3: how they are run and analysed, fixed on 27 November 2026
+
+Section 2 gives each of these arms one line of its table, section 9.5 names the preset they start from, and section 5 asks for "each arm against the deposited runs". None of them gives the commands, the generation at which such an arm is compared, or what three runs can show. These details were fixed while arm D was running, before any score of it had been read, and before any run of arms E1 to E3 was started.
+
+1. **The commands.** As arm D's but for the engine's options: this project's search with `--no-age-pareto --pop 30`, 300 generations, seeds 1 to 3, from the code tagged `campaign-v4`, with one linear-algebra thread per process (section 9.6). The runs are named `armE1_s<seed>`, `armE2_s<seed>` and `armE3_s<seed>` and are started with `paper/reference_2013/start_arm.py --arm E1` (`E2`, `E3`).
+
+   | Arm | Engine options | The one setting it undoes |
+   |---|---|---|
+   | E1 | `--preset cheney2013-floor --damping-global 0.01` | Global damping: from 0.001, the value of the 2013 robot files, back to 0.01, the engine's own default, with which this project ran until 18 November 2026. |
+   | E2 | `--preset cheney2013-floor --amp 0.2 --poisson on` | Actuation: from ±14% of a voxel's length without the volumetric law, as in the 2013 source, back to ±20% with the volumetric law on, as this project ran until 18 November 2026. The table of section 2 takes the two together. |
+   | E3 | `--preset cheney2013` | Floor and start: from the 2013 simulator's own back to the engine's hard floor with every body set on it (section 9.5). |
+
+   An option given next to a preset replaces the preset's value. That is the search's own rule, and a run's manifest records which entries of the preset were applied. Checked on 27 November 2026 with small runs on seed 101, which is the seed of no arm: each of the three sets of options differs from arm D's settings in the settings named above and in no other.
+2. **Outcome.** A run's champion score at generation 300, and at generation 100, read as for arm D (section 9.1, point 1; for a run of this project's search from its numbered generation files).
+3. **Against the deposited runs** at the same generation, with the statistics of section 5: two-sided Mann-Whitney U, A12 with its interval, the ratio of medians with its interval, and the reading of section 9.1, point 7. These comparisons are not among the five primary ones, whose family section 5 fixes; their p-values are reported uncorrected. The body measures of the three champions are set against the deposited champions as for arm D: generation 300 against generation 1000, Holm within the arm's five measures.
+4. **Against arm D** at the same generations, with the same statistics; the ratio of medians is the E arm over arm D. This is the comparison that says whether undoing the setting moved the outcome, which is what these arms are for (section 2). Sections 4 and 5 do not name it; it is added here. No criterion is attached: the comparison is read by whether the 95% interval of the ratio contains 1, and its p-values are reported uncorrected. Arm D's scores are taken from its committed report, so an E arm is analysed after arm D.
+5. **What three runs can show**, computed on 27 November 2026 from the deposited runs alone, as in section 9.2 (`analyse_arm.py --what-can-the-criterion-show`). Three runs were drawn from the 35 deposited no-cost runs at generation 300 and multiplied by a factor, and set against the deposited runs, or against 10 more runs drawn the same way, as an E arm is set against the deposit or against arm D; 2000 draws for each figure. How often that is read as a difference:
+
+   | True ratio of the scores | Against the deposit: the interval excludes 1 | p < 0.05 | Against a 10-run arm: the interval excludes 1 | p < 0.05 |
+   |---|---|---|---|---|
+   | 1 (no difference) | 10% | 3% | 8% | 5% |
+   | 0.9 | 43% | 25% | 26% | 18% |
+   | 0.75 | 93% | 86% | 79% | 65% |
+   | 0.5 | 100% | 100% | 100% | 100% |
+
+   An E arm can therefore show that undoing a setting costs a quarter of the score or more. It cannot show a difference of 10%, and it cannot show that there is none. With three runs the bootstrapped interval of the arm's own median is the range of its three scores, and the interval of the ratio excludes 1 without a difference in 8 to 10% of cases, against 2% for ten runs set against the deposit. The Mann-Whitney test is exact at these sizes and keeps its 5%; the smallest p it can give is 0.0002 against the 35 deposited runs and 0.007 against arm D's ten. A perfect reproduction with three runs would meet the criterion of section 5 in 11% of cases. These figures are reported with each result. The seeds stay three, as fixed at the freeze. (Scores of real runs are never equal, scores drawn from 35 recorded ones are; each drawn score was therefore moved by an amount far below the smallest difference between two deposited scores.)
+6. **The audit** is that of section 9.7, point 2, with each arm's own settings: read from the arm's command and checked against each run's own record of its settings. The floor of arms E1 and E2 is the 2013 simulator's, whose rule depends on the time step (section 9.5). Arm E3's hard floor has no such rule.
+7. **Nothing else.** Section 4 names no transfer outcome for these arms (section 9.7, point 7), and none is computed.
+8. **When they run.** Each arm is started on the author's word. Their settings do not depend on any result of arm D, so they may be started before arm D has been analysed. The three arms may run side by side: how many runs share the machine is a matter of machine time (section 8, point 2, and the evidence of section 9.6).

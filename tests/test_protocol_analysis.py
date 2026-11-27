@@ -107,6 +107,39 @@ class TestStatistics(unittest.TestCase):
         self.assertEqual(ps.attainability(tight, 35, trials=30, n_boot=200, seed=4),
                          ps.attainability(tight, 35, trials=30, n_boot=200, seed=4))
 
+    def test_read_as_different_knows_no_difference_from_a_large_one(self):
+        y = np.linspace(3.0, 4.4, 35)
+        same = ps.read_as_different(y, 3, 10, 1.0, trials=200, n_boot=300)
+        self.assertLess(same['interval_excludes_1'], 0.25)                  # false alarms: some, not many
+        self.assertLessEqual(same['p_below_0.05'], 0.12)
+        far = ps.read_as_different(y, 3, 10, 0.4, trials=200, n_boot=300)   # every drawn run below every other
+        self.assertEqual((far['interval_excludes_1'], far['p_below_0.05']), (1.0, 1.0))
+        self.assertEqual(ps.read_as_different(y, 3, None, 0.4, trials=100, n_boot=300)['interval_excludes_1'], 1.0)
+        self.assertEqual(same, ps.read_as_different(y, 3, 10, 1.0, trials=200, n_boot=300))    # same seed, same result
+        self.assertNotEqual(same, ps.read_as_different(y, 3, 10, 1.0, trials=200, n_boot=300, seed=7))
+
+    def test_drawn_runs_have_no_ties_so_the_test_is_the_exact_one(self):
+        """Three runs drawn from the reference and set against it: without the tie-breaking every
+        drawn run would equal a reference run, and SciPy would leave its exact test."""
+        y = np.linspace(3.0, 4.4, 35)
+        calls = []
+        real = ps.mannwhitneyu
+
+        def watching(x, other, **kw):
+            calls.append(len(set(np.asarray(x).tolist()) & set(np.asarray(other).tolist())) + len(x) - len(set(x.tolist())))
+            return real(x, other, **kw)
+        with mock.patch.object(ps, 'mannwhitneyu', watching):
+            ps.read_as_different(y, 3, None, 1.0, trials=40, n_boot=50)
+        self.assertEqual((len(calls), sum(calls)), (40, 0))
+
+    def test_the_smallest_p_of_three_runs(self):
+        y = np.linspace(3.0, 4.4, 35)
+        self.assertAlmostEqual(ps.smallest_p(3, 35), 2 / 8436)
+        self.assertAlmostEqual(ps.smallest_p(3, 10), 2 / 286)
+        # three runs above every reference run: the analysis' own comparison gives exactly that p
+        self.assertAlmostEqual(ps.compare([5.0, 5.1, 5.2], y, n_boot=200)['p'], ps.smallest_p(3, 35))
+        self.assertAlmostEqual(ps.compare([1.0, 1.1, 1.2], y[:10], n_boot=200)['p'], ps.smallest_p(3, 10))
+
 
 def robot_text(grid):
     return '<x>' + ''.join(f'<Layer><![CDATA[{row}]]></Layer>' for row in c13.layer_rows(grid)) + '</x>'
@@ -464,6 +497,27 @@ class TestArmDReport(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn('seeds [4] have not finished with 300 generations', text)
         self.assertNotIn('SCORES', text)
+
+
+@unittest.skipUnless(HAVE_DEPOSIT, 'deposited 2013 data not present')
+class TestWhatThreeRunsCanShow(unittest.TestCase):
+    """PROTOCOL.md, section 9.8, point 5: from the deposited runs alone."""
+
+    def test_the_design_is_that_of_the_e_arms(self):
+        few = aa.what_three_runs_can_show(trials=60, n_boot=200)
+        self.assertEqual((few['runs'], few['generation'], few['deposited_runs'], few['runs_of_the_other_arm']), (3, 300, 35, 10))
+        self.assertEqual([r['true_ratio'] for r in few['rows']], [1.0, 0.9, 0.75, 0.5])
+        none, half = few['rows'][0], few['rows'][-1]
+        for against in ('against_the_deposit', 'against_another_arm'):
+            self.assertLess(none[against]['interval_excludes_1'], 0.35)
+            self.assertGreater(half[against]['interval_excludes_1'], 0.95)
+        self.assertAlmostEqual(few['smallest_p_against_the_deposit'], 2 / 8436)
+        self.assertAlmostEqual(few['smallest_p_against_the_other_arm'], 2 / 286)
+
+    def test_the_designs_of_the_earlier_arms_are_still_there(self):
+        with mock.patch.object(ps, 'ATTAIN_TRIALS', 30), mock.patch.object(ps, 'ATTAIN_BOOT', 200):
+            rows = aa.what_the_criterion_can_show()
+        self.assertEqual([r['design'].split(':')[0] for r in rows], ['R and A', 'Rc', 'D', 'E1 to E3'])
 
 
 @unittest.skipUnless(HAVE_DEPOSIT, 'deposited 2013 data not present')

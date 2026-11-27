@@ -8,6 +8,10 @@ nothing here reads a run.
   two_proportions      Fisher's exact test for a yes/no measure
   attainability        how often a PERFECT reproduction would meet the criterion, estimated from
                        the reference runs alone
+  read_as_different    how often a comparison of few runs would be read as a difference when
+                       there is none, or a shift of a given size, estimated the same way
+                       (section 9.8)
+  smallest_p           the smallest p the exact Mann-Whitney test can give two small samples
   median_interval      one sample: its median with a bootstrapped 95% interval   (section 9.4)
   rank_correlation     paired measures: Spearman's rank correlation with a bootstrapped 95%
                        interval                                                  (section 9.4)
@@ -158,3 +162,49 @@ def attainability(reference, n_runs, trials=None, n_boot=None, seed=None, window
         lo, hi = np.percentile(bx / by, [2.5, 97.5])
         met += bool(lo >= window[0] and hi <= window[1])
     return met / trials
+
+
+def read_as_different(reference, n_arm, n_other=None, shift=1.0, trials=None, n_boot=None, seed=None):
+    """How often a comparison of few runs would be read as a difference (section 9.8).
+
+    n_arm runs are drawn from the reference runs themselves and multiplied by `shift`; with a
+    shift of 1 they come from the same distribution as the runs they are set against, by
+    construction. They are set against the reference runs (n_other None), or against n_other more
+    runs drawn the same way, as an arm is against the deposit or against another arm. Returned:
+    the fraction of such draws in which the bootstrapped 95% interval of the ratio of medians
+    excludes 1, and the fraction in which the two-sided Mann-Whitney test gives p below 0.05.
+    With a shift of 1 both are false alarms; with another shift they say how often a shift of
+    that size would be seen. It uses the reference runs alone; no run of any arm enters.
+
+    Scores of real runs are never equal, but runs drawn from 35 recorded scores are: every drawn
+    run equals a reference run. Each drawn score is therefore moved by a random amount a thousand
+    times smaller than the smallest difference between two reference runs, which breaks the ties
+    and changes nothing else. Without that the test would not be the exact one that real runs
+    get, and a ratio of exactly 1 would stand at the end of many intervals."""
+    y = np.asarray(reference, float)
+    trials = ATTAIN_TRIALS if trials is None else trials
+    n_boot = ATTAIN_BOOT if n_boot is None else n_boot
+    rng = np.random.default_rng(SEED if seed is None else seed)
+    distinct = np.unique(y)
+    tiny = 1e-3 * (float(np.diff(distinct).min()) if len(distinct) > 1 else 1.0)
+
+    def drawn(n):
+        return rng.choice(y, n) + rng.uniform(-tiny, tiny, n)
+
+    by_interval = by_test = 0
+    for _ in range(trials):
+        x = shift * drawn(n_arm)
+        other = y if n_other is None else drawn(n_other)
+        bx = np.median(rng.choice(x, (n_boot, n_arm)), axis=1)
+        bo = np.median(rng.choice(other, (n_boot, len(other))), axis=1)
+        lo, hi = np.percentile(bx / bo, [2.5, 97.5])
+        by_interval += not (lo <= 1.0 <= hi)
+        by_test += bool(mannwhitneyu(x, other, alternative='two-sided').pvalue < 0.05)
+    return {'interval_excludes_1': by_interval / trials, 'p_below_0.05': by_test / trials}
+
+
+def smallest_p(n_arm, n_other):
+    """The smallest two-sided p the exact Mann-Whitney test can give two samples of these sizes
+    without ties: every run of one above every run of the other."""
+    from math import comb
+    return 2.0 / comb(n_arm + n_other, n_arm)
