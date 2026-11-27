@@ -18,7 +18,9 @@ and, with the code in this folder only, against its own base_floor_s101:
 
 usage, from the project folder:
     python paper/diagnostics_2026-11-27/check_same_search.py [--only-this-code | --only-old-code]
-Runs that are complete already are not made again. Written next to this file: same_search.json.
+Runs that are complete already are not made again: they are kept in
+results/diagnostics_2026-11-27/ (old_code and new_code). Written next to this file:
+same_search.json.
 --only-this-code makes the runs of the code in this folder, --only-old-code those of
 campaign-v3, and neither compares anything yet: the two can then be made at the same time.
 """
@@ -38,7 +40,8 @@ sys.path.insert(0, os.path.join(ROOT, 'paper', 'reference_2013'))
 import search_arm                                             # noqa: E402
 
 OLD_TAG = 'campaign-v3'
-OLD_ROOT = os.path.join(ROOT, '_worktrees', 'v3')            # a checkout of that tag (git worktree)
+OLD_ROOT = os.path.join(ROOT, '_worktrees', 'v3')            # a checkout of that tag (git worktree), made when needed
+OLD_OUT = os.path.join(ROOT, 'results', 'diagnostics_2026-11-27', 'old_code')
 NEW_OUT = os.path.join(ROOT, 'results', 'diagnostics_2026-11-27', 'new_code')
 SEARCH = ['--no-age-pareto', '--pop', '30', '--seed', '101']      # not a seed of any arm
 RUNS = (
@@ -128,7 +131,6 @@ def compare(a, b):
 
 
 def main():
-    old_root = old_checkout()
     new_environment = search_arm.run_environment()
     only_new = '--only-this-code' in sys.argv[1:]             # make this code's runs and compare nothing yet
     only_old = '--only-old-code' in sys.argv[1:]              # make the runs of campaign-v3 and compare nothing yet
@@ -140,10 +142,10 @@ def main():
 
     # the code of campaign-v3, one run after the other: each of its processes may ask for 3 GB
     for name, settings in RUNS:
-        if not only_new and not complete(old_root, name, generations_of(settings)):
+        if not only_new and not complete(OLD_OUT, name, generations_of(settings)):
             print(f'{OLD_TAG}: {name} ...', flush=True)
-            if start(old_root, old_root, name, settings, default_threads()).wait() != 0:
-                raise SystemExit(f'{name} did not finish under {OLD_TAG}; see {os.path.join(old_root, name)}.log')
+            if start(old_checkout(), OLD_OUT, name, settings, default_threads()).wait() != 0:
+                raise SystemExit(f'{name} did not finish under {OLD_TAG}; see {os.path.join(OLD_OUT, name)}.log')
 
     if only_old:
         return 0
@@ -180,7 +182,7 @@ def main():
     print()
     for name, settings in RUNS:
         n = generations_of(settings)
-        old, new = read(old_root, name, n), read(NEW_OUT, name, n)
+        old, new = read(OLD_OUT, name, n), read(NEW_OUT, name, n)
         row = compare(old, new)
         row.update(settings=settings, old_starts=old['starts'], new_starts=new['starts'])
         report['runs'][name] = row

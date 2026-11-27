@@ -158,6 +158,17 @@ The same commands with `--arm D`, through the same `search_arm.py`. Prepared on 
 - **A run that records no new generation for two hours** of the launcher's running time has its processes ended and is continued from its checkpoint, with a line in the log. A worker process that died outright leaves its run waiting for a result that never comes; this is what gets it going again.
 - Everything else is as for arm A: the launcher owns its runs, a run is continued from its checkpoint and is then the run it would have been, and the files are in `results/campaign/`.
 
+Tried on 27 November with ten runs side by side (`trialD_s101` to `trialD_s110`: seeds 101 to 110, which belong to no arm, three generations each):
+
+| Tried | Result |
+|---|---|
+| Ten runs started by the launcher from the tagged code | All ten ran to the end in 29 minutes; every run's manifest names the commit of `campaign-v4` and one thread; `--status` read the runs while they ran |
+| One run (`trialD_s103`) had its processes ended from outside while it evaluated its second population | The launcher logged the end, continued the run from its checkpoint (start 2 of 6), and the run finished with the others |
+| `trialD_s101` against the check run of the same seed in `../diagnostics_2026-11-27/`, which was started by hand | The same scores, 90 of 90 over the three generations |
+| Bodies the engine refused, runs that stopped themselves | None |
+
+**How long the arm will take.** With all ten runs going, a generation took 8.8 minutes in the median (7.3 to 10.8 over the 30 generations of the trial), which is 53 seconds per evaluation. At that pace 300 generations are 44 hours. The first three generations are not the whole run: a first population is a mix of sizes and materials, while the champions evolved so far are large and nearly all muscle, which needs fewer time steps (arm A's champions took 44 seconds each under a comparable load), and the last runs speed up as the others finish. Expect about two days, somewhere between one and a half and two and a half. Arm A's forecasts from its first minutes were off by as much.
+
 Arm R ran from 21 November 23:27 to 22 November 21:40. Its outcome is in [`../outcomes/README.md`](../outcomes/README.md).
 
 The launcher without a window was tried on 23 November (`dryH_P0_s3`, `s5`): a close request to its progress window left launcher and runs alive; a second start was refused; `--stop` ended the runs and the launcher; the stopped seeds started again and gave the pilot's scores; and after the launcher alone was ended, starting again adopted the runs.
