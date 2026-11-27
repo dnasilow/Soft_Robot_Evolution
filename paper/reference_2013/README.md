@@ -148,13 +148,14 @@ Tried on 23 November with short trial runs (`dryQ`, `dryS`, `dryT`, `dryU`): thr
 
 ### Arm D: this project's search in its own MuJoCo engine
 
-The same commands with `--arm D`, through the same `search_arm.py`. Prepared on 27 November 2026; **not started**: it waits for the go-ahead.
+The same commands with `--arm D`, through the same `search_arm.py`. Prepared on 27 November 2026 and **started that day at 15:03**, with the go-ahead of that afternoon.
 
 - **A run** is `run_tendon_evolution.py --preset cheney2013-floor --no-age-pareto --pop 30 --gen 300 --workers 3 --seed <s> --name armD_s<s>`, seeds 1 to 10 (PROTOCOL.md, sections 2 and 9.5). All ten run side by side, each simulating three robots at a time in worker processes of its own, which keeps the machine's 24 cores busy. The scores do not depend on that number (`../diagnostics_2026-11-27/`).
 - **The code must be that of the tag `campaign-v4`** (section 9.6), which is what the campaign's folder holds.
 - **One linear-algebra thread in every process**, set by the launcher and recorded in each run's manifest. With it, and with the memory MuJoCo sets aside now stated by the engine, a process asks the system for about 0.1 GB; before, it was up to 3.2 GB.
 - **Memory is looked at before a run is started.** The launcher starts the arm only if the system can still promise 0.2 GB for each process of the runs it is about to start, with 4 GB left free (12 GB for the whole arm, which then asks for about 4), and it holds a run back while that is not so.
 - **A run that an error stops is continued**, like any run that ends unfinished: six starts at most. If the run stopped itself because an evaluation failed for a reason that is not the robot's (section 9.6), the launcher's log says so and gives the error.
+- **The log shows no score.** When a run ends early the launcher quotes the last lines of the run's output, to show why; the scores in those lines are replaced by "(not shown)". An arm's results are read only once the arm is complete.
 - **A run that records no new generation for two hours** of the launcher's running time has its processes ended and is continued from its checkpoint, with a line in the log. A worker process that died outright leaves its run waiting for a result that never comes; this is what gets it going again.
 - Everything else is as for arm A: the launcher owns its runs, a run is continued from its checkpoint and is then the run it would have been, and the files are in `results/campaign/`.
 
@@ -168,6 +169,8 @@ Tried on 27 November with ten runs side by side (`trialD_s101` to `trialD_s110`:
 | Bodies the engine refused, runs that stopped themselves | None |
 
 **How long the arm will take.** With all ten runs going, a generation took 8.8 minutes in the median (7.3 to 10.8 over the 30 generations of the trial), which is 53 seconds per evaluation. At that pace 300 generations are 44 hours. The first three generations are not the whole run: a first population is a mix of sizes and materials, while the champions evolved so far are large and nearly all muscle, which needs fewer time steps (arm A's champions took 44 seconds each under a comparable load), and the last runs speed up as the others finish. Expect about two days, somewhere between one and a half and two and a half. Arm A's forecasts from its first minutes were off by as much.
+
+Arm D was started on 27 November at 15:03: all ten runs from the code of `campaign-v4`, each started once, with one thread in every process. Its first generation took 8.6 minutes in the median (6.5 to 9.6), and its 40 processes ask the system for 2.5 GB together. No body was refused and no run stopped itself in that generation.
 
 Arm R ran from 21 November 23:27 to 22 November 21:40. Its outcome is in [`../outcomes/README.md`](../outcomes/README.md).
 

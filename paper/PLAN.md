@@ -311,10 +311,19 @@ Decision 14, taken on 27 November ("Yes, make them"): the three changes of secti
 - **A second read of the change** by a separate AI agent, given the diff and not the reasoning, found no defect in what is computed. Four of its six points were taken up before the checks were made; the other two are listed as known limits.
 - **What a run does not do by itself**: go on when a worker process dies outright. The launcher sees a run that has recorded no generation for two hours, ends it and continues it.
 - **The code is tagged `campaign-v4`.** Arms D and E run from it. The project's 318 tests pass on it.
-- **Arm D is prepared, not started.** The launcher knows it (`start_arm.py --arm D`: seeds 1 to 10, 300 generations, three evaluations at a time in each run, one thread per process). It looks at free memory before it starts a run, says what stopped a run, and ends and continues a run that stands still. The analysis reads it (`analyse_arm.py --arm D`: primary outcome at generation 300), written and tested on made-up runs before any run of the arm exists.
+- **Arm D is prepared, not started** (it was started that afternoon: section 3.23). The launcher knows it (`start_arm.py --arm D`: seeds 1 to 10, 300 generations, three evaluations at a time in each run, one thread per process). It looks at free memory before it starts a run, says what stopped a run, and ends and continues a run that stands still. The analysis reads it (`analyse_arm.py --arm D`: primary outcome at generation 300), written and tested on made-up runs before any run of the arm exists.
 - **The launcher was tried** with ten runs side by side on seeds 101 to 110, which belong to no arm, three generations each. All ten finished; one was ended from outside on purpose and the launcher continued it; the run of seed 101 repeats the check run of that seed score for score.
 - **How long arm D will take: about two days.** In the trial a generation took 8.8 minutes with all ten runs going, which makes 44 hours for 300. Later generations may cost somewhat more or less than the first three, so expect between one and a half and two and a half days.
 - **Next.** Your go-ahead for arm D. While it runs: the audit of its champions and their transfer into the 2013 simulator, and arms E1 to E3 in the launcher.
+
+### 3.23 27 November, afternoon: arm D started
+
+- **Started at 15:03**, on your "Yes, start arm D": seeds 1 to 10, 300 generations each, all ten runs side by side with three evaluations at a time in each, from the code tagged `campaign-v4`.
+- **One change to the launcher before the start.** When a run ends early the launcher quotes the last lines of the run's output, to show why, and those lines hold scores. They are now left out, so that reading the log shows no result of the arm. Tried on two runs with seeds 101 and 102, which belong to no arm.
+- **Checked after the first generation**, at 15:14, without reading a score: all ten runs have a generation on record; each was started once, from that code, with one thread and with the settings of the protocol; no body was refused and no run stopped itself. The arm's 40 processes ask the system for 2.5 GB together.
+- **Pace.** The first generation took 8.6 minutes in the median (6.5 to 9.6). At that pace the arm ends on Sunday 29 November in the morning; with the range of the estimate, between late on Saturday and Monday morning.
+- **Not read until the arm is complete:** its scores. `start_arm.py --arm D --status` gives generations only.
+- **Next, while it runs.** The audit of its champions and their transfer into the 2013 simulator; arms E1 to E3 in the launcher. Its analysis is one command once it is complete, and waits for your go-ahead.
 
 ---
 
