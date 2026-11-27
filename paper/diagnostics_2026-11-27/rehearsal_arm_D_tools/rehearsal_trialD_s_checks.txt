@@ -1,0 +1,45 @@
+REHEARSAL TRIALD_S (not an arm of the campaign)
+
+BY HAND, from the raw files
+  generation    3: rehearsal trialD_s 1.7170, deposited 1.0475; ratio 1.6391; A12 0.9057; largest difference from the report 0.0e+00
+  seeds whose scores are the report's: 10 of 10
+
+THE RUNS
+  10 runs, started 2026-11-27 04:34:42 to 2026-11-27 04:43:38; code 8870da6 (the same as campaign-v4 in what computes a run); launched 1 time(s); evaluations at a time [3]
+  problems: none
+  runs started more than once: seed 103 (2 starts)
+    seed 103 ended with code 1 at generation 1
+  runs that stood still and were ended by the launcher: none
+  bodies the engine refused (they score 0): 0
+  times a run stopped itself because an evaluation failed (section 9.6): 0
+
+THE CHAMPIONS
+  the one the report measured: 10 of 10
+  is the last point of the curve: 10 of 10
+  is the best of the whole run: 10 of 10
+  is the run s recorded best robot: 10 of 10
+  runs in which different bodies share the top fitness: 0
+  champions that do not touch the bottom of the workspace: 1
+
+AUDIT (PROTOCOL.md, section 9.7, point 2): each champion evaluated again in the MuJoCo engine
+
+  Reproduced score: 10 of 10 champions get their recorded score to the last digit.
+  A quarter of the time step: the score changes by 1.6% in the median, by more than 10% for 3 of 10, and at most by -67.6% (seed 109).
+    Under this preset the floor rule itself depends on the time step (section 9.5): it stops a voxel that the brake would stop within one step. The change is therefore not numerical error alone.
+  Floor penetration: the lowest voxel sank 0.59 of a voxel below the floor's surface in the median (quartiles 0.43 to 0.78). The floor of this preset is the 2013 simulator's spring.
+  Simulations that blew up: 0 at the engine's time step, 0 at a quarter of it.
+
+  seed  voxels   recorded      again  quarter step   change   sank  sank, quarter
+   101     498     1.3059     1.3059        1.2998    -0.5%   0.74           0.74
+   102     892     1.7475     1.7475        1.7493    +0.1%   0.79           0.81
+   103     552     1.3112     1.3112        1.3324    +1.6%   0.37           0.36
+   104     365     1.8123     1.8123        0.5889   -67.5%   0.80           0.66
+   105     209     1.7672     1.7672        1.7960    +1.6%   0.42           0.42
+   106     612     1.5512     1.5512        1.5750    +1.5%   0.37           0.35
+   107     649     2.4056     2.4056        2.3936    -0.5%   0.54           0.54
+   108     476     1.6866     1.6866        1.6929    +0.4%   0.45           0.45
+   109     110     1.9874     1.9874        0.6444   -67.6%   0.64           0.67
+   110     515     1.3893     1.3893        0.7637   -45.0%   0.79           0.83
+
+Written to results\analysis\rehearsal_trialD_s_checks.json and results\analysis\rehearsal_trialD_s_champion_audit.csv
+ALL CHECKS HOLD

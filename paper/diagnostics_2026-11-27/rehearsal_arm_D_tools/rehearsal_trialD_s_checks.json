@@ -1,0 +1,478 @@
+{
+ "what": "rehearsal trialD_s",
+ "is_arm": false,
+ "by_hand": {
+  "runs": {
+   "arm": 10,
+   "deposited": 35
+  },
+  "generations": {
+   "3": {
+    "arm_median": 1.717040268731052,
+    "deposited_median": 1.04755,
+    "ratio_to_deposited": 1.6391010154465677,
+    "a12_against_deposited": 0.9057142857142857,
+    "largest_difference_from_the_report": 0.0
+   }
+  },
+  "seeds_whose_scores_agree_with_the_report": 10,
+  "agrees_with_the_report": true
+ },
+ "runs": {
+  "runs": 10,
+  "problems": [],
+  "first_start": "2026-11-27 04:34:42",
+  "last_start": "2026-11-27 04:43:38",
+  "started_more_than_once": {
+   "103": [
+    "2026-11-27 04:34:42",
+    "2026-11-27 04:43:38"
+   ]
+  },
+  "code_commits": {
+   "8870da6": true
+  },
+  "code_tag": "campaign-v4",
+  "evaluations_at_a_time": [
+   3
+  ],
+  "launches": 1,
+  "launcher_code": [
+   "campaign-v4"
+  ],
+  "runs_that_ended_early_by_the_launcher_log": [
+   {
+    "seed": 103,
+    "code": 1,
+    "generation": 1,
+    "why": ""
+   }
+  ],
+  "runs_that_stood_still": [],
+  "bodies_the_engine_refused": {},
+  "runs_that_stopped_themselves": {}
+ },
+ "champions": [
+  {
+   "seed": 101,
+   "individual": 0,
+   "fitness": 1.3059396216168988,
+   "voxels": 498,
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 102,
+   "individual": 0,
+   "fitness": 1.7474994619425814,
+   "voxels": 892,
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 103,
+   "individual": 0,
+   "fitness": 1.3111950550155207,
+   "voxels": 552,
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 104,
+   "individual": 0,
+   "fitness": 1.8123149795751208,
+   "voxels": 365,
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 105,
+   "individual": 0,
+   "fitness": 1.7672429488632593,
+   "voxels": 209,
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 106,
+   "individual": 0,
+   "fitness": 1.5512439227282142,
+   "voxels": 612,
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 107,
+   "individual": 19,
+   "fitness": 2.405599175210383,
+   "voxels": 649,
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 108,
+   "individual": 0,
+   "fitness": 1.6865810755195223,
+   "voxels": 476,
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  },
+  {
+   "seed": 109,
+   "individual": 11,
+   "fitness": 1.987382582926889,
+   "voxels": 110,
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 4
+  },
+  {
+   "seed": 110,
+   "individual": 0,
+   "fitness": 1.3893353741449166,
+   "voxels": 515,
+   "the_one_the_report_measured": true,
+   "is_the_last_point_of_the_curve": true,
+   "is_the_best_of_the_whole_run": true,
+   "is_the_run_s_recorded_best_robot": true,
+   "individuals_with_that_fitness": 1,
+   "different_bodies_among_them": 1,
+   "lowest_layer": 0
+  }
+ ],
+ "audit": {
+  "summary": {
+   "champions": 10,
+   "reproduced": 10,
+   "blew_up": 0,
+   "quarter_change_median": 0.015728899300984,
+   "quarter_change_over_10_percent": 3,
+   "quarter_change_largest": -0.675775710188476,
+   "quarter_change_largest_seed": 109,
+   "quarter_blew_up": 0,
+   "sank": [
+    0.5910146590440397,
+    0.42502249442054896,
+    0.7761037305689964
+   ]
+  },
+  "champions": [
+   {
+    "seed": 101,
+    "voxels": 498,
+    "lowest_layer": 0,
+    "recorded": 1.3059396216168988,
+    "again": 1.3059396216168988,
+    "reproduced": true,
+    "difference": 0.0,
+    "blew_up": false,
+    "error": null,
+    "sank": 0.7372548203370239,
+    "moved": [
+     -1.260243668601559,
+     0.2685291446257966,
+     -0.21250009304729872
+    ],
+    "time_step": 1.575553553274936e-05,
+    "steps": 15867,
+    "quarter": 1.2997727295027968,
+    "quarter_change": -0.004722187773479712,
+    "quarter_blew_up": false,
+    "quarter_error": null,
+    "quarter_sank": 0.7391610227757457,
+    "quarter_time_step": 3.93888388318734e-06,
+    "seconds": 62.0,
+    "quarter_seconds": 248.7
+   },
+   {
+    "seed": 102,
+    "voxels": 892,
+    "lowest_layer": 0,
+    "recorded": 1.7474994619425814,
+    "again": 1.7474994619425814,
+    "reproduced": true,
+    "difference": 0.0,
+    "blew_up": false,
+    "error": null,
+    "sank": 0.7920410639536752,
+    "moved": [
+     -1.3137822827168282,
+     -1.151134081012503,
+     -0.051193853541919715
+    ],
+    "time_step": 1.575553553274936e-05,
+    "steps": 15867,
+    "quarter": 1.7493382050120754,
+    "quarter_change": 0.0010522138115281199,
+    "quarter_blew_up": false,
+    "quarter_error": null,
+    "quarter_sank": 0.8078663102123728,
+    "quarter_time_step": 3.93888388318734e-06,
+    "seconds": 93.4,
+    "quarter_seconds": 367.1
+   },
+   {
+    "seed": 103,
+    "voxels": 552,
+    "lowest_layer": 0,
+    "recorded": 1.3111950550155207,
+    "again": 1.3111950550155207,
+    "reproduced": true,
+    "difference": 0.0,
+    "blew_up": false,
+    "error": null,
+    "sank": 0.3657644104819225,
+    "moved": [
+     -1.3048874939878725,
+     0.10399916078301402,
+     0.0754007618504815
+    ],
+    "time_step": 1.575553553274936e-05,
+    "steps": 15867,
+    "quarter": 1.3323659638919556,
+    "quarter_change": 0.016146269615228463,
+    "quarter_blew_up": false,
+    "quarter_error": null,
+    "quarter_sank": 0.3594383217384868,
+    "quarter_time_step": 3.93888388318734e-06,
+    "seconds": 69.3,
+    "quarter_seconds": 262.0
+   },
+   {
+    "seed": 104,
+    "voxels": 365,
+    "lowest_layer": 0,
+    "recorded": 1.8123149795751208,
+    "again": 1.8123149795751208,
+    "reproduced": true,
+    "difference": 0.0,
+    "blew_up": false,
+    "error": null,
+    "sank": 0.7973391507131855,
+    "moved": [
+     -1.2606489759702413,
+     -1.2436327470309607,
+     -0.3855221590126554
+    ],
+    "time_step": 1.575553553274936e-05,
+    "steps": 15867,
+    "quarter": 0.5889182008600599,
+    "quarter_change": -0.6750464419832111,
+    "quarter_blew_up": false,
+    "quarter_error": null,
+    "quarter_sank": 0.6649827717474809,
+    "quarter_time_step": 3.93888388318734e-06,
+    "seconds": 53.8,
+    "quarter_seconds": 199.5
+   },
+   {
+    "seed": 105,
+    "voxels": 209,
+    "lowest_layer": 0,
+    "recorded": 1.7672429488632593,
+    "again": 1.7672429488632593,
+    "reproduced": true,
+    "difference": 0.0,
+    "blew_up": false,
+    "error": null,
+    "sank": 0.4174381830465115,
+    "moved": [
+     0.041841295184480536,
+     1.766047202500481,
+     0.049741580839561955
+    ],
+    "time_step": 1.575553553274936e-05,
+    "steps": 15867,
+    "quarter": 1.7959605718329008,
+    "quarter_change": 0.016249957589653148,
+    "quarter_blew_up": false,
+    "quarter_error": null,
+    "quarter_sank": 0.42016589884939903,
+    "quarter_time_step": 3.93888388318734e-06,
+    "seconds": 34.2,
+    "quarter_seconds": 127.3
+   },
+   {
+    "seed": 106,
+    "voxels": 612,
+    "lowest_layer": 0,
+    "recorded": 1.5512439227282142,
+    "again": 1.5512439227282142,
+    "reproduced": true,
+    "difference": 0.0,
+    "blew_up": false,
+    "error": null,
+    "sank": 0.3683554305200934,
+    "moved": [
+     1.510363249101803,
+     -0.34350257574570503,
+     0.08465544294331495
+    ],
+    "time_step": 1.575553553274936e-05,
+    "steps": 15867,
+    "quarter": 1.5749958390165708,
+    "quarter_change": 0.015311528986739539,
+    "quarter_blew_up": false,
+    "quarter_error": null,
+    "quarter_sank": 0.35353702259643377,
+    "quarter_time_step": 3.93888388318734e-06,
+    "seconds": 66.7,
+    "quarter_seconds": 285.1
+   },
+   {
+    "seed": 107,
+    "voxels": 649,
+    "lowest_layer": 0,
+    "recorded": 2.405599175210383,
+    "again": 2.405599175210383,
+    "reproduced": true,
+    "difference": 0.0,
+    "blew_up": false,
+    "error": null,
+    "sank": 0.5399617660466342,
+    "moved": [
+     -2.389636974603389,
+     0.273008241859102,
+     0.04482210680276419
+    ],
+    "time_step": 1.575553553274936e-05,
+    "steps": 15867,
+    "quarter": 2.3935919541203563,
+    "quarter_change": -0.004991363986885609,
+    "quarter_blew_up": false,
+    "quarter_error": null,
+    "quarter_sank": 0.5423754217225305,
+    "quarter_time_step": 3.93888388318734e-06,
+    "seconds": 69.0,
+    "quarter_seconds": 296.5
+   },
+   {
+    "seed": 108,
+    "voxels": 476,
+    "lowest_layer": 0,
+    "recorded": 1.6865810755195223,
+    "again": 1.6865810755195223,
+    "reproduced": true,
+    "difference": 0.0,
+    "blew_up": false,
+    "error": null,
+    "sank": 0.44777542854266134,
+    "moved": [
+     -1.4349993726970496,
+     0.8861155641233567,
+     0.011477442136968233
+    ],
+    "time_step": 3.523044847314093e-05,
+    "steps": 7096,
+    "quarter": 1.6929393342574717,
+    "quarter_change": 0.0037699099262043017,
+    "quarter_blew_up": false,
+    "quarter_error": null,
+    "quarter_sank": 0.4463356500144947,
+    "quarter_time_step": 8.807612118285232e-06,
+    "seconds": 30.0,
+    "quarter_seconds": 97.2
+   },
+   {
+    "seed": 109,
+    "voxels": 110,
+    "lowest_layer": 4,
+    "recorded": 1.987382582926889,
+    "again": 1.987382582926889,
+    "reproduced": true,
+    "difference": 0.0,
+    "blew_up": false,
+    "error": null,
+    "sank": 0.6420675520414452,
+    "moved": [
+     -1.5242782429062958,
+     -1.1896675511480128,
+     -0.45929999659170273
+    ],
+    "time_step": 3.523044847314093e-05,
+    "steps": 7096,
+    "quarter": 0.6443577065332626,
+    "quarter_change": -0.675775710188476,
+    "quarter_blew_up": false,
+    "quarter_error": null,
+    "quarter_sank": 0.6722461762562338,
+    "quarter_time_step": 8.807612118285232e-06,
+    "seconds": 12.2,
+    "quarter_seconds": 42.9
+   },
+   {
+    "seed": 110,
+    "voxels": 515,
+    "lowest_layer": 0,
+    "recorded": 1.3893353741449166,
+    "again": 1.3893353741449166,
+    "reproduced": true,
+    "difference": 0.0,
+    "blew_up": false,
+    "error": null,
+    "sank": 0.7890533673129873,
+    "moved": [
+     0.4391288507738127,
+     1.310012334665458,
+     -0.14589831148036622
+    ],
+    "time_step": 1.575553553274936e-05,
+    "steps": 15867,
+    "quarter": 0.763656231898669,
+    "quarter_change": -0.4503442105411945,
+    "quarter_blew_up": false,
+    "quarter_error": null,
+    "quarter_sank": 0.8264561188872893,
+    "quarter_time_step": 3.93888388318734e-06,
+    "seconds": 50.5,
+    "quarter_seconds": 235.9
+   }
+  ],
+  "quarter": 0.25,
+  "code": "campaign-v4-4-g004017d-dirty"
+ }
+}

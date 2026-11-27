@@ -1,0 +1,31 @@
+PILOT, not an arm of the campaign: runs trialD_s<seed>, 10 runs at generation 3.
+Reference: the 35 deposited 2013 runs, condition noCost.
+Made 2026-11-27T15:23 with code campaign-v4-4-g004017d-dirty; 10000 bootstrap resamples, seed 0.
+
+NOTE: A pilot. The reproduction criterion applies to complete arms only.
+NOTE: The body table sets generation 3 against the deposited generation 1000: a test of the code, not a comparison.
+
+SCORES: the champion's original score, best so far
+generation             runs    arm median (quartiles)  deposited median (quartiles)  ratio  95% interval   A12 (95% interval)        p
+         3               10          1.72 (1.43-1.80)              1.05 (0.93-1.38)   1.64   1.29-1.83    0.91 (0.79-0.98)    0.0001
+
+BODY of each run's champion at generation 3 (10 runs) against the deposited champions of generation 1000 (35 runs)
+               measure    arm median (quartiles)  deposited median (quartiles)   A12 (95% interval)        p  p (Holm)
+                voxels             506 (393-597)                 652 (594-698)  0.23 (0.06-0.44)    0.0103    0.0363
+     footprint (cells)                48 (37-68)                    26 (14-40)  0.77 (0.55-0.95)    0.0091    0.0363
+  fill of bounding box          0.65 (0.54-0.79)              0.65 (0.59-0.70)  0.52 (0.28-0.76)    0.8378    1.0000
+       muscle fraction          0.72 (0.57-0.85)              1.00 (0.96-1.00)  0.14 (0.02-0.30)    0.0003    0.0014
+      two or more feet                  0 of 10                        1 of 35         (Fisher exact)    1.0000    1.0000
+
+PER SEED
+seed  generations     score@3  voxels  footprint   fill  muscle  feet  note
+ 101            3      1.3059     498         46   0.71    0.59     1  
+ 102            3      1.7475     892         48   0.89    0.64     1  
+ 103            3      1.3112     552         62   0.69    0.44     1  
+ 104            3      1.8123     365         12   0.61    0.96     1  
+ 105            3      1.7672     209         34   0.52    0.83     1  
+ 106            3      1.5512     612         70   0.87    0.57     1  
+ 107            3      2.4056     649        100   0.81    0.85     1  
+ 108            3      1.6866     476         85   0.48    0.80     1  
+ 109            3      1.9874     110         10   0.52    1.00     1  
+ 110            3      1.3893     515         49   0.57    0.48     1  

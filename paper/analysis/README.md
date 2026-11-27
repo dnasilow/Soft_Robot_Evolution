@@ -44,6 +44,8 @@ The interval of the pilot is 0.86 to 1.48 here. The summary of 21 November gave 
 | `transfer_scores.py` | The transfer outcome: every final champion scored in the MuJoCo engine with the preset's settings (below) |
 | `render_transfer.py` | Videos of one champion in both simulators side by side, with checks that both hold the same body and that the frames are the evaluation that was scored |
 | `compare_presets.py` | The two transfer reports side by side, champion by champion: how many keep more of their score under the second preset, with the paired test of the floor test. Reads the reports only; nothing is simulated |
+| `check_arm_D.py` | Checks on arm D's report after its analysis, and the audit of its champions: the scores recomputed with readers of its own, each run's record of itself and of every start, and each champion evaluated again in the MuJoCo engine (below). Written on 27 November 2026, while the arm was running and before any score of it had been read |
+| `transfer_to_2013.py` | Arm D's transfer outcome: its champions scored in the original 2013 simulator (below). Written the same day |
 
 ## Arm A
 
@@ -98,7 +100,48 @@ What it was checked against:
 
 39 tests for the scoring, 8 for its video tool, 8 for the champions' video tool, 15 for the memory changes of 27 November (`tests/test_memory.py`).
 
+## Arm D's champions: the audit and the transfer
+
+Added on 27 November 2026, while arm D was running and before any score of it had been read. What they compute was fixed in PROTOCOL.md, section 9.7, and committed before either was built. Both refuse to run on the arm while it has no report in `../outcomes/`.
+
+```
+python paper/analysis/check_arm_D.py                      after the arm's analysis: checks and audit
+python paper/analysis/transfer_to_2013.py --arm D          after the arm's analysis: its champions in the 2013 simulator
+python paper/analysis/check_arm_D.py --rehearsal trialD_s --seeds 101-110 --generations 3     runs that are not an arm
+python paper/analysis/transfer_to_2013.py --rehearsal trialD_s --generation 3                  runs that are not an arm
+```
+
+**The checks** follow those of arm A: the scores again from the raw files; each run's own record; the champions against their runs. What is new for this arm:
+
+- **Every start of every run** is read from the run's manifest: the command, the settings, one linear-algebra thread, and code that is the tag `campaign-v4` in every file that computes a run. A run started more than once is reported with what the launcher's log says about why. That is not a failure: a continued run is the run it would have been (protocol, section 9.3).
+- **Bodies the engine refused** (they score 0) and **runs that stopped themselves** (section 9.6) are counted from the runs' own output.
+
+**The audit** (section 9.7, point 2) evaluates each champion again in the MuJoCo engine, from the body its run stored and with the evaluation of its run:
+
+- **Reproduced score.** Identical to the recorded score to the last digit, or not.
+- **A quarter of the time step.** The change of the score, per champion, with its median and largest value. Under arm D's preset the floor rule depends on the time step, so this is not numerical error alone.
+- **Floor penetration.** How deep the lowest voxel sank below the floor's surface.
+
+The body is evaluated as the run stored it, inside the larger array the search works with, not cut out to the workspace: only then is the recorded score reproduced to the last digit.
+
+**The transfer** scores each champion once in this campaign's build of the 2013 simulator, by the evaluation arm A's search used, and checks by its checksum that the program is the one arms R, Rc and A ran with. The ratio is the 2013 score over the recorded MuJoCo score. The statistics are those of the transfer outcome above; the comparison is made against the deposited no-cost champions' ratios under `--preset cheney2013-floor`.
+
+What they were checked against:
+
+| Check | Result |
+|---|---|
+| Arm A's 35 champions through the transfer tool. They were evolved in the 2013 simulator, so their scores there are on record | All 35 get exactly their recorded score |
+| A run of the search's own command line under arm D's preset, small enough for a test; its champion evaluated again by the audit | The recorded score to the last digit (`tests/test_arm_D_tools.py`) |
+| The checks and the audit on the ten trial runs of 27 November (`trialD_s101` to `trialD_s110`: seeds that belong to no arm, three generations each), against their pilot report | By hand the report's numbers. The run that was ended on purpose and continued is reported as started twice, and nothing else is flagged. All ten champions get their recorded score to the last digit when evaluated again |
+| The transfer on the same ten champions | Ten simulations; the simulator is by its checksum the program of arms R, Rc and A |
+| Made-up runs: a wrong number in the report, a start with another setting, without the one thread, with changed code, a checkpoint left over, a score off in the thirteenth digit | Each is caught and named |
+
+21 tests in `tests/test_arm_D_tools.py`.
+
+What the rehearsal showed about the audit's second line, on robots that belong to no arm: of the ten trial champions, robots of a third generation, seven changed their score by under 2% at a quarter of the time step and three lost 45% to 68% of it. That says nothing about arm D. It shows what the check is for, and that under this preset a single score can rest on the time step.
+
 ## Not yet here
 
-- Arms E1 to E3. Arm D's transfer in the other direction (its champions in the 2013 simulator) and the audit of its champions (reproduced score, a quarter of the time step, floor penetration).
+- Arms E1 to E3, in the launcher, the analysis and the audit.
+- A video of arm D's champions in the engine they were evolved in.
 - Figures.

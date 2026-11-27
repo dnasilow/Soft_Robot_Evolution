@@ -1,0 +1,219 @@
+{
+ "champions": [
+  {
+   "set": "rehearsal_trialD_s",
+   "label": "seed 101",
+   "file": "final_population.pkl, individual 0",
+   "voxels": 498,
+   "lowest_layer": 0,
+   "evolved": 1.3059396216168988,
+   "score": 0.69315,
+   "ratio": 0.530767264065243,
+   "no_result": false,
+   "not_usable": false,
+   "blew_up": false,
+   "error": null
+  },
+  {
+   "set": "rehearsal_trialD_s",
+   "label": "seed 102",
+   "file": "final_population.pkl, individual 0",
+   "voxels": 892,
+   "lowest_layer": 0,
+   "evolved": 1.7474994619425814,
+   "score": 1.3915,
+   "ratio": 0.796280645748045,
+   "no_result": false,
+   "not_usable": false,
+   "blew_up": false,
+   "error": null
+  },
+  {
+   "set": "rehearsal_trialD_s",
+   "label": "seed 103",
+   "file": "final_population.pkl, individual 0",
+   "voxels": 552,
+   "lowest_layer": 0,
+   "evolved": 1.3111950550155207,
+   "score": 0.650096,
+   "ratio": 0.4958041883343625,
+   "no_result": false,
+   "not_usable": false,
+   "blew_up": false,
+   "error": null
+  },
+  {
+   "set": "rehearsal_trialD_s",
+   "label": "seed 104",
+   "file": "final_population.pkl, individual 0",
+   "voxels": 365,
+   "lowest_layer": 0,
+   "evolved": 1.8123149795751208,
+   "score": 0.85314,
+   "ratio": 0.47074598489497127,
+   "no_result": false,
+   "not_usable": false,
+   "blew_up": false,
+   "error": null
+  },
+  {
+   "set": "rehearsal_trialD_s",
+   "label": "seed 105",
+   "file": "final_population.pkl, individual 0",
+   "voxels": 209,
+   "lowest_layer": 0,
+   "evolved": 1.7672429488632593,
+   "score": 1.23963,
+   "ratio": 0.7014485477491169,
+   "no_result": false,
+   "not_usable": false,
+   "blew_up": false,
+   "error": null
+  },
+  {
+   "set": "rehearsal_trialD_s",
+   "label": "seed 106",
+   "file": "final_population.pkl, individual 0",
+   "voxels": 612,
+   "lowest_layer": 0,
+   "evolved": 1.5512439227282142,
+   "score": 0.9910169999999999,
+   "ratio": 0.6388531071612978,
+   "no_result": false,
+   "not_usable": false,
+   "blew_up": false,
+   "error": null
+  },
+  {
+   "set": "rehearsal_trialD_s",
+   "label": "seed 107",
+   "file": "final_population.pkl, individual 19",
+   "voxels": 649,
+   "lowest_layer": 0,
+   "evolved": 2.405599175210383,
+   "score": 1.7245,
+   "ratio": 0.7168692181851878,
+   "no_result": false,
+   "not_usable": false,
+   "blew_up": false,
+   "error": null
+  },
+  {
+   "set": "rehearsal_trialD_s",
+   "label": "seed 108",
+   "file": "final_population.pkl, individual 0",
+   "voxels": 476,
+   "lowest_layer": 0,
+   "evolved": 1.6865810755195223,
+   "score": 1.4618799999999998,
+   "ratio": 0.8667712576756459,
+   "no_result": false,
+   "not_usable": false,
+   "blew_up": false,
+   "error": null
+  },
+  {
+   "set": "rehearsal_trialD_s",
+   "label": "seed 109",
+   "file": "final_population.pkl, individual 11",
+   "voxels": 110,
+   "lowest_layer": 4,
+   "evolved": 1.987382582926889,
+   "score": 0.740077,
+   "ratio": 0.3723877860044754,
+   "no_result": false,
+   "not_usable": false,
+   "blew_up": false,
+   "error": null
+  },
+  {
+   "set": "rehearsal_trialD_s",
+   "label": "seed 110",
+   "file": "final_population.pkl, individual 0",
+   "voxels": 515,
+   "lowest_layer": 0,
+   "evolved": 1.3893353741449166,
+   "score": 0.340812,
+   "ratio": 0.24530578170138143,
+   "no_result": false,
+   "not_usable": false,
+   "blew_up": false,
+   "error": null
+  }
+ ],
+ "set": {
+  "n": 10,
+  "blew_up": 0,
+  "failed": 0,
+  "evolved": [
+   1.717040268731052,
+   1.429812511290741,
+   1.8010469718971553
+  ],
+  "score": [
+   0.9220785,
+   0.70488175,
+   1.3535325
+  ],
+  "ratio": [
+   0.5848101856132704,
+   0.4770105357548191,
+   0.7130140505761701
+  ],
+  "ratio_median_interval": [
+   0.434095987169419,
+   0.748864596748581
+  ],
+  "rank_correlation": 0.6,
+  "rank_correlation_interval": [
+   -0.24528301886792456,
+   0.8867924528301887
+  ],
+  "kept_all_or_more": 0
+ },
+ "without_a_usable_result": {
+  "no_result": 0,
+  "not_usable": 0
+ },
+ "comparison": {
+  "reference": "deposit_noCost under --preset cheney2013-floor",
+  "n_reference": 35,
+  "result": {
+   "n_arm": 10,
+   "n_reference": 35,
+   "arm_median": 0.5848101856132704,
+   "arm_q25": 0.4770105357548191,
+   "arm_q75": 0.7130140505761701,
+   "reference_median": 1.159588994175901,
+   "reference_q25": 0.7554858417232176,
+   "reference_q75": 1.3285186543561838,
+   "a12": 0.1457142857142857,
+   "a12_interval": [
+    0.04857142857142857,
+    0.26571428571428574
+   ],
+   "mann_whitney_u": 51.0,
+   "p": 0.0007471479502779775
+  }
+ },
+ "title": "REHEARSAL, not an arm: the generation-3 champions of the runs trialD_s<seed>, scored in the original 2013 simulator.",
+ "notes": [],
+ "simulator": {
+  "now": {
+   "simulator_sha256": "853ead817a0f0cd928db08859aebedcc0b8293297ce5843d519b2dce3667d190",
+   "template_sha256": "a20e64395009807e62adf5b730fbdb5fa31f720fc1f68ea0713683fd3591a025"
+  },
+  "of_arm_A": {
+   "simulator_sha256": "853ead817a0f0cd928db08859aebedcc0b8293297ce5843d519b2dce3667d190",
+   "template_sha256": "a20e64395009807e62adf5b730fbdb5fa31f720fc1f68ea0713683fd3591a025"
+  },
+  "same_simulator": true,
+  "same_template": true
+ },
+ "made": "2026-11-27T15:24",
+ "code": "campaign-v4-4-g004017d-dirty",
+ "settings": {
+  "n_boot": 10000,
+  "seed": 0
+ }
+}

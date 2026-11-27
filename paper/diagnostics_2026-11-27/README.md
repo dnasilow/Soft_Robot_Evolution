@@ -121,6 +121,10 @@ The measurement of 25 November, repeated with the new code (`measure_memory.py`,
 
 Before the tag was set, the change to the three files that compute a run was read once more by a separate AI agent that was given the diff and the requirement, and not the reasoning above. It found no defect in what an evaluation computes: with its own runs it got the same state of a body after 400 steps from the old and the new engine, byte for byte, and confirmed that a model has no constraint other than the floor pairs. Four of its points were taken up before the checks on this page were made: the memory check now reads MuJoCo's counters afresh each time instead of keeping a view of them; its error message says that the engine's statement, not the machine, is what ran out; and two descriptions in the code that claimed more than the rule does were corrected (the rule cannot tell a fault in the code from a body's own error if both raise the same kind of error). Its other two points are the first and the third item of the list above.
 
+## Later the same day: the tools for arm D's champions, rehearsed
+
+Arm D was started at 15:03. While it ran, the audit and the transfer of its champions were fixed in the protocol (section 9.7) and built (`../analysis/check_arm_D.py`, `../analysis/transfer_to_2013.py`; described in [`../analysis/README.md`](../analysis/README.md)). They were tried on the ten trial runs of the launcher, `trialD_s101` to `trialD_s110`: seeds that belong to no arm, three generations each. What the rehearsal wrote is kept in `rehearsal_arm_D_tools/`: the pilot report of the trial runs, the checks with the audit, and the transfer. Nothing in that folder is a result of an arm.
+
 ## Files
 
 | File | What it is |
@@ -128,3 +132,4 @@ Before the tag was set, the change to the three files that compute a run was rea
 | `check_same_search.py`, `same_search.json` | Short runs of the search with the code tagged `campaign-v3` and with the new code, compared score for score; one run stopped twice and continued |
 | `check_same_scores.py`, `same_scores.json` | Every evaluation behind the two transfer reports computed again with the new code and compared with the committed report; the memory each evaluation used |
 | `measure_memory.py`, `memory_after.json` | The worst case for MuJoCo's memory, what MuJoCo does with too little, and what a process asks the system for |
+| `rehearsal_arm_D_tools/` | The tools for arm D's champions tried on the trial runs with seeds 101 to 110: their pilot report, the checks with the audit, the transfer into the 2013 simulator |

@@ -325,6 +325,18 @@ Decision 14, taken on 27 November ("Yes, make them"): the three changes of secti
 - **Not read until the arm is complete:** its scores. `start_arm.py --arm D --status` gives generations only.
 - **Next, while it runs.** The audit of its champions and their transfer into the 2013 simulator; arms E1 to E3 in the launcher. Its analysis is one command once it is complete, and waits for your go-ahead.
 
+### 3.24 27 November: the tools for arm D's champions, built while it runs
+
+On your "Yes, build them". Nothing of arm D was read for this: all that was known of it was how many generations each run had on record.
+
+- **First the protocol, then the code.** Section 9.7 fixes how the audit and the transfer of arm D's champions are computed. It was committed before either tool was built.
+- **The audit** (`analysis/check_arm_D.py`). After the arm's analysis it checks the report from the raw files, reads every start of every run from the run's own record, and evaluates each champion again in the MuJoCo engine from the body its run stored: is the recorded score reproduced to the last digit, what a quarter of the time step does to it, and how deep the body stood in the floor.
+- **The transfer** (`analysis/transfer_to_2013.py`). Each champion once in this campaign's build of the 2013 simulator, by the evaluation arm A's search used. The ratio is the 2013 score over the recorded MuJoCo score.
+- **One choice in section 9.7 that is mine**, for you to overrule before the arm is analysed: the transfer ratios of arm D's champions are set against those of the 35 deposited no-cost champions under `--preset cheney2013-floor`, not under the hard floor. Both sets then cross between the same two simulators, in opposite directions.
+- **Tried on what is on record and on runs that belong to no arm.** Arm A's 35 champions get exactly their recorded scores from the transfer tool. On the ten trial runs with seeds 101 to 110 the checks find the report's numbers, report the run that was ended on purpose as started twice, and all ten champions reproduce their recorded score to the last digit. 21 tests.
+- **A caution the rehearsal gave.** Three of the ten trial champions, robots of a third generation, lost 45% to 68% of their score at a quarter of the time step; the other seven changed by under 2%. That is not arm D. But it is the second time this preset shows that a single score can rest on the time step (section 3.21), and the audit will show how arm D's champions stand.
+- **Still missing.** A video of arm D's champions in the engine they were evolved in; arms E1 to E3 in the launcher, the analysis and the audit.
+
 ---
 
 ## 4. What the literature says

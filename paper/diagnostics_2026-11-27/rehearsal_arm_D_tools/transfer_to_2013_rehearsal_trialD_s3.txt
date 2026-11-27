@@ -1,0 +1,25 @@
+REHEARSAL, not an arm: the generation-3 champions of the runs trialD_s<seed>, scored in the original 2013 simulator.
+Made 2026-11-27T15:24 with code campaign-v4-4-g004017d-dirty; 10000 bootstrap resamples, seed 0.
+Simulator: this campaign's build of the original 2013 simulator, through the evaluation of arm A's search; one simulation per champion.
+  Its checksum 853ead817a0f is that of the program arms R, Rc and A ran with; the settings template a20e64395009 is the one of arm A.
+
+Scores in workspace widths. Transfer ratio: score in the 2013 simulator over the score the run recorded in the MuJoCo engine.
+
+set                               n  no usable result       MuJoCo engine      2013 simulator      transfer ratio  95% of its median   rank correlation (95%)  ratio >= 1
+rehearsal: trialD_s              10                 0    1.72 (1.43-1.80)    0.92 (0.70-1.35)    0.58 (0.48-0.71)      0.43-0.75       +0.60 (-0.25 to +0.89)     0 of 10 
+
+Against the transfer ratios of the 35 deposited no-cost champions under --preset cheney2013-floor, which cross between the same two simulators in the other direction (descriptive: no criterion, p not corrected):
+  these champions 0.58 (0.48-0.71); the deposited champions 1.16 (0.76-1.33); A12 0.15 (0.05-0.27); p = 0.0007
+
+PER CHAMPION
+champion    voxels  lowest layer   MuJoCo  2013 sim   ratio  note
+seed 101       498             0    1.306     0.693    0.53  
+seed 102       892             0    1.747     1.391    0.80  
+seed 103       552             0    1.311     0.650    0.50  
+seed 104       365             0    1.812     0.853    0.47  
+seed 105       209             0    1.767     1.240    0.70  
+seed 106       612             0    1.551     0.991    0.64  
+seed 107       649             0    2.406     1.724    0.72  
+seed 108       476             0    1.687     1.462    0.87  
+seed 109       110             4    1.987     0.740    0.37  
+seed 110       515             0    1.389     0.341    0.25  

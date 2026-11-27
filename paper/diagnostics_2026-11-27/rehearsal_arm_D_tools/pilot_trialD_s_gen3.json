@@ -1,0 +1,362 @@
+{
+ "reference": "the 35 deposited 2013 runs, condition noCost",
+ "scores": {
+  "3": {
+   "n_arm": 10,
+   "n_reference": 35,
+   "arm_median": 1.717040268731052,
+   "arm_q25": 1.429812511290741,
+   "arm_q75": 1.8010469718971553,
+   "reference_median": 1.04755,
+   "reference_q25": 0.932026,
+   "reference_q75": 1.378355,
+   "a12": 0.9057142857142857,
+   "a12_interval": [
+    0.7942857142857143,
+    0.9828571428571429
+   ],
+   "mann_whitney_u": 317.0,
+   "p": 0.00011196459498190795,
+   "ratio_of_medians": 1.6391010154465677,
+   "ratio_interval": [
+    1.289705135380577,
+    1.8305433337177506
+   ]
+  }
+ },
+ "body": {
+  "generation": 3,
+  "reference_generation": 1000,
+  "n_arm": 10,
+  "n_reference": 35,
+  "measures": {
+   "voxels": {
+    "n_arm": 10,
+    "n_reference": 35,
+    "arm_median": 506.5,
+    "arm_q25": 392.75,
+    "arm_q75": 597.0,
+    "reference_median": 652.0,
+    "reference_q25": 594.0,
+    "reference_q75": 698.5,
+    "a12": 0.23,
+    "a12_interval": [
+     0.06285714285714286,
+     0.44
+    ],
+    "mann_whitney_u": 80.5,
+    "p": 0.010276813461761182,
+    "p_holm": 0.036345464797292136
+   },
+   "footprint": {
+    "n_arm": 10,
+    "n_reference": 35,
+    "arm_median": 48.5,
+    "arm_q25": 37.0,
+    "arm_q75": 68.0,
+    "reference_median": 26.0,
+    "reference_q25": 14.5,
+    "reference_q75": 40.0,
+    "a12": 0.7742857142857142,
+    "a12_interval": [
+     0.5528571428571428,
+     0.9514285714285714
+    ],
+    "mann_whitney_u": 271.0,
+    "p": 0.009086366199323034,
+    "p_holm": 0.036345464797292136
+   },
+   "fill": {
+    "n_arm": 10,
+    "n_reference": 35,
+    "arm_median": 0.6491666666666667,
+    "arm_q25": 0.5359126984126984,
+    "arm_q75": 0.7862946428571429,
+    "reference_median": 0.652,
+    "reference_q25": 0.594,
+    "reference_q75": 0.6984999999999999,
+    "a12": 0.5228571428571429,
+    "a12_interval": [
+     0.28,
+     0.76
+    ],
+    "mann_whitney_u": 183.0,
+    "p": 0.8377619139838509,
+    "p_holm": 1.0
+   },
+   "muscle": {
+    "n_arm": 10,
+    "n_reference": 35,
+    "arm_median": 0.7203480046727211,
+    "arm_q25": 0.5728354594849988,
+    "arm_q75": 0.8460384397048091,
+    "reference_median": 1.0,
+    "reference_q25": 0.9585911836997221,
+    "reference_q75": 1.0,
+    "a12": 0.1357142857142857,
+    "a12_interval": [
+     0.017142857142857144,
+     0.29714285714285715
+    ],
+    "mann_whitney_u": 47.5,
+    "p": 0.0002835517529111466,
+    "p_holm": 0.001417758764555733
+   },
+   "two_feet": {
+    "arm_yes": 0,
+    "n_arm": 10,
+    "reference_yes": 1,
+    "n_reference": 35,
+    "p": 1.0,
+    "p_holm": 1.0
+   }
+  }
+ },
+ "per_seed": [
+  {
+   "seed": 101,
+   "generations": 3,
+   "scores": {
+    "3": 1.3059396216168988
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 0",
+    "adjusted": 1.3059396216168988,
+    "original": 1.3059396216168988,
+    "filled": 498,
+    "population": 30,
+    "body": {
+     "voxels": 498,
+     "footprint": 46,
+     "fill": 0.7114285714285714,
+     "muscle": 0.5903614457831325,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 102,
+   "generations": 3,
+   "scores": {
+    "3": 1.7474994619425814
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 0",
+    "adjusted": 1.7474994619425814,
+    "original": 1.7474994619425814,
+    "filled": 892,
+    "population": 30,
+    "body": {
+     "voxels": 892,
+     "footprint": 48,
+     "fill": 0.892,
+     "muscle": 0.6423766816143498,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 103,
+   "generations": 3,
+   "scores": {
+    "3": 1.3111950550155207
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 0",
+    "adjusted": 1.3111950550155207,
+    "original": 1.3111950550155207,
+    "filled": 552,
+    "population": 30,
+    "body": {
+     "voxels": 552,
+     "footprint": 62,
+     "fill": 0.69,
+     "muscle": 0.4438405797101449,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 104,
+   "generations": 3,
+   "scores": {
+    "3": 1.8123149795751208
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 0",
+    "adjusted": 1.8123149795751208,
+    "original": 1.8123149795751208,
+    "filled": 365,
+    "population": 30,
+    "body": {
+     "voxels": 365,
+     "footprint": 12,
+     "fill": 0.6083333333333333,
+     "muscle": 0.9643835616438357,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 105,
+   "generations": 3,
+   "scores": {
+    "3": 1.7672429488632593
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 0",
+    "adjusted": 1.7672429488632593,
+    "original": 1.7672429488632593,
+    "filled": 209,
+    "population": 30,
+    "body": {
+     "voxels": 209,
+     "footprint": 34,
+     "fill": 0.5225,
+     "muscle": 0.8325358851674641,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 106,
+   "generations": 3,
+   "scores": {
+    "3": 1.5512439227282142
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 0",
+    "adjusted": 1.5512439227282142,
+    "original": 1.5512439227282142,
+    "filled": 612,
+    "population": 30,
+    "body": {
+     "voxels": 612,
+     "footprint": 70,
+     "fill": 0.8742857142857143,
+     "muscle": 0.5669934640522876,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 107,
+   "generations": 3,
+   "scores": {
+    "3": 2.405599175210383
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 19",
+    "adjusted": 2.405599175210383,
+    "original": 2.405599175210383,
+    "filled": 649,
+    "population": 30,
+    "body": {
+     "voxels": 649,
+     "footprint": 100,
+     "fill": 0.81125,
+     "muscle": 0.8505392912172574,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 108,
+   "generations": 3,
+   "scores": {
+    "3": 1.6865810755195223
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 0",
+    "adjusted": 1.6865810755195223,
+    "original": 1.6865810755195223,
+    "filled": 476,
+    "population": 30,
+    "body": {
+     "voxels": 476,
+     "footprint": 85,
+     "fill": 0.476,
+     "muscle": 0.7983193277310925,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 109,
+   "generations": 3,
+   "scores": {
+    "3": 1.987382582926889
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 11",
+    "adjusted": 1.987382582926889,
+    "original": 1.987382582926889,
+    "filled": 110,
+    "population": 30,
+    "body": {
+     "voxels": 110,
+     "footprint": 10,
+     "fill": 0.5238095238095238,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 110,
+   "generations": 3,
+   "scores": {
+    "3": 1.3893353741449166
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 0",
+    "adjusted": 1.3893353741449166,
+    "original": 1.3893353741449166,
+    "filled": 515,
+    "population": 30,
+    "body": {
+     "voxels": 515,
+     "footprint": 49,
+     "fill": 0.5722222222222222,
+     "muscle": 0.4796116504854369,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  }
+ ],
+ "title": "PILOT, not an arm of the campaign: runs trialD_s<seed>, 10 runs at generation 3.",
+ "notes": [
+  "A pilot. The reproduction criterion applies to complete arms only.",
+  "The body table sets generation 3 against the deposited generation 1000: a test of the code, not a comparison."
+ ],
+ "made": "2026-11-27T15:23",
+ "code": "campaign-v4-4-g004017d-dirty",
+ "settings": {
+  "n_boot": 10000,
+  "seed": 0,
+  "criterion": [
+   0.9,
+   1.1
+  ]
+ }
+}
