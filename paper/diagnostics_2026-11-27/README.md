@@ -125,6 +125,43 @@ Before the tag was set, the change to the three files that compute a run was rea
 
 Arm D was started at 15:03. While it ran, the audit and the transfer of its champions were fixed in the protocol (section 9.7) and built (`../analysis/check_arm_D.py`, `../analysis/transfer_to_2013.py`; described in [`../analysis/README.md`](../analysis/README.md)). They were tried on the ten trial runs of the launcher, `trialD_s101` to `trialD_s110`: seeds that belong to no arm, three generations each. What the rehearsal wrote is kept in `rehearsal_arm_D_tools/`: the pilot report of the trial runs, the checks with the audit, the transfer, and five moments of the video that `../analysis/render_champions.py` makes of such runs, with its record of what was checked. Nothing in that folder is a result of an arm.
 
+## In the evening: arms E1 to E3 prepared
+
+Arm D was still running, and nothing of it was read. The three sensitivity arms were fixed in the protocol (section 9.8) and then put into the launcher, the analysis, the audit and the video tool; none of them was started. What is kept in `arms_E/` is the record of how that was checked. Every run here has seed 101, 102 or 103: seeds of no arm.
+
+**The settings** (`check_settings.py`, `settings.json`). Small runs of the search's own command line with the engine options of arm D and of each of the three arms, as the launcher has them. Each arm's run recorded settings that differ from arm D's in its one setting and in no other:
+
+| Arm | Options next to the search's | What its run recorded differently from arm D's |
+|---|---|---|
+| E1 | `--preset cheney2013-floor --damping-global 0.01` | global damping 0.01 in place of 0.001 |
+| E2 | `--preset cheney2013-floor --amp 0.2 --poisson on` | amplitude 0.2 in place of 0.14; volumetric law on in place of off |
+| E3 | `--preset cheney2013` | the preset; floor `voxelyze` in place of `rule2013`; start `floor` in place of `workspace` |
+
+**The first population** (`check_first_population.py`, `first_population.json`). Seeds 1 to 3 are seeds of arm D and of each E arm. Runs of one generation under the options of all four arms begin with the same bodies in the same order and share no score. So a run of an E arm begins with the robots of arm D's run of that seed, and the two differ by what the changed setting does from the first evaluation on.
+
+**The launcher's trial.** Three runs with each arm's command, two generations each, next to arm D's ten runs; logs in `arms_E/rehearsal/`.
+
+| Tried | Result |
+|---|---|
+| E2 and E3 started together, each by its own launcher | All six ended; each run's record shows its arm's command and settings |
+| E1 started waiting (`trial_waiting_start.py`: in that process the name of arm D was pointed at the trial of arm E3, because the real arm D runs for days; in its log "Arm D" is that trial) | It waited 26 minutes and started nothing; when the trial it waited for had ended with its three runs complete, it started its own three within the minute |
+| `trialE3_s102` ended from outside during its second generation | The launcher continued it from its checkpoint; its log shows no score |
+| Seed 101 with arm E2's command and five robots at a time, against the trial run with three (`check_five_at_a_time.py`, `five_at_a_time.json`) | The same run: 60 of 60 scores, all 30 bodies of the final population |
+
+The volumetric law shortens the engine's time step by a factor of 1.57 for every body: a body of muscle only has 3.5e-5 s under the other settings and 2.2e-5 s under arm E2's, and the three trial champions of arm E2's settings have 1.0e-5 s where the others have 1.6e-5 s or 3.5e-5 s. A generation of arm E2's command took about twice as long. That is why arm E2's runs simulate five robots at a time.
+
+**The tools rehearsed** on those nine trial runs (`arms_E/rehearsal/`): their pilot reports, the checks with the audit, and five moments of the video of each trial.
+
+| Trial | Champions that get their recorded score when evaluated again with the arm's own settings | Change of the score at a quarter of the time step | How deep the lowest voxel stood in the floor (median) |
+|---|---|---|---|
+| E1 settings | 3 of 3, to the last digit | 0.3% to 0.4% | 0.55 of a voxel |
+| E2 settings | 3 of 3, to the last digit | 0.6% to 10.9% | 1.09 voxels |
+| E3 settings (hard floor) | 3 of 3, to the last digit | 0.6% to 1.6% | 0.14 of a voxel |
+
+These are robots of a second generation. The table shows that the audit measures what it should under each arm's settings; it says nothing about the arms.
+
+**The arm mode, with stand-ins** (`dress_rehearsal.py`). The tools of an E arm's analysis need an analysed arm D next to an analysed E arm: the report with the comparison against arm D, the checks of that comparison from the raw files of both arms, and the video with the arm below arm D. To try that mode before any arm is analysed, the trial runs stand in for the arms in one process: `trialD_s101` to `s110` for arm D, `trial<E>_s101` to `s103` for the E arm. It ran through for all three arms: every check holds, and in the video each of the four robots in the MuJoCo engine reproduces its recorded score to the last digit under the settings of its own arm. Its files carry the names of arms and are made of trial runs, so they stay in `results/`, out of git.
+
 ## Files
 
 | File | What it is |
@@ -133,3 +170,9 @@ Arm D was started at 15:03. While it ran, the audit and the transfer of its cham
 | `check_same_scores.py`, `same_scores.json` | Every evaluation behind the two transfer reports computed again with the new code and compared with the committed report; the memory each evaluation used |
 | `measure_memory.py`, `memory_after.json` | The worst case for MuJoCo's memory, what MuJoCo does with too little, and what a process asks the system for |
 | `rehearsal_arm_D_tools/` | The tools for arm D's champions tried on the trial runs with seeds 101 to 110: their pilot report, the checks with the audit, the transfer into the 2013 simulator |
+| `arms_E/check_settings.py`, `settings.json` | Small runs with each E arm's options: what each recorded differently from arm D's |
+| `arms_E/check_first_population.py`, `first_population.json` | One-generation runs under the options of all four arms: the same first population |
+| `arms_E/check_five_at_a_time.py`, `five_at_a_time.json` | Arm E2's command with five robots at a time against three: the same run |
+| `arms_E/trial_waiting_start.py` | The trial of a launcher that waits for another arm of this project's search |
+| `arms_E/dress_rehearsal.py` | The arm mode of the E arms' tools, tried with trial runs standing in for the arms |
+| `arms_E/rehearsal/` | The nine trial runs' launcher logs, pilot reports, checks with the audit, and stills of their videos |

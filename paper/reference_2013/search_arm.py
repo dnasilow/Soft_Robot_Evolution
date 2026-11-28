@@ -34,8 +34,9 @@ How these arms differ from the re-runs of the original program (R, Rc)
   - Runs side by side: all of them by default. In arm A each simulates one robot at a time, the
     pattern of arm R, which keeps every core busy with 35 runs. Arm D has 10 runs, so each
     simulates three robots at a time (--workers); the scores do not depend on that number. Arms
-    E1 to E3 have 3 runs each, with three robots at a time; the three arms can run side by side,
-    each with its own launcher (9 runs, 27 simulations at a time).
+    E1 to E3 have 3 runs each, with three robots at a time in arms E1 and E3 and five in arm E2,
+    whose robots take about twice as long to simulate; the three arms can run side by side, each
+    with its own launcher (9 runs, 33 simulations at a time).
   - Every run is started with one linear-algebra thread (PROTOCOL.md section 9.6).
   - The arms in the MuJoCo engine (D, E1 to E3), memory: a run is started only while the system
     can still promise the memory its processes may ask for. A run that an error stopped is
@@ -76,8 +77,12 @@ ARMS = {
     'E1': {'tag': 'armE1', 'generations': 300, 'condition': 'noCost', 'seeds': '1-3', 'code': 'campaign-v4',
            'workers': 3, 'runner': ['--preset', 'cheney2013-floor', '--damping-global', '0.01',
                                     '--no-age-pareto', '--pop', '30']},
+    # Arm E2 simulates five robots at a time where the others simulate three: with the volumetric
+    # law the engine's time step is shorter, and a generation takes about twice as long. That is
+    # machine time; the scores do not depend on it (seed 101 with five at a time repeats the run
+    # with three, 60 of 60 scores: the trial of 27 November 2026).
     'E2': {'tag': 'armE2', 'generations': 300, 'condition': 'noCost', 'seeds': '1-3', 'code': 'campaign-v4',
-           'workers': 3, 'runner': ['--preset', 'cheney2013-floor', '--amp', '0.2', '--poisson', 'on',
+           'workers': 5, 'runner': ['--preset', 'cheney2013-floor', '--amp', '0.2', '--poisson', 'on',
                                     '--no-age-pareto', '--pop', '30']},
     'E3': {'tag': 'armE3', 'generations': 300, 'condition': 'noCost', 'seeds': '1-3', 'code': 'campaign-v4',
            'workers': 3, 'runner': ['--preset', 'cheney2013', '--no-age-pareto', '--pop', '30']},

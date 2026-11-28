@@ -170,8 +170,8 @@ class TestArmsE(unittest.TestCase):
         for name, runner in self.RUNNERS.items():
             arm = search_arm.ARMS[name]
             self.assertEqual(arm['runner'], runner)
-            self.assertEqual((arm['generations'], arm['condition'], arm['tag'], arm['seeds'], arm['code'], arm['workers']),
-                             (300, 'noCost', 'arm' + name, '1-3', 'campaign-v4', 3))
+            self.assertEqual((arm['generations'], arm['condition'], arm['tag'], arm['seeds'], arm['code']),
+                             (300, 'noCost', 'arm' + name, '1-3', 'campaign-v4'))
             self.assertFalse(search_arm.in_the_2013_simulator(arm))
             self.assertEqual(runner[-3:], d['runner'][-3:])               # the search itself is arm D's
         # and arm D, which is running, is what it was
@@ -228,11 +228,18 @@ class TestArmsE(unittest.TestCase):
             with self.assertRaises(SystemExit, msg=argv), contextlib.redirect_stderr(io.StringIO()):
                 start_arm.main(argv)
 
-    def test_the_three_arms_fit_in_memory_side_by_side(self):
+    def test_robots_at_a_time_and_memory(self):
+        """Arm E2's robots take about twice as long to simulate (the volumetric law shortens the
+        time step), so its runs simulate five at a time and the others three. Machine time only:
+        the scores do not depend on it."""
+        self.assertEqual({name: search_arm.ARMS[name]['workers'] for name in self.RUNNERS}, {'E1': 3, 'E2': 5, 'E3': 3})
+        cmd = search_arm.runner_command(search_arm.ARMS['E2'], 'python.exe', 'armE2', 2, 300, search_arm.ARMS['E2']['workers'])
+        self.assertEqual(cmd[cmd.index('--workers') + 1], '5')
         per, keep = search_arm.GB_PER_PROCESS, search_arm.KEEP_FREE_GB
-        # each arm's launcher asks for its own three runs of four processes
+        # each arm's launcher asks for its own three runs: four processes each, six in arm E2
         self.assertEqual(search_arm.room_for(3, 3, free=64.0)[2], keep + 12 * per)
-        self.assertTrue(search_arm.room_for(3, 3, free=keep + 12 * per)[0])
+        self.assertEqual(search_arm.room_for(3, 5, free=64.0)[2], keep + 18 * per)
+        self.assertTrue(search_arm.room_for(3, 5, free=keep + 18 * per)[0])
 
 
 class TestRunState(unittest.TestCase):

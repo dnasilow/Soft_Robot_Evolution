@@ -1,0 +1,22 @@
+[27 Nov 16:47] launcher started (process 87208, no window): arm E3, runs trialE3_s101 to trialE3_s103 (3 seeds), 2 generations each; 3 side by side, 3 simulation(s) at a time in each
+[27 Nov 16:47] NOTE: this console belongs to the Claude app. A launcher started here ends when the app closes. Without --here it is started through the Windows shell.
+[27 Nov 16:47] Keep-awake : ON (system + execution required - survives Modern Standby)
+[27 Nov 16:47] code campaign-v4-8-gd7b0ddb, modified tracked files: [' M MUJOCO_LOG.TXT', ' M paper/analysis/analyse_arm.py', ' M paper/analysis/check_arm_D.py', ' M paper/analysis/render_champions.py', ' M paper/analysis/transfer_scores.py', ' M tests/test_arm_D_tools.py', ' M tests/test_protocol_analysis.py', ' M tests/test_render_champions.py', ' M tests/test_transfer_scores.py']; the MuJoCo engine, one linear-algebra thread in every process
+[27 Nov 16:47] 0 runs are complete already, 0 are continued from their checkpoints, 3 start from the beginning.
+[27 Nov 16:48] 3 runs: 3 running. Generation of 2: slowest 0, median 0, fastest 0.
+[27 Nov 16:51] 3 runs: 3 running. Generation of 2: slowest 0, median 0, fastest 0.
+[27 Nov 16:54] 3 runs: 3 running. Generation of 2: slowest 0, median 0, fastest 0.
+[27 Nov 16:57] 3 runs: 3 running. Generation of 2: slowest 0, median 0, fastest 0.
+[27 Nov 16:59] trialE3_s102: ended with code 1 at generation 1; continuing it from its checkpoint (start 2 of 6). Its last lines: Generating 30 CPPN robots... / Evaluating initial population... / Gen   1/2  best=(not shown)W  mean=(not shown)W  worst=(not shown)W  [631.4s]  species=1  cppn=N10/E24
+[27 Nov 17:00] 3 runs: 3 running. Generation of 2: slowest 1, median 1, fastest 1.
+[27 Nov 17:03] 3 runs: 3 running. Generation of 2: slowest 1, median 1, fastest 1.
+[27 Nov 17:06] 3 runs: 3 running. Generation of 2: slowest 1, median 1, fastest 1.
+[27 Nov 17:08] trialE3_s103: complete
+[27 Nov 17:09] 3 runs: 2 running, 1 finished. Generation of 2: slowest 1, median 1, fastest 1.
+[27 Nov 17:10] trialE3_s101: complete
+[27 Nov 17:12] 3 runs: 1 running, 2 finished. Generation of 2: slowest 1, median 1, fastest 1.
+[27 Nov 17:13] trialE3_s102: complete
+[27 Nov 17:13] 3 runs: 3 finished.
+[27 Nov 17:13] 3 of 3 runs are complete with 2 generations.
+[27 Nov 17:13] The trial is complete.
+[27 Nov 17:13] launcher ended

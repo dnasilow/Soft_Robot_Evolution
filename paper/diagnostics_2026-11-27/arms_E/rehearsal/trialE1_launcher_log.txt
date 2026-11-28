@@ -1,0 +1,22 @@
+[27 Nov 16:47] launcher started (process 66208, no window): arm E1, runs trialE1_s101 to trialE1_s103 (3 seeds), 2 generations each; 3 side by side, 3 simulation(s) at a time in each
+[27 Nov 16:47] NOTE: this console belongs to the Claude app. A launcher started here ends when the app closes. Without --here it is started through the Windows shell.
+[27 Nov 16:47] Keep-awake : ON (system + execution required - survives Modern Standby)
+[27 Nov 16:47] code campaign-v4-8-gd7b0ddb, modified tracked files: [' M MUJOCO_LOG.TXT', ' M paper/analysis/analyse_arm.py', ' M paper/analysis/check_arm_D.py', ' M paper/analysis/render_champions.py', ' M paper/analysis/transfer_scores.py', ' M tests/test_arm_D_tools.py', ' M tests/test_protocol_analysis.py', ' M tests/test_render_champions.py', ' M tests/test_transfer_scores.py']; the MuJoCo engine, one linear-algebra thread in every process
+[27 Nov 16:47] Arm D is running. Waiting for it to finish; nothing is started before that.
+[27 Nov 17:13] Arm D is complete: 3 of 3 runs with 2 generations.
+[27 Nov 17:13] Starting arm E1 now.
+[27 Nov 17:13] 0 runs are complete already, 0 are continued from their checkpoints, 3 start from the beginning.
+[27 Nov 17:14] 3 runs: 3 running. Generation of 2: slowest 0, median 0, fastest 0.
+[27 Nov 17:17] 3 runs: 3 running. Generation of 2: slowest 0, median 0, fastest 0.
+[27 Nov 17:20] 3 runs: 3 running. Generation of 2: slowest 0, median 0, fastest 0.
+[27 Nov 17:23] 3 runs: 3 running. Generation of 2: slowest 1, median 1, fastest 1.
+[27 Nov 17:26] 3 runs: 3 running. Generation of 2: slowest 1, median 1, fastest 1.
+[27 Nov 17:29] 3 runs: 3 running. Generation of 2: slowest 1, median 1, fastest 1.
+[27 Nov 17:31] trialE1_s102: complete
+[27 Nov 17:31] trialE1_s103: complete
+[27 Nov 17:32] 3 runs: 1 running, 2 finished. Generation of 2: slowest 1, median 1, fastest 1.
+[27 Nov 17:33] trialE1_s101: complete
+[27 Nov 17:33] 3 runs: 3 finished.
+[27 Nov 17:33] 3 of 3 runs are complete with 2 generations.
+[27 Nov 17:33] The trial is complete.
+[27 Nov 17:33] launcher ended

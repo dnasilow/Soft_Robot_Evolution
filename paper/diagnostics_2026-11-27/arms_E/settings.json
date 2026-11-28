@@ -1,0 +1,131 @@
+{
+ "seed": 101,
+ "small": [
+  "--pop",
+  "4",
+  "--grid-size",
+  "5"
+ ],
+ "arm_D": {
+  "options": [
+   "--preset",
+   "cheney2013-floor",
+   "--no-age-pareto",
+   "--pop",
+   "4",
+   "--grid-size",
+   "5"
+  ],
+  "preset_applied": {
+   "body": "beam",
+   "materials": "cheney2013",
+   "floor_contact": "rule2013",
+   "friction_static": 1.0,
+   "friction_kinetic": 0.5,
+   "freq": 40.0,
+   "amp": 0.14,
+   "poisson": "off",
+   "damping_global": 0.001,
+   "sim_time": 0.25,
+   "settle": 0.0,
+   "direction": "any",
+   "divide_by": "workspace",
+   "fitness": "forward",
+   "no_trim": true,
+   "start": "workspace"
+  }
+ },
+ "arms": {
+  "E1": {
+   "options": [
+    "--preset",
+    "cheney2013-floor",
+    "--damping-global",
+    "0.01",
+    "--no-age-pareto",
+    "--pop",
+    "4",
+    "--grid-size",
+    "5"
+   ],
+   "settings_that_differ_from_arm_D": {
+    "damping_global": [
+     0.001,
+     0.01
+    ]
+   },
+   "preset_entries_not_applied": [
+    "damping_global"
+   ],
+   "preset_entries_applied_with_another_value": {},
+   "differs_in_the_named_setting_and_no_other": true
+  },
+  "E2": {
+   "options": [
+    "--preset",
+    "cheney2013-floor",
+    "--amp",
+    "0.2",
+    "--poisson",
+    "on",
+    "--no-age-pareto",
+    "--pop",
+    "4",
+    "--grid-size",
+    "5"
+   ],
+   "settings_that_differ_from_arm_D": {
+    "amp": [
+     0.14,
+     0.2
+    ],
+    "poisson": [
+     "off",
+     "on"
+    ]
+   },
+   "preset_entries_not_applied": [
+    "amp",
+    "poisson"
+   ],
+   "preset_entries_applied_with_another_value": {},
+   "differs_in_the_named_setting_and_no_other": true
+  },
+  "E3": {
+   "options": [
+    "--preset",
+    "cheney2013",
+    "--no-age-pareto",
+    "--pop",
+    "4",
+    "--grid-size",
+    "5"
+   ],
+   "settings_that_differ_from_arm_D": {
+    "floor_contact": [
+     "rule2013",
+     "voxelyze"
+    ],
+    "preset": [
+     "cheney2013-floor",
+     "cheney2013"
+    ],
+    "start": [
+     "workspace",
+     "floor"
+    ]
+   },
+   "preset_entries_not_applied": [
+    "start"
+   ],
+   "preset_entries_applied_with_another_value": {
+    "floor_contact": [
+     "rule2013",
+     "voxelyze"
+    ]
+   },
+   "differs_in_the_named_setting_and_no_other": true
+  }
+ },
+ "each_arm_differs_in_its_one_setting_only": true
+}

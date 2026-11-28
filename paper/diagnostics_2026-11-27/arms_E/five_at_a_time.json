@@ -1,0 +1,65 @@
+{
+ "runs": {
+  "trialE2_s101": {
+   "robots_at_a_time": [
+    3
+   ],
+   "command": [
+    "run_tendon_evolution.py",
+    "--preset",
+    "cheney2013-floor",
+    "--amp",
+    "0.2",
+    "--poisson",
+    "on",
+    "--no-age-pareto",
+    "--pop",
+    "30",
+    "--gen",
+    "2",
+    "--workers",
+    "3",
+    "--seed",
+    "101",
+    "--name",
+    "trialE2_s101"
+   ]
+  },
+  "trialW_s101": {
+   "robots_at_a_time": [
+    5
+   ],
+   "command": [
+    "run_tendon_evolution.py",
+    "--preset",
+    "cheney2013-floor",
+    "--amp",
+    "0.2",
+    "--poisson",
+    "on",
+    "--no-age-pareto",
+    "--pop",
+    "30",
+    "--gen",
+    "2",
+    "--workers",
+    "5",
+    "--seed",
+    "101",
+    "--name",
+    "trialW_s101"
+   ]
+  }
+ },
+ "the_same_settings_but_for_the_number_at_a_time": true,
+ "scores": {
+  "compared": 60,
+  "identical_to_the_last_digit": 60
+ },
+ "final_population": {
+  "robots": 30,
+  "the_same_bodies": 30,
+  "the_same_scores": 30
+ },
+ "the_same_run": true
+}

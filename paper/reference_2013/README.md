@@ -170,7 +170,37 @@ Tried on 27 November with ten runs side by side (`trialD_s101` to `trialD_s110`:
 
 **How long the arm will take.** With all ten runs going, a generation took 8.8 minutes in the median (7.3 to 10.8 over the 30 generations of the trial), which is 53 seconds per evaluation. At that pace 300 generations are 44 hours. The first three generations are not the whole run: a first population is a mix of sizes and materials, while the champions evolved so far are large and nearly all muscle, which needs fewer time steps (arm A's champions took 44 seconds each under a comparable load), and the last runs speed up as the others finish. Expect about two days, somewhere between one and a half and two and a half. Arm A's forecasts from its first minutes were off by as much.
 
-Arm D was started on 27 November at 15:03: all ten runs from the code of `campaign-v4`, each started once, with one thread in every process. Its first generation took 8.6 minutes in the median (6.5 to 9.6), and its 40 processes ask the system for 2.5 GB together. No body was refused and no run stopped itself in that generation.
+Arm D was started on 27 November at 15:03: all ten runs from the code of `campaign-v4`, each started once, with one thread in every process. Its first generation took 8.6 minutes in the median (6.5 to 9.6), and its 40 processes ask the system for 2.5 GB together. No body was refused and no run stopped itself in that generation. That pace did not hold. From 18:00 on 27 November to midnight, with nothing else on the machine, a generation took 11 minutes in the median run, 8 in the fastest and 16 in the slowest (generations 14 to 46, 18 to 66 and 11 to 34). At that pace the arm is complete on Monday 30 November, not on Sunday as its first generation suggested.
+
+### Arms E1 to E3: arm D with one setting undone
+
+The same commands with `--arm E1`, `--arm E2` and `--arm E3`. Prepared on 27 November 2026, while arm D was running; **not started**. Each is started on the author's word (PROTOCOL.md, section 9.8).
+
+- **A run** is arm D's with other engine options, seeds 1 to 3, 300 generations, from the code of `campaign-v4`:
+
+  | Arm | `run_tendon_evolution.py` ... `--no-age-pareto --pop 30 --gen 300 --workers <n> --seed <s> --name arm<E>_s<s>` | Robots at a time (`<n>`) |
+  |---|---|---|
+  | E1 | `--preset cheney2013-floor --damping-global 0.01` | 3 |
+  | E2 | `--preset cheney2013-floor --amp 0.2 --poisson on` | 5 |
+  | E3 | `--preset cheney2013` | 3 |
+
+  An option given next to a preset replaces the preset's value. Checked with small runs on seed 101: each differs from arm D's settings in its one setting and in no other (global damping; amplitude and volumetric law; floor and start).
+- **Arm E2 simulates five robots at a time.** The volumetric law shortens the engine's time step by a factor of 1.57 for every body (a body of muscle only: from 3.5e-5 s to 2.2e-5 s), so a robot takes that many more steps, and in the trial a generation took about twice as long. Five at a time brings its runs near the pace of the others. It is machine time and changes no score: seed 101 with five at a time repeats the run with three, 60 of 60 scores and all 30 final bodies.
+- **Each arm has its own launcher**, its own lock and its own files in `results/campaign/` (`armE1_...`). The three can run side by side: nine runs, 33 robots at a time, about as many as arm D's 30.
+- **An arm can wait for arm D.** `--arm E1 --after D` makes its checks at once and then waits until arm D's launcher has ended. It starts the arm only if all ten runs of arm D are complete with their 300 generations; if arm D ended unfinished it starts nothing and says so. `--stop` ends the wait. The wait looks at arm D's lock and at the names of its files, never at a score.
+- Everything else is as for arm D: one linear-algebra thread, memory looked at before a run is started, a run that ends early is continued from its checkpoint, the log shows no score, and a run that stands still for two hours is ended and continued.
+
+Tried on 27 November with three runs for each arm (`trialE1_s101` to `trialE3_s103`: seeds 101 to 103, which belong to no arm, two generations each), next to arm D's ten runs. The record is in `../diagnostics_2026-11-27/arms_E/`.
+
+| Tried | Result |
+|---|---|
+| Three runs with each arm's command, each arm with its own launcher; E2 and E3 started together | All nine ran to the end (E3 in 26 minutes, E2 in 41, E1 in 20). Every run's manifest shows the arm's command, the preset applied without the entries the command replaces, the replaced settings with the command's values, one thread, and code that is `campaign-v4` in every file that computes a run |
+| The trial of E1 started waiting (`--after`). The real arm D runs for days, so for the trial the name of arm D was pointed at the trial of arm E3, in that launcher's process only (`trial_waiting_start.py`) | It waited 26 minutes, starting nothing; when that trial's launcher had ended with its three runs complete, it started its own runs within the minute |
+| One run (`trialE3_s102`) had its processes ended from outside while it evaluated its second population | The launcher logged the end without a score, continued the run from its checkpoint (start 2 of 6), and the run finished |
+| Seed 101 with arm E2's command and five robots at a time (`trialW_s101`), against the trial run with three | The same run: 60 of 60 scores and all 30 bodies of the final population |
+| Bodies the engine refused, runs that stopped themselves | None |
+
+**How long they will take.** In the trial, with arm D's ten runs and other work on the machine, a generation took 9 to 12 minutes for E1 and E3 and about 20 for E2 with three robots at a time; with five at a time and less on the machine E2 took 10. Run by themselves, the three arms simulate 33 robots at a time, about as many as arm D's 30, so arm D's pace is the guide: 11 minutes a generation in the median run and 8 to 16 across runs, which makes two and a half days for 300 generations, somewhere between two and three and a half. Two generations say little about the three hundred that follow.
 
 Arm R ran from 21 November 23:27 to 22 November 21:40. Its outcome is in [`../outcomes/README.md`](../outcomes/README.md).
 
@@ -185,7 +215,7 @@ Arm A ran from 23 November 23:21, started by its launcher when arm Rc was comple
 | File | Purpose |
 |---|---|
 | `build_2013_search.sh`, `compat_2013_search.h`, `patches_2013_search/` | Build the original search program |
-| `start_arm.py`, `search_arm.py` | Start and look after a whole arm of the campaign (section 6); the second holds what is particular to arm A |
+| `start_arm.py`, `search_arm.py` | Start and look after a whole arm of the campaign (section 6); the second holds what is particular to the arms run with this project's own search (A, D, E1 to E3) |
 | `run_2013_search.sh`, `collect_2013_runs.sh`, `stop_2013_runs.sh`, `summarise_reruns.py` | Re-run the original experiment, copy out and stop its runs, and compare it with the deposit |
 | `make_template.py` | Writes the settings template from a deposited robot file, after checking the files agree |
 | `build_2013_simulator.sh` | Builds the simulator in WSL from `research_reference/repositories/softbots2013Code.tgz` |

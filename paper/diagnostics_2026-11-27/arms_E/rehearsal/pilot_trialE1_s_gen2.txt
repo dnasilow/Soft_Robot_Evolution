@@ -1,0 +1,24 @@
+PILOT, not an arm of the campaign: runs trialE1_s<seed>, 3 runs at generation 2.
+Reference: the 35 deposited 2013 runs, condition noCost.
+Made 2026-11-27T17:34 with code campaign-v4-10-ge55c9df-dirty; 10000 bootstrap resamples, seed 0.
+
+NOTE: A pilot. The reproduction criterion applies to complete arms only.
+NOTE: The body table sets generation 2 against the deposited generation 1000: a test of the code, not a comparison.
+
+SCORES: the champion's original score, best so far
+generation             runs    arm median (quartiles)  deposited median (quartiles)  ratio  95% interval   A12 (95% interval)        p
+         2                3          0.78 (0.75-0.84)              0.95 (0.87-1.07)   0.82   0.72-0.99    0.15 (0.00-0.35)    0.0484
+
+BODY of each run's champion at generation 2 (3 runs) against the deposited champions of generation 1000 (35 runs)
+               measure    arm median (quartiles)  deposited median (quartiles)   A12 (95% interval)        p  p (Holm)
+                voxels             658 (446-775)                 652 (594-698)  0.50 (0.00-1.00)    1.0000    1.0000
+     footprint (cells)                48 (28-74)                    26 (14-40)  0.68 (0.14-1.00)    0.3296    1.0000
+  fill of bounding box          0.67 (0.66-0.78)              0.65 (0.59-0.70)  0.69 (0.41-1.00)    0.3193    1.0000
+       muscle fraction          0.64 (0.57-0.67)              1.00 (0.96-1.00)  0.03 (0.00-0.10)    0.0046    0.0229
+      two or more feet                  0 of 3                         1 of 35         (Fisher exact)    1.0000    1.0000
+
+PER SEED
+seed  generations     score@2  voxels  footprint   fill  muscle  feet  note
+ 101            2      0.7793     658        100   0.66    0.70     1  
+ 102            2      0.9047     892         48   0.89    0.64     1  
+ 103            2      0.7257     233          8   0.67    0.51     1  

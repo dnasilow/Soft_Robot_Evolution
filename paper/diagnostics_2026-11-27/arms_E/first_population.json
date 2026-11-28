@@ -1,0 +1,33 @@
+{
+ "seed": 101,
+ "small": [
+  "--pop",
+  "6",
+  "--grid-size",
+  "5"
+ ],
+ "robots": 6,
+ "voxels_of_each": [
+  87,
+  55,
+  41,
+  80,
+  44,
+  82
+ ],
+ "arms": {
+  "E1": {
+   "the_same_bodies_in_the_same_order": true,
+   "robots_with_the_same_score": 0
+  },
+  "E2": {
+   "the_same_bodies_in_the_same_order": true,
+   "robots_with_the_same_score": 0
+  },
+  "E3": {
+   "the_same_bodies_in_the_same_order": true,
+   "robots_with_the_same_score": 0
+  }
+ },
+ "every_arm_begins_with_the_population_of_arm_D": true
+}

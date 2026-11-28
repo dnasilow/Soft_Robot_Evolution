@@ -677,7 +677,7 @@ def main(argv=None):
                     help='start unfinished seeds again from the beginning (their folders are moved aside)')
     ap.add_argument('--jobs', type=int, help='runs side by side (default: all seeds at once; each uses one core)')
     ap.add_argument('--workers', type=int, help="arms A, D and E1 to E3 only: simulations at a time within one run "
-                                                "(default: the arm's own, 1 for arm A and 3 for the others)")
+                                                "(default: the arm's own, 1 for arm A, 5 for arm E2 and 3 for the others)")
     ap.add_argument('--after', choices=sorted(ARMS) + sorted(search_arm.ARMS),
                     help='arms A, D and E1 to E3 only: wait until that arm has finished completely, then start; '
                          'if it ends unfinished, start nothing (e.g. --arm E1 --after D)')

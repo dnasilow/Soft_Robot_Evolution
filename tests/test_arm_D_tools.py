@@ -435,6 +435,22 @@ class TestArmsE(unittest.TestCase):
         self.assertAlmostEqual(final['arm_median'], 0.5 * (0.1 * 2 + 0.25 * GENERATIONS))
         self.assertAlmostEqual(final['ratio_to_the_other_arm'], final['arm_median'] / final['other_median'])
         self.assertLessEqual(final['largest_difference_from_the_report'], 1e-9)
+        # the report's list of the seeds both arms have, each with its two scores
+        g = GENERATIONS
+        pairs = [{'seed': s, 'arm': 0.5 * max(max(f) for f in scores_of(s)[:g]), 'other': max(max(f) for f in scores_of(s)[:g])}
+                 for s in (1, 2, 3)]
+        report['against']['same_seeds'] = {'generation': g, 'runs': pairs}
+        hand, _ = cd.by_hand(spec_, report, self.results, deposit=DEPOSIT)
+        self.assertEqual(hand['against']['seeds_listed_with_both_scores'], {'seeds': [1, 2, 3], 'as_in_the_raw_files': True})
+        self.assertTrue(hand['agrees_with_the_report'])
+        pairs[1]['other'] += 0.001                                         # a score of the other arm that is not its run's
+        hand, _ = cd.by_hand(spec_, report, self.results, deposit=DEPOSIT)
+        self.assertFalse(hand['against']['seeds_listed_with_both_scores']['as_in_the_raw_files'])
+        self.assertFalse(hand['agrees_with_the_report'])
+        pairs[1]['other'] -= 0.001
+        del pairs[2]                                                       # a seed left out of the list
+        self.assertFalse(cd.by_hand(spec_, report, self.results, deposit=DEPOSIT)[0]['agrees_with_the_report'])
+        del report['against']['same_seeds']
         # a report whose comparison with arm D is off, or is not there, does not pass
         report['against']['scores'][str(GENERATIONS)]['reference_median'] += 0.001
         self.assertFalse(cd.by_hand(spec_, report, self.results, deposit=DEPOSIT)[0]['agrees_with_the_report'])

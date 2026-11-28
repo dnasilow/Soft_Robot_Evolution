@@ -223,6 +223,17 @@ def by_hand(spec, report, results=RESULTS, deposit=None):
                 mine['largest_difference_from_the_report'] = max(abs(mine[k] - theirs[k]) for k in theirs)
                 agrees = agrees and mine['largest_difference_from_the_report'] <= 1e-9
             out['against']['generations'][str(g)] = mine
+        # the report's list of the seeds both arms have, each with its two scores (section 9.8, point 9)
+        listed = block.get('same_seeds')
+        if listed is not None:
+            g = listed['generation']
+            shared = [s for s in spec['seeds'] if s in against['seeds']]
+            pairs = {p['seed']: p for p in listed['runs']}
+            good = sorted(pairs) == shared and all(
+                abs(pairs[s]['arm'] - max(arm[s][:g])) <= SAME and abs(pairs[s]['other'] - max(other[s][:g])) <= SAME
+                for s in shared)
+            out['against']['seeds_listed_with_both_scores'] = {'seeds': shared, 'as_in_the_raw_files': bool(good)}
+            agrees = agrees and good
     out['agrees_with_the_report'] = bool(agrees and out['seeds_whose_scores_agree_with_the_report'] == len(arm))
     return out, arm
 
@@ -493,6 +504,10 @@ def main(argv=None):
             print(f"    generation {g:>4}: {spec['name']} {v['arm_median']:.4f}, arm {other['arm']} {v['other_median']:.4f}; ratio "
                   f"{v['ratio_to_the_other_arm']:.4f}; A12 {v['a12_against_the_other_arm']:.4f}; largest difference from the "
                   f"report " + ('-' if difference is None else f'{difference:.1e}'))
+        listed = other.get('seeds_listed_with_both_scores')
+        if listed:
+            print(f"    the seeds both arms have, {listed['seeds']}: the report lists their two scores "
+                  + ('as the raw files give them' if listed['as_in_the_raw_files'] else 'BUT NOT as the raw files give them'))
 
     records = runs(spec, a.results_dir)
     print('\nTHE RUNS')

@@ -611,6 +611,20 @@ class TestArmEReports(unittest.TestCase):
         self.assertIn('Arm D itself against the deposited runs at generation 300', self.text1)
         self.assertNotIn('The floor, measured for the original code itself', self.text1)
 
+    def test_the_same_seeds_of_both_arms_are_listed_side_by_side(self):
+        """Seeds 1 to 3 are seeds of arm D too, and a run begins with the population its seed
+        gives: listed, not tested (section 9.8, point 9)."""
+        listed = self.e1['against']['same_seeds']
+        self.assertEqual((listed['generation'], [p['seed'] for p in listed['runs']]), (300, [1, 2, 3]))
+        d = {row['seed']: row['scores']['300'] for row in self.d['per_seed']}
+        e = {row['seed']: row['scores']['300'] for row in self.e1['per_seed']}
+        for p in listed['runs']:
+            self.assertEqual((p['arm'], p['other']), (e[p['seed']], d[p['seed']]))
+            self.assertAlmostEqual(p['ratio'], e[p['seed']] / d[p['seed']])
+        self.assertIn("The same seeds in arm D at generation 300, listed and not tested", self.text1)
+        self.assertRegex(self.text1, r'seed  1: \d\.\d{4} here, \d\.\d{4} in arm D, ratio \d\.\d\d')
+        self.assertNotIn('same_seeds', load_json(os.path.join(aa.OUTCOMES, 'arm_A.json')).get('against', {}))
+
     def test_a_setting_that_changes_nothing_is_not_distinguishable(self):
         self.assertEqual(self.code3, 0, self.text3)
         self.assertEqual(self.e3['against']['reading'], 'not distinguishable')

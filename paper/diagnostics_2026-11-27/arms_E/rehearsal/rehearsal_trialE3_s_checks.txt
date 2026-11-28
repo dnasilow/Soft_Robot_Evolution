@@ -1,0 +1,39 @@
+REHEARSAL TRIALE3_S (not an arm of the campaign): runs in the MuJoCo engine with --preset cheney2013
+
+BY HAND, from the raw files
+  generation    2: rehearsal trialE3_s 1.3723, deposited 0.9545; ratio 1.4377; A12 0.9238; largest difference from the report 0.0e+00
+  seeds whose scores are the report's: 3 of 3
+
+THE RUNS
+  3 runs, started 2026-11-27 16:47:13 to 2026-11-27 17:00:09; code d7b0ddb (the same as campaign-v4 in what computes a run), 3152744 (the same as campaign-v4 in what computes a run); launched 1 time(s); evaluations at a time [3]
+  problems: none
+  runs started more than once: seed 102 (2 starts)
+    seed 102 ended with code 1 at generation 1
+  runs that stood still and were ended by the launcher: none
+  bodies the engine refused (they score 0): 0
+  times a run stopped itself because an evaluation failed (section 9.6): 0
+
+THE CHAMPIONS
+  the one the report measured: 3 of 3
+  is the last point of the curve: 3 of 3
+  is the best of the whole run: 3 of 3
+  is the run s recorded best robot: 3 of 3
+  runs in which different bodies share the top fitness: 0
+  champions that do not touch the bottom of the workspace: 0
+
+AUDIT (PROTOCOL.md, section 9.7, point 2): each champion evaluated again in the MuJoCo engine with --preset cheney2013
+6 evaluations: 6 already done, 0 to do.
+
+  Reproduced score: 3 of 3 champions get their recorded score to the last digit.
+  A quarter of the time step: the score changes by 0.9% in the median, by more than 10% for 0 of 3, and at most by -1.6% (seed 103).
+    The floor of this preset is the engine's hard floor, which has no rule that depends on the time step (section 9.8, point 6).
+  Floor penetration: the lowest voxel sank 0.14 of a voxel below the floor's surface in the median (quartiles 0.13 to 0.14). The floor of this preset is the engine's hard floor.
+  Simulations that blew up: 0 at the engine's time step, 0 at a quarter of it.
+
+  seed  voxels   recorded      again  quarter step   change   sank  sank, quarter
+   101     705     1.7906     1.7906        1.7747    -0.9%   0.15           0.16
+   102     643     1.3305     1.3305        1.3389    +0.6%   0.12           0.13
+   103     552     1.3723     1.3723        1.3509    -1.6%   0.14           0.14
+
+Written to results\analysis\rehearsal_trialE3_s_checks.json and results\analysis\rehearsal_trialE3_s_champion_audit.csv
+ALL CHECKS HOLD

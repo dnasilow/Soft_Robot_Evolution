@@ -1,0 +1,201 @@
+{
+ "reference": "the 35 deposited 2013 runs, condition noCost",
+ "scores": {
+  "2": {
+   "n_arm": 3,
+   "n_reference": 35,
+   "arm_median": 1.3723325649071816,
+   "arm_q25": 1.3514389751644158,
+   "arm_q75": 1.58148237977093,
+   "reference_median": 0.954509,
+   "reference_q25": 0.8714120000000001,
+   "reference_q75": 1.0740750000000001,
+   "a12": 0.9238095238095239,
+   "a12_interval": [
+    0.8,
+    1.0
+   ],
+   "mann_whitney_u": 97.0,
+   "p": 0.009720246562351827,
+   "ratio_of_medians": 1.4377366425116804,
+   "ratio_interval": [
+    1.3147941514868378,
+    1.9532628094088706
+   ]
+  }
+ },
+ "body": {
+  "generation": 2,
+  "reference_generation": 1000,
+  "n_arm": 3,
+  "n_reference": 35,
+  "measures": {
+   "voxels": {
+    "n_arm": 3,
+    "n_reference": 35,
+    "arm_median": 643.0,
+    "arm_q25": 597.5,
+    "arm_q75": 674.0,
+    "reference_median": 652.0,
+    "reference_q25": 594.0,
+    "reference_q75": 698.5,
+    "a12": 0.4666666666666667,
+    "a12_interval": [
+     0.19047619047619047,
+     0.7619047619047619
+    ],
+    "mann_whitney_u": 49.0,
+    "p": 0.878615457562826,
+    "p_holm": 1.0
+   },
+   "footprint": {
+    "n_arm": 3,
+    "n_reference": 35,
+    "arm_median": 62.0,
+    "arm_q25": 57.5,
+    "arm_q75": 66.0,
+    "reference_median": 26.0,
+    "reference_q25": 14.5,
+    "reference_q75": 40.0,
+    "a12": 0.9904761904761905,
+    "a12_interval": [
+     0.9428571428571428,
+     1.0
+    ],
+    "mann_whitney_u": 104.0,
+    "p": 0.005736829394379287,
+    "p_holm": 0.028684146971896432
+   },
+   "fill": {
+    "n_arm": 3,
+    "n_reference": 35,
+    "arm_median": 0.69,
+    "arm_q25": 0.6665,
+    "arm_q75": 0.6975,
+    "reference_median": 0.652,
+    "reference_q25": 0.594,
+    "reference_q75": 0.6984999999999999,
+    "a12": 0.6,
+    "a12_interval": [
+     0.38095238095238093,
+     0.8
+    ],
+    "mann_whitney_u": 63.0,
+    "p": 0.6073968705547652,
+    "p_holm": 1.0
+   },
+   "muscle": {
+    "n_arm": 3,
+    "n_reference": 35,
+    "arm_median": 0.9773049645390071,
+    "arm_q25": 0.7404640764724021,
+    "arm_q75": 0.9886524822695035,
+    "reference_median": 1.0,
+    "reference_q25": 0.9585911836997221,
+    "reference_q75": 1.0,
+    "a12": 0.3380952380952381,
+    "a12_interval": [
+     0.0,
+     0.7142857142857143
+    ],
+    "mann_whitney_u": 35.5,
+    "p": 0.3339082640316122,
+    "p_holm": 1.0
+   },
+   "two_feet": {
+    "arm_yes": 0,
+    "n_arm": 3,
+    "reference_yes": 1,
+    "n_reference": 35,
+    "p": 1.0,
+    "p_holm": 1.0
+   }
+  }
+ },
+ "per_seed": [
+  {
+   "seed": 101,
+   "generations": 2,
+   "scores": {
+    "2": 1.7906321946346786
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 0",
+    "adjusted": 1.7906321946346786,
+    "original": 1.7906321946346786,
+    "filled": 705,
+    "population": 30,
+    "body": {
+     "voxels": 705,
+     "footprint": 70,
+     "fill": 0.705,
+     "muscle": 0.9773049645390071,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 102,
+   "generations": 2,
+   "scores": {
+    "2": 1.3305453854216502
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 15",
+    "adjusted": 1.3305453854216502,
+    "original": 1.3305453854216502,
+    "filled": 643,
+    "population": 30,
+    "body": {
+     "voxels": 643,
+     "footprint": 53,
+     "fill": 0.643,
+     "muscle": 1.0,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  },
+  {
+   "seed": 103,
+   "generations": 2,
+   "scores": {
+    "2": 1.3723325649071816
+   },
+   "champion": {
+    "file": "final_population.pkl, individual 8",
+    "adjusted": 1.3723325649071816,
+    "original": 1.3723325649071816,
+    "filled": 552,
+    "population": 30,
+    "body": {
+     "voxels": 552,
+     "footprint": 62,
+     "fill": 0.69,
+     "muscle": 0.5036231884057971,
+     "feet": 1,
+     "two_feet": false
+    },
+    "curve_agrees": true
+   }
+  }
+ ],
+ "title": "PILOT, not an arm of the campaign: runs trialE3_s<seed>, 3 runs at generation 2.",
+ "notes": [
+  "A pilot. The reproduction criterion applies to complete arms only.",
+  "The body table sets generation 2 against the deposited generation 1000: a test of the code, not a comparison."
+ ],
+ "made": "2026-11-27T17:15",
+ "code": "campaign-v4-10-ge55c9df-dirty",
+ "settings": {
+  "n_boot": 10000,
+  "seed": 0,
+  "criterion": [
+   0.9,
+   1.1
+  ]
+ }
+}

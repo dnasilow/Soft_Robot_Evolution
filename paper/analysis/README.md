@@ -29,7 +29,7 @@ An arm is analysed only as a whole: while one of its seeds is unfinished the scr
 | The deposited cost runs dressed up as an arm, against the no-cost runs | Ratio 0.78 (0.72 to 0.90), "differs"; smaller bodies with less muscle |
 | An arm with a seed short of its generations, unfinished, failed, or missing | Refused, nothing computed |
 
-The rehearsals are in `tests/test_protocol_analysis.py` (36 tests with those for arms A and D). They need the deposited data, which is kept out of git.
+The rehearsals are in `tests/test_protocol_analysis.py` (51 tests with those for arms A, D and E1 to E3). They need the deposited data, which is kept out of git.
 
 The interval of the pilot is 0.86 to 1.48 here. The summary of 21 November gave 0.86 to 1.50: it took the runs in folder-name order, this analysis takes them in seed order, and with 12 runs the resampling differs that much. `summarise_reruns.py` now uses seed order too, so the launcher's closing summary and this analysis give the same interval.
 
@@ -37,14 +37,14 @@ The interval of the pilot is 0.86 to 1.48 here. The summary of 21 November gave 
 
 | File | Purpose |
 |---|---|
-| `protocol_stats.py` | The statistics, as pure functions: comparison of two sets of runs, the criterion, Holm, Fisher's exact test, and what the criterion can show |
+| `protocol_stats.py` | The statistics, as pure functions: comparison of two sets of runs, the criterion, Holm, Fisher's exact test, what the criterion can show, and how often a comparison of few runs is read as a difference |
 | `analyse_arm.py` | Reads an arm's collected runs and the deposited data and writes the report |
 | `check_arm_A.py` | Checks on arm A's report after its analysis: the scores recomputed with readers of its own, each run's record of itself, seed 1 against the pilot, and the audit of every champion (simulated again in the 2013 simulator). Written on 26 November 2026, after the arm's analysis; it changes nothing in the report |
-| `render_champions.py` | Videos of an analysed arm's median and best champion next to their 2013 counterparts, each simulated again in the simulator it was evolved in, with checks that the frames are the simulation that was scored. Arms R, Rc and A: the recording copy of the 2013 simulator. Arm D: this project's MuJoCo engine, and the same two robots once more in the 2013 simulator (below) |
+| `render_champions.py` | Videos of an analysed arm's median and best champion next to their 2013 counterparts, each simulated again in the simulator it was evolved in, with checks that the frames are the simulation that was scored. Arms R, Rc and A: the recording copy of the 2013 simulator. Arm D: this project's MuJoCo engine, and the same two robots once more in the 2013 simulator (below). Arms E1 to E3: next to arm D, each in the engine of its own arm (below) |
 | `transfer_scores.py` | The transfer outcome: every final champion scored in the MuJoCo engine with the preset's settings (below) |
 | `render_transfer.py` | Videos of one champion in both simulators side by side, with checks that both hold the same body and that the frames are the evaluation that was scored |
 | `compare_presets.py` | The two transfer reports side by side, champion by champion: how many keep more of their score under the second preset, with the paired test of the floor test. Reads the reports only; nothing is simulated |
-| `check_arm_D.py` | Checks on arm D's report after its analysis, and the audit of its champions: the scores recomputed with readers of its own, each run's record of itself and of every start, and each champion evaluated again in the MuJoCo engine (below). Written on 27 November 2026, while the arm was running and before any score of it had been read |
+| `check_arm_D.py` | Checks on arm D's report after its analysis, and the audit of its champions: the scores recomputed with readers of its own, each run's record of itself and of every start, and each champion evaluated again in the MuJoCo engine (below). Written on 27 November 2026, while the arm was running and before any score of it had been read. With `--arm E1` (`E2`, `E3`) the same for those arms, with their own settings |
 | `transfer_to_2013.py` | Arm D's transfer outcome: its champions scored in the original 2013 simulator (below). Written the same day |
 
 ## Arm A
@@ -98,7 +98,7 @@ What it was checked against:
 | Rehearsal on the 12 pilot runs at generation 10 | Ran through; seed 1 gives 1.7753, the value measured by hand before the script existed |
 | Reading: made-up arm folders, a made-up deposit, a made-up replay table | The champions of the reports, their bodies, their scores; a body that is not the reported one stops the script |
 
-39 tests for the scoring, 8 for its video tool, 17 for the champions' video tool, 15 for the memory changes of 27 November (`tests/test_memory.py`).
+40 tests for the scoring, 8 for its video tool, 25 for the champions' video tool, 15 for the memory changes of 27 November (`tests/test_memory.py`).
 
 ## Arm D's champions: the audit and the transfer
 
@@ -136,7 +136,7 @@ What they were checked against:
 | The transfer on the same ten champions | Ten simulations; the simulator is by its checksum the program of arms R, Rc and A |
 | Made-up runs: a wrong number in the report, a start with another setting, without the one thread, with changed code, a checkpoint left over, a score off in the thirteenth digit | Each is caught and named |
 
-21 tests in `tests/test_arm_D_tools.py`.
+21 tests in `tests/test_arm_D_tools.py` (29 with those added for arms E1 to E3).
 
 What the rehearsal showed about the audit's second line, on robots that belong to no arm: of the ten trial champions, robots of a third generation, seven changed their score by under 2% at a quarter of the time step and three lost 45% to 68% of it. That says nothing about arm D. It shows what the check is for, and that under this preset a single score can rest on the time step.
 
@@ -157,7 +157,66 @@ python paper/analysis/render_champions.py --rehearsal trialD_s --generation 3   
 
 Tried on the ten trial runs with seeds 101 to 110 (three generations, not an arm): the two trial champions reproduce their recorded scores in the engine to the last digit, the same bodies are found in both simulators, and their scores in the 2013 simulator are the ones the transfer tool gave them. The still picture and the record of that rehearsal are in `../diagnostics_2026-11-27/rehearsal_arm_D_tools/`. The videos of arms R, Rc and A are made by the same code as before: arm R's video, made again with the changed tool, is the committed one in every pixel of every frame, with the same record of its checks.
 
+## Arms E1 to E3
+
+Added on 27 November 2026, while arm D was running and before any of the three was started. What is computed for them was fixed in PROTOCOL.md, section 9.8, and committed before any of this was built. Each is arm D with one setting undone, in three runs of 300 generations:
+
+| Arm | The engine options of its runs | The setting it undoes |
+|---|---|---|
+| E1 | `--preset cheney2013-floor --damping-global 0.01` | Global damping 0.001, the value of the 2013 files, back to the engine's own 0.01 |
+| E2 | `--preset cheney2013-floor --amp 0.2 --poisson on` | Amplitude ±14% without the volumetric law back to ±20% with it |
+| E3 | `--preset cheney2013` | The 2013 simulator's floor and start back to the hard floor with bodies set on it |
+
+```
+python paper/analysis/analyse_arm.py --arm E1               after arm D's analysis; refuses before it
+python paper/analysis/check_arm_D.py --arm E1               after the arm's analysis: checks and audit
+python paper/analysis/render_champions.py --arm E1          after that: the video
+python paper/analysis/analyse_arm.py --what-can-the-criterion-show     what three runs can show, from the deposit alone
+```
+
+**The report** is arm D's with three differences:
+
+- **No primary comparison.** The champion score at generation 300 is the arm's outcome, against the deposited runs with the same statistics, but it is not one of the five primary comparisons of the protocol. The report has an `outcome` where the others have a `primary`, gives the p-value uncorrected and says so.
+- **Against arm D.** The same statistics once more with arm D in the place of the deposit: the ratio of medians is the E arm over arm D. This is the comparison these arms are for. It is read by whether the 95% interval of the ratio contains 1. Arm D's scores are taken from its committed report, so an E arm is not analysed before arm D.
+- **What three runs can show** is printed in the report, computed from the deposited runs alone: three runs drawn from them and multiplied by a factor, set against the deposit or against ten more drawn runs.
+
+  | True ratio of the scores | Against the deposit: the interval excludes 1 | p < 0.05 | Against a 10-run arm: the interval excludes 1 | p < 0.05 |
+  |---|---|---|---|---|
+  | 1 (no difference) | 10% | 3% | 8% | 5% |
+  | 0.9 | 43% | 25% | 26% | 18% |
+  | 0.75 | 93% | 86% | 79% | 65% |
+  | 0.5 | 100% | 100% | 100% | 100% |
+
+  So such an arm can show a loss of a quarter of the score or more. It cannot show a difference of 10%, and "not distinguishable" is no evidence that a setting does not matter. With three runs the interval of the arm's own median is the range of its three scores, and the interval reading gives a false alarm in 8 to 10% of cases; the Mann-Whitney test is exact at these sizes and keeps its 5%.
+
+**The settings are written in one place:** the launcher's command for the arm (`search_arm.ARMS`). `search_arm.engine_options` reads the preset and the options given next to it back from that command, and the audit and the video take the evaluation's settings from there (`transfer_scores.evaluator_arguments(..., given=...)`: an option given next to a preset replaces the preset's value, as in the search). An option the script does not know stops it.
+
+**The checks and the audit** are arm D's (`check_arm_D.py --arm E1`). What is their own:
+
+- **The record of each run** must show the arm's command, the preset applied without the entries the command replaces, and the replaced settings with the command's values.
+- **By hand** the comparison with arm D as well, from the raw files of both arms.
+- **The audit** evaluates each champion again with the arm's own settings. Arms E1 and E2 stand on the 2013 simulator's floor, whose rule depends on the time step; arm E3 stands on the hard floor, which has no such rule.
+
+**The video** (`render_champions.py --arm E1`) shows six robots: the deposited 2013 champions with the median and the best score in the 2013 simulator, arm D's median and best champion in arm D's engine, and the arm's own median and best champion (of three: the second and the first) in the engine with its setting undone. Each robot in the MuJoCo engine must reproduce its recorded score to the last digit under the settings of its own arm, or the script stops. None is shown in the 2013 simulator: the protocol names no transfer outcome for these arms.
+
+**The same seeds.** Seeds 1 to 3 are also seeds of arm D, and a run takes its first population from its seed alone, so a run of an E arm begins with the same thirty robots as arm D's run of that seed (`../diagnostics_2026-11-27/arms_E/check_first_population.py`). The report lists the two scores of each seed side by side, without a test; the checks compare that list with the raw files of both arms.
+
+What they were checked against (`../diagnostics_2026-11-27/arms_E/`):
+
+| Check | Result |
+|---|---|
+| The reports of arms R, Rc and A, written again by the changed analysis from their committed numbers | Identical to the committed text, character for character |
+| Made-up arms: ten deposited runs standing in for arm D; three others at half their scores as an E arm; three of the ten, the ones around their median, as another | The first is read as different from arm D and from the deposit, the second as not distinguishable; an E arm without arm D's report is refused; arm D's own report is untouched (`tests/test_protocol_analysis.py`) |
+| For each of the three settings a run of the search's own command line, small enough for a test; its record checked like an arm's run, its champion evaluated again with the settings read back from the launcher's command | The record passes; the recorded score to the last digit (`tests/test_arm_D_tools.py`) |
+| The checks and the audit on the nine trial runs of 27 November (`trialE1_s101` to `trialE3_s103`: seeds that belong to no arm, two generations each), against their pilot reports | By hand the reports' numbers. The run that was ended on purpose and continued is reported as started twice, and nothing else is flagged. All nine champions get their recorded score to the last digit under the settings of their own arm |
+| The video tool on the same runs | Each trial robot's evaluation, run again and recorded, gives its recorded score to the last digit |
+| A dress rehearsal of the arm mode, with trial runs standing in for arm D and for the E arm in one process (`dress_rehearsal.py`): report, checks with the comparison by hand from both arms' raw files, audit, and the six-robot video | Ran through for all three arms; every check holds. Its files carry the names of arms and are made of trial runs, so they are kept out of git |
+| Made-up runs: runs made with another arm's command, a record that says the volumetric law was off, a comparison with arm D that is off or missing, a seed left out of the list | Each is caught and named |
+
+51 tests for the analysis, 29 for the checks, the audit and the transfer of arms D and E, 25 for the video tool, 54 for the launcher.
+
+What the rehearsal showed, on robots of a second generation that belong to no arm: under arm E2's settings the trial robots tumble and their lowest voxels stand a full voxel deep in the 2013 floor's spring (0.5 to 1.1, against 0.6 for the trial robots of arm D's settings); on arm E3's hard floor they stand 0.14 of a voxel deep and their scores change by under 2% at a quarter of the time step, where three of ten trial robots under arm D's floor rule lost half their score. None of this is a result of an arm. It is what the audit and the videos are there to show.
+
 ## Not yet here
 
-- Arms E1 to E3, in the launcher, the analysis and the audit.
 - Figures.

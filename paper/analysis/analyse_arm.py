@@ -338,6 +338,16 @@ def analyse(runs, condition, generations, primary, body_generation, n_boot=None,
                 report['few_runs'] = what_few_runs_can_show(s['n_arm'], s['n_reference'], primary, condition, seed)
             if measured:
                 block['baseline'] = measured          # the other arm's own result against the deposit
+            # The seeds of such an arm are seeds of the other arm too, and a run takes its first
+            # population from its seed alone: the two runs of a seed begin with the same robots
+            # (section 9.8, point 9). Listed side by side; no test is made of the pairs.
+            theirs = {row['seed']: row['scores'] for row in other['per_seed']}
+            pairs = []
+            for r in runs:
+                if r['generations'] >= primary and str(primary) in theirs.get(r['seed'], {}):
+                    mine, same = float(r['best'][primary - 1]), float(theirs[r['seed']][str(primary)])
+                    pairs.append({'seed': r['seed'], 'arm': mine, 'other': same, 'ratio': mine / same if same > 0 else None})
+            block['same_seeds'] = {'generation': primary, 'runs': pairs}
         else:
             if str(primary) in block['scores']:
                 block['generation'] = primary
@@ -529,6 +539,12 @@ def render(report):
             L.append(f"  Arm {against['arm']} itself against the deposited runs at generation {b['generation']}: ratio of medians "
                      f"{b['ratio_of_medians']:.3f}, 95% interval {b['ratio_interval'][0]:.3f} to {b['ratio_interval'][1]:.3f} "
                      f"({b['verdict']}).")
+        if (against.get('same_seeds') or {}).get('runs'):
+            L.append(f"  The same seeds in {other} at generation {against['same_seeds']['generation']}, listed and not tested "
+                     f"(a run of this arm begins with the first population of {other}'s run of that seed):")
+            for p in against['same_seeds']['runs']:
+                L.append(f"    seed {p['seed']:>2}: {p['arm']:.4f} here, {p['other']:.4f} in {other}"
+                         + ('' if p['ratio'] is None else f", ratio {p['ratio']:.2f}"))
 
     few = report.get('few_runs')
     if few:
