@@ -174,7 +174,7 @@ Arm D was started on 27 November at 15:03: all ten runs from the code of `campai
 
 ### Arms E1 to E3: arm D with one setting undone
 
-The same commands with `--arm E1`, `--arm E2` and `--arm E3`. Prepared on 27 November 2026, while arm D was running; **not started**. Each is started on the author's word (PROTOCOL.md, section 9.8).
+The same commands with `--arm E1`, `--arm E2` and `--arm E3`. Prepared on 27 November 2026, while arm D was running. **Their three launchers were started on 28 November 2026 at 00:46 with `--after D`**, on the go-ahead of that night ("Yes, start waiting"): they wait for arm D and start the arms when it is complete (PROTOCOL.md, section 9.8).
 
 - **A run** is arm D's with other engine options, seeds 1 to 3, 300 generations, from the code of `campaign-v4`:
 
@@ -202,6 +202,8 @@ Tried on 27 November with three runs for each arm (`trialE1_s101` to `trialE3_s1
 | Bodies the engine refused, runs that stopped themselves | None |
 | On 28 November, a made-up shortage of memory (`trial_short_of_memory.py`: the launcher told to keep 1000 GB free). Started by hand | It said "Nothing started" and ended with code 2, as before |
 | The same shortage for a launcher started with `--after`, ended after 90 seconds (`trialM_s101`, `trialM_s102`) | It said that it does not give up, started nothing while the shortage lasted, then started its two runs 20 seconds apart (the trial's spacing), and both ran to the end |
+
+**The launchers were started on 28 November at 00:46**, each with `python paper\reference_2013\start_arm.py --arm <E> --after D`: three processes without a window, started through the Windows shell like arm D's, from the code of `campaign-v4` (commit 6ebb91f, which differs from the tag in no file that computes a run). Each wrote "Arm D is running. Waiting for it to finish; nothing is started before that." and has started nothing: no run folder of these arms exists. Arm D was at generation 49 of 300 in its median run. `--status` shows the wait, `--stop` ends it, and logging off or restarting Windows ends the launchers like any other.
 
 **How long they will take.** In the trial, with arm D's ten runs and other work on the machine, a generation took 9 to 12 minutes for E1 and E3 and about 20 for E2 with three robots at a time; with five at a time and less on the machine E2 took 10. Run by themselves, the three arms simulate 33 robots at a time, about as many as arm D's 30, so arm D's pace is the guide: 11 minutes a generation in the median run and 8 to 16 across runs, which makes two and a half days for 300 generations, somewhere between two and three and a half. Two generations say little about the three hundred that follow.
 
