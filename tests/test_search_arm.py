@@ -423,6 +423,22 @@ class TestWaitingForArmD(unittest.TestCase):
             lock.close()
         self.assertEqual(len(self.said), 1)                                           # it never said how arm D ended
 
+    def test_a_launcher_that_waited_does_not_give_up_for_lack_of_memory(self):
+        """At its start a launcher looks whether all its runs fit into the memory the system can
+        still promise. Started by a person, it refuses and says how to make room. Having waited
+        for another arm, perhaps until a night with nobody at the machine, it must not leave the
+        machine idle: it starts each run when there is room for it, one at a time."""
+        self.assertEqual(search_arm.when_short_of_memory(None), 'refuse')
+        self.assertEqual(search_arm.when_short_of_memory('D'), 'one at a time')
+        apart = search_arm.SPAWN_APART_SECONDS
+        self.assertGreaterEqual(apart, 30)                        # time for a run to take the memory it takes
+        self.assertTrue(search_arm.may_start_a_run(False, 0.0))   # the usual start: all runs at once
+        self.assertFalse(search_arm.may_start_a_run(True, apart - 1))
+        self.assertTrue(search_arm.may_start_a_run(True, apart))
+        self.assertTrue(search_arm.may_start_a_run(True, 1e9))    # the first run of such a launcher
+        self.assertFalse(search_arm.may_start_a_run(True, 15, apart=20))
+        self.assertTrue(search_arm.may_start_a_run(True, 25, apart=20))
+
     def test_the_launcher_hands_a_search_arm_to_this_wait(self):
         from unittest import mock
         stop = lambda: False                                                          # noqa: E731

@@ -147,6 +147,7 @@ Arm D was still running, and nothing of it was read. The three sensitivity arms 
 | E1 started waiting (`trial_waiting_start.py`: in that process the name of arm D was pointed at the trial of arm E3, because the real arm D runs for days; in its log "Arm D" is that trial) | It waited 26 minutes and started nothing; when the trial it waited for had ended with its three runs complete, it started its own three within the minute |
 | `trialE3_s102` ended from outside during its second generation | The launcher continued it from its checkpoint; its log shows no score |
 | Seed 101 with arm E2's command and five robots at a time, against the trial run with three (`check_five_at_a_time.py`, `five_at_a_time.json`) | The same run: 60 of 60 scores, all 30 bodies of the final population |
+| 28 November: too little memory at a launcher's start, made up by telling it to keep 1000 GB free (`trial_short_of_memory.py`) | Started by hand it refuses, as before. Started with `--after` it does not give up: it started nothing for the 90 seconds the shortage lasted, then its two runs one after the other, and both ended |
 
 The volumetric law shortens the engine's time step by a factor of 1.57 for every body: a body of muscle only has 3.5e-5 s under the other settings and 2.2e-5 s under arm E2's, and the three trial champions of arm E2's settings have 1.0e-5 s where the others have 1.6e-5 s or 3.5e-5 s. A generation of arm E2's command took about twice as long. That is why arm E2's runs simulate five robots at a time.
 
@@ -174,5 +175,6 @@ These are robots of a second generation. The table shows that the audit measures
 | `arms_E/check_first_population.py`, `first_population.json` | One-generation runs under the options of all four arms: the same first population |
 | `arms_E/check_five_at_a_time.py`, `five_at_a_time.json` | Arm E2's command with five robots at a time against three: the same run |
 | `arms_E/trial_waiting_start.py` | The trial of a launcher that waits for another arm of this project's search |
+| `arms_E/trial_short_of_memory.py` | The trial of a launcher that finds too little memory at its start: started by hand, and started waiting |
 | `arms_E/dress_rehearsal.py` | The arm mode of the E arms' tools, tried with trial runs standing in for the arms |
 | `arms_E/rehearsal/` | The nine trial runs' launcher logs, pilot reports, checks with the audit, and stills of their videos |

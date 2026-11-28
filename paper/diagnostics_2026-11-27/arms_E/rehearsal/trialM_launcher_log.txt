@@ -1,0 +1,24 @@
+[28 Nov 00:34] launcher started (process 132108, no window): arm E1, runs trialM_s101 to trialM_s102 (2 seeds), 1 generations each; 2 side by side, 3 simulation(s) at a time in each
+[28 Nov 00:34] NOTE: this console belongs to the Claude app. A launcher started here ends when the app closes. Without --here it is started through the Windows shell.
+[28 Nov 00:34] Keep-awake : ON (system + execution required - survives Modern Standby)
+[28 Nov 00:34] code campaign-v4-11-g5e3c24b, modified tracked files: [' M MUJOCO_LOG.TXT', ' M paper/reference_2013/search_arm.py', ' M tests/test_search_arm.py']; the MuJoCo engine, one linear-algebra thread in every process
+[28 Nov 00:34] Arm D is complete: 3 of 3 runs with 2 generations.
+[28 Nov 00:34] Starting arm E1 now.
+[28 Nov 00:34] 0 runs are complete already, 0 are continued from their checkpoints, 2 start from the beginning.
+[28 Nov 00:34] The system can still promise 10.2 GB of memory to programs; 1001.6 GB are wanted before 2 runs with 3 simulation(s) at a time are started (0.2 GB for each process, 1000 GB left free). This launcher waited for arm D and may have nobody at the machine, so it does not give up: each run is started when there is room for it, one at a time.
+[28 Nov 00:34] 2 run(s) wait to be started: the system can promise too little memory just now (10.2 GB). Looking again every few seconds.
+[28 Nov 00:35] 2 runs: 1 running, 1 not started. Generation of 1: slowest 0, median 0, fastest 0.
+[28 Nov 00:36] 2 runs: 2 running. Generation of 1: slowest 0, median 0, fastest 0.
+[28 Nov 00:37] 2 runs: 2 running. Generation of 1: slowest 0, median 0, fastest 0.
+[28 Nov 00:38] 2 runs: 2 running. Generation of 1: slowest 0, median 0, fastest 0.
+[28 Nov 00:39] 2 runs: 2 running. Generation of 1: slowest 0, median 0, fastest 0.
+[28 Nov 00:40] 2 runs: 2 running. Generation of 1: slowest 0, median 0, fastest 0.
+[28 Nov 00:41] 2 runs: 2 running. Generation of 1: slowest 0, median 0, fastest 0.
+[28 Nov 00:42] 2 runs: 2 running. Generation of 1: slowest 0, median 0, fastest 0.
+[28 Nov 00:43] trialM_s101: complete
+[28 Nov 00:43] 2 runs: 1 running, 1 finished. Generation of 1: slowest 0, median 0, fastest 0.
+[28 Nov 00:44] trialM_s102: complete
+[28 Nov 00:44] 2 runs: 2 finished.
+[28 Nov 00:44] 2 of 2 runs are complete with 1 generations.
+[28 Nov 00:44] The trial is complete.
+[28 Nov 00:44] launcher ended

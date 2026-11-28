@@ -39,8 +39,11 @@ How these arms differ from the re-runs of the original program (R, Rc)
     with its own launcher (9 runs, 33 simulations at a time).
   - Every run is started with one linear-algebra thread (PROTOCOL.md section 9.6).
   - The arms in the MuJoCo engine (D, E1 to E3), memory: a run is started only while the system
-    can still promise the memory its processes may ask for. A run that an error stopped is
-    continued like any other; the launcher's log says what stopped it.
+    can still promise the memory its processes may ask for. A launcher that finds too little
+    for all its runs at its start refuses and says so; one that waited for another arm
+    (--after), and may have nobody at the machine, starts its runs one at a time as room
+    appears. A run that an error stopped is continued like any other; the launcher's log says
+    what stopped it.
   - A run that records no new generation for two hours of the launcher's running time has its
     processes ended and is continued from its checkpoint, like any run that ends unfinished.
     (A worker process that dies outright leaves its run waiting for a result that never comes.)
@@ -114,6 +117,7 @@ ONE_THREAD = {'OPENBLAS_NUM_THREADS': '1', 'OMP_NUM_THREADS': '1', 'MKL_NUM_THRE
 GB_PER_PROCESS = 0.2        # allowed for each process of a run
 KEEP_FREE_GB = 4.0          # left for everything else on the machine
 STALL_SECONDS = 2 * 3600    # a run without a new generation for this long is ended and continued
+SPAWN_APART_SECONDS = 60    # between the starts of two runs by a launcher that found too little memory at its start
 
 
 # --------------------------------------------------------------------------------------------
@@ -199,6 +203,21 @@ def room_for(runs, workers, free=None):
     free = free_commit_gb() if free is None else free
     wanted = KEEP_FREE_GB + runs * processes_of_a_run(workers) * GB_PER_PROCESS
     return free is None or free >= wanted, free, wanted
+
+
+def when_short_of_memory(waited_for):
+    """What a launcher does when, at its start, the system cannot promise the memory for all its
+    runs: 'refuse' or 'one at a time'. A launcher that a person started refuses and says how to
+    make room: the person is there to do it. One that waited for another arm (--after) may begin
+    at night with nobody at the machine, and giving up would leave the machine idle until someone
+    looks: it starts each run when there is room for that run, one at a time."""
+    return 'one at a time' if waited_for else 'refuse'
+
+
+def may_start_a_run(one_at_a_time, seconds_since_the_last_start, apart=None):
+    """One at a time: no run is started before the run started last has had time to take the
+    memory it takes, so that the look at free memory before the next start sees it."""
+    return not one_at_a_time or seconds_since_the_last_start >= (SPAWN_APART_SECONDS if apart is None else apart)
 
 
 def stopped_by(last_lines):
@@ -591,14 +610,20 @@ def run_launcher(core, a, arm, stem, seeds, generations):
             f"{sum(1 for s in pending if st[s][1] == 'not started')} start from the beginning.")
         attempts = {s: 0 for s in seeds}
         failed = {}
+        one_at_a_time = False                        # short of memory at the start, with nobody to tell (see below)
+        last_start = [0.0]                           # when this launcher last started a run
         if not with_2013:
             fits, free, wanted = room_for(min(jobs, len(pending)), workers)
             if not fits:
-                say(f'The system can still promise {free:.1f} GB of memory to programs; {wanted:.1f} GB are wanted '
-                    f'before {min(jobs, len(pending))} runs with {workers} simulation(s) at a time are started '
-                    f'({GB_PER_PROCESS:g} GB for each process, {KEEP_FREE_GB:g} GB left free). Nothing started. '
-                    f'Close other programs, or start fewer runs side by side with --jobs.')
-                return 2
+                short = (f'The system can still promise {free:.1f} GB of memory to programs; {wanted:.1f} GB are wanted '
+                         f'before {min(jobs, len(pending))} runs with {workers} simulation(s) at a time are started '
+                         f'({GB_PER_PROCESS:g} GB for each process, {KEEP_FREE_GB:g} GB left free).')
+                if when_short_of_memory(a.after) == 'refuse':
+                    say(short + ' Nothing started. Close other programs, or start fewer runs side by side with --jobs.')
+                    return 2
+                one_at_a_time = True
+                say(short + f' This launcher waited for arm {a.after} and may have nobody at the machine, so it does '
+                            f'not give up: each run is started when there is room for it, one at a time.')
         progress = {}                                # {seed: [generations, when the last one came]}
         awake = [0.0, time.time()]                   # seconds this launcher has been running, and when last counted:
         #                                              time the machine slept through is no time a run stood still
@@ -646,6 +671,8 @@ def run_launcher(core, a, arm, stem, seeds, generations):
                 awake[0] += min(time.time() - awake[1], 30.0)
                 awake[1] = time.time()
                 while pending and len(active) < jobs:
+                    if not may_start_a_run(one_at_a_time, time.time() - last_start[0]):
+                        break                        # the run started last has not yet taken its memory
                     # a run continued while others are going: only if the system has the memory for it
                     if not with_2013 and not room_for(1, workers)[0]:
                         if time.time() - waiting_for_memory[0] > 600:
@@ -655,6 +682,7 @@ def run_launcher(core, a, arm, stem, seeds, generations):
                         break
                     seed = pending.pop(0)
                     active[seed] = spawn(seed)
+                    last_start[0] = time.time()
                 for seed, process in list(active.items()):
                     code = process.poll()
                     if code is None:
